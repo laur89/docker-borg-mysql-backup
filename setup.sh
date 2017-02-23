@@ -19,9 +19,9 @@ install_crontab() {
 install_ssh_key() {
     local ssh_key_target
 
-    readonly ssh_key_target="$HOME/.ssh/id_rsa"
+    readonly ssh_key_target=~/.ssh/id_rsa
 
-    [[ -d "$HOME/.ssh" ]] || fail "[$HOME/.ssh] is not a dir; is ssh client installed?"
+    [[ -d ~/.ssh ]] || fail "[~/.ssh] is not a dir; is ssh client installed?"
     [[ -f "$SSH_KEY" ]] && cp -- "$SSH_KEY" "$ssh_key_target"
 }
 
@@ -31,3 +31,5 @@ printenv | sed 's/^\(.*\)$/export \1/g' > /env_vars.sh
 
 install_crontab
 install_ssh_key
+
+exit 0
