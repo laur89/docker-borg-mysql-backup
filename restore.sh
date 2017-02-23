@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# restores selected archive from either local or remote repo to $BACKUP_ROOT
+# restores selected borg archive from either local or remote repo to $BACKUP_ROOT
 
 
 readonly usage="
@@ -64,7 +64,8 @@ do_restore() {
     [[ "$LOCAL_REPO" -eq 1 ]] && repo="$BORG_LOCAL_REPO" || repo="$REMOTE"
 
     pushd -- "$RESTORE_DIR" || fail "unable to pushd into [$RESTORE_DIR]"
-    borg extract "$repo"::"$ARCHIVE_NAME" -v --list || { RM_DIR=1; fail "restoring [$repo::$ARCHIVE_NAME] failed"; }
+    borg extract "$repo"::"$ARCHIVE_NAME" -v --list || fail "restoring [$repo::$ARCHIVE_NAME] failed"
+    KEEP_DIR=1  # from this point onward, we should not delete $RESTORE_DIR on failure
     restore_db
     popd
 }
@@ -86,23 +87,23 @@ validate_config() {
 
     for i in "${vars[@]}"; do
         val="$(eval echo "\$$i")" || fail "evaling [echo $i] failed with code [$?]"
-        [[ -z "$val" ]] && fail "[$i] env var is not defined"
+        [[ -z "$val" ]] && fail "[$i] is not defined"
     done
 
     [[ "$REMOTE_OR_LOCAL_OPT_COUNTER" -ne 1 ]] && fail "need to select whether to restore from local or remote repo"
     [[ -d "$BACKUP_ROOT" ]] || fail "[$BACKUP_ROOT] is not mounted"
-    [[ "$-" != *i* ]] && fail "need to run in interactive mode"  # TODO you sure?
+    [[ "$-" != *i* ]] && fail "need to run in interactive mode"  # TODO: sure?
     [[ "$BORG_LOCAL_REPO_NAME" == /* ]] && fail "BORG_LOCAL_REPO_NAME should not start with a slash"
 }
 
 
 create_dirs() {
-    mkdir -p "$RESTORE_DIR" || fail "dir [$RESTORE_DIR] creation failed"
+    mkdir -p -- "$RESTORE_DIR" || fail "dir [$RESTORE_DIR] creation failed"
 }
 
 
 cleanup() {
-    [[ "$RM_DIR" -eq 1 && -d "$RESTORE_DIR" ]] && rm -r -- "$RESTORE_DIR"
+    [[ "$KEEP_DIR" -ne 1 && -d "$RESTORE_DIR" ]] && rm -r -- "$RESTORE_DIR"
     [[ -d "$RESTORE_DIR" ]] && echo -e "restored files are in [$RESTORE_DIR]"
 }
 
