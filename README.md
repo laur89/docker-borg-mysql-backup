@@ -93,7 +93,7 @@ directly via docker for one off backup.
 
 `/config/crontab` contents:
 
-    15 05 * * * root  backup -d "App1 App2" -n /app1-data -p app1-app2
+    15 05 * * * root  /backup.sh -d "App1 App2" -n /app1-data -p app1-app2
 
 ##### Back up all databases daily at 04:10 and 16:10 to local&remote borg repos, stopping containers myapp1 & myapp2 for the process
 
@@ -113,7 +113,7 @@ directly via docker for one off backup.
 
 `/config/crontab` contents:
 
-    10 04,16 * * * root  backup -d __all__ -p myapp-prefix -c "myapp1 myapp2"
+    10 04,16 * * * root  /backup.sh -d __all__ -p myapp-prefix -c "myapp1 myapp2"
 
 ##### Back up directores /app1 & /app2 every 6 hours to local borg repo (ie remote is excluded)
 
@@ -129,7 +129,7 @@ directly via docker for one off backup.
 
 `/config/crontab` contents:
 
-    0 */6 * * * root  backup -l -n "/app1 /app2" -p my_app_prefix
+    0 */6 * * * root  /backup.sh -l -n "/app1 /app2" -p my_app_prefix
 
 Note we didn't need to define mysql- or remote borg repo related docker env vars.
 Also there's no need to have ssh key in `/config`, as we're not connecting to a remote server.
@@ -144,7 +144,7 @@ Also there's no need to have ssh key in `/config`, as we're not connecting to a 
         -v /backup:/backup \
         -v /borg-mysql-backup/config:/config:ro \
         -v /app3/on/host:/app3:ro \
-           layr/borg-mysql-backup -- backup -r -n /app3 -p my_prefix
+           layr/borg-mysql-backup -- backup.sh -r -n /app3 -p my_prefix
 
 Note there's no need to have a crontab file in `/config`, as container only lives until
 the `backup` command returns.
@@ -185,14 +185,14 @@ will be extracted into `/backup/restored-{archive_name}`
         -e BORG_PASSPHRASE=borgrepopassword \
         -v /tmp:/backup \
         -v /borg-mysql-backup/config:/config:ro \
-           layr/borg-mysql-backup -- restore -r -d -a my_prefix-HOSTNAME-2017-02-27-160159
+           layr/borg-mysql-backup -- restore.sh -r -d -a my_prefix-HOSTNAME-2017-02-27-160159
 
 ##### Restore archive from local borg repo & stop container app1 beforehand
 
     docker run -it --rm \
         -e BORG_PASSPHRASE=borgrepopassword \
         -v /tmp:/backup \
-           layr/borg-mysql-backup -- restore -l -c app1 -a my_prefix-HOSTNAME-2017-02-27-160159
+           layr/borg-mysql-backup -- restore.sh -l -c app1 -a my_prefix-HOSTNAME-2017-02-27-160159
 
 Note there's no need to mount `/config`, as we're not using cron nor connecting to remote borg.
 Also we're not providing mysql env vars, as script isn't invoked with `-d` option, meaning
@@ -202,7 +202,7 @@ db won't be automatically restored with the included .sql dumpfile (if there was
 
     docker run -it --rm \
         -v /tmp:/backup \
-           layr/borg-mysql-backup -- restore -l -N otherrepo -a my_prefix-HOSTNAME-2017-02-27-160159
+           layr/borg-mysql-backup -- restore.sh -l -N otherrepo -a my_prefix-HOSTNAME-2017-02-27-160159
 
 Data will be restored from non-default local borg repo `otherrepo`. Also note missing `BORG_PASSPHRASE`,
 which is required to be typed in manually.
@@ -228,7 +228,7 @@ which is required to be typed in manually.
     docker run -it --rm \
         -e BORG_PASSPHRASE=borgrepopassword \
         -v /tmp:/backup \
-           layr/borg-mysql-backup -- list -l
+           layr/borg-mysql-backup -- list.sh -l
 
 ##### List the remote repository contents
 
@@ -237,7 +237,7 @@ which is required to be typed in manually.
         -e REMOTE=remoteuser@server.com:repo/location \
         -e BORG_PASSPHRASE=borgrepopassword \
         -v /borg-mysql-backup/config:/config:ro \
-           layr/borg-mysql-backup -- list -r
+           layr/borg-mysql-backup -- list.sh -r
 
 Note the `BORG_EXTRA_OPTS`, `BORG_LOCAL_EXTRA_OPTS`, `BORG_REMOTE_EXTRA_OPTS` env
 variables are still usable with `list`.
