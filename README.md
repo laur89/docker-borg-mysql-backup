@@ -34,9 +34,9 @@ root permissions on the host).
     REMOTE                  remote connection, including repository, eg remoteuser@remoteserver.com:/backup/location
                             optional - can be omitted when only backing up to local borg repo.
     BORG_LOCAL_REPO_NAME    local borg repo name; optional, defaults to 'repo'
-    BORG_EXTRA_OPTS         additional borg backup params (for both local & remote borg commands); optional
-    BORG_LOCAL_EXTRA_OPTS   additional borg backup params for local borg command; optional
-    BORG_REMOTE_EXTRA_OPTS  additional borg backup params for remote borg command; optional
+    BORG_EXTRA_OPTS         additional borg params (for both local & remote borg commands); optional
+    BORG_LOCAL_EXTRA_OPTS   additional borg params for local borg command; optional
+    BORG_REMOTE_EXTRA_OPTS  additional borg params for remote borg command; optional
     BORG_PASSPHRASE         borg repo password
     BORG_PRUNE_OPTS         options for borg prune (both local and remote); not required when
                             restoring or if it's defined by backup script -P param
@@ -155,7 +155,11 @@ the `backup` command returns.
 Script will restore db from the restored dump, if respective param is provided. All data
 will be extracted into `/backup/restored-{archive_name}`
 
-    usage: restore [-h] [-d] [-c CONTAINERS] [-r] [-l] [-N BORG_LOCAL_REPO_NAME] -a ARCHIVE_NAME
+Repository contents can be listed with the `-L` option, or simply run directly `borg list`
+instead of `restore`
+
+    usage: restore [-h] [-d] [-c CONTAINERS] [-r] [-l] [-L]
+                   [-N BORG_LOCAL_REPO_NAME] -a ARCHIVE_NAME
     
     Restore data from borg archive
     
@@ -168,10 +172,31 @@ will be extracted into `/backup/restored-{archive_name}`
                               requires mounting the docker socket (-v /var/run/docker.sock:/var/run/docker.sock)
       -r                      restore from remote borg repo
       -l                      restore from local borg repo
+      -L                      instead of restoring, simply list the repository contents and exit;
+                              in this case, naturally, -a option is not mandatory
       -N BORG_LOCAL_REPO_NAME overrides container env variable BORG_LOCAL_REPO_NAME; optional;
       -a ARCHIVE_NAME         name of the borg archive to restore data from
 
 #### Usage examples
+
+##### List the local repository contents
+
+    docker run -it --rm \
+        -e BORG_PASSPHRASE=borgrepopassword \
+        -v /tmp:/backup:ro \
+           layr/borg-mysql-backup -- restore -lL
+
+##### List the remote repository contents
+
+    docker run -it --rm \
+        -e BORG_EXTRA_OPTS="-P my-prefix" \
+        -e REMOTE=remoteuser@server.com:repo/location \
+        -e BORG_PASSPHRASE=borgrepopassword \
+        -v /borg-mysql-backup/config:/config:ro \
+           layr/borg-mysql-backup -- restore -rL
+
+Note the `BORG_EXTRA_OPTS`, `BORG_LOCAL_EXTRA_OPTS`, `BORG_REMOTE_EXTRA_OPTS` env
+variables are still usable with -L option.
 
 ##### Restore archive from remote borg repo & restore mysql with restored dumpfile
 
