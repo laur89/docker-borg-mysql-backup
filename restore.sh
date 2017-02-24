@@ -1,10 +1,11 @@
 #!/bin/bash
 #
-# restores selected archive from either local or remote repo to $BACKUP_ROOT
+# restores selected borg archive from either local or remote repo to $BACKUP_ROOT
 
 
 readonly usage="
-    usage: restore [-h] [-d] [-c CONTAINERS] [-r] [-l] [-N BORG_LOCAL_REPO_NAME] -a ARCHIVE_NAME
+    usage: ${0##*/} [-h] [-d] [-c CONTAINERS] [-r] [-l] [-L]
+                   [-N BORG_LOCAL_REPO_NAME] -a ARCHIVE_NAME
 
     Restore data from borg archive
 
@@ -17,6 +18,8 @@ readonly usage="
                               requires mounting the docker socket (-v /var/run/docker.sock:/var/run/docker.sock)
       -r                      restore from remote borg repo
       -l                      restore from local borg repo
+      -L                      instead of restoring, simply list the repository contents and exit;
+                              in this case, naturally, -a option is not mandatory
       -N BORG_LOCAL_REPO_NAME overrides container env variable BORG_LOCAL_REPO_NAME; optional;
       -a ARCHIVE_NAME         name of the borg archive to restore data from
 "
@@ -59,14 +62,40 @@ restore_db() {
 
 
 do_restore() {
-    local repo
-
-    [[ "$LOCAL_REPO" -eq 1 ]] && repo="$BORG_LOCAL_REPO" || repo="$REMOTE"
 
     pushd -- "$RESTORE_DIR" || fail "unable to pushd into [$RESTORE_DIR]"
-    borg extract "$repo"::"$ARCHIVE_NAME" -v --list || { RM_DIR=1; fail "restoring [$repo::$ARCHIVE_NAME] failed"; }
+
+    if [[ "$LOCAL_REPO" -eq 1 ]]; then
+        borg extract -v --list \
+            $BORG_EXTRA_OPTS \
+            $BORG_LOCAL_EXTRA_OPTS \
+            "$BORG_LOCAL_REPO"::"$ARCHIVE_NAME" || fail "restoring [$BORG_LOCAL_REPO::$ARCHIVE_NAME] failed"
+    elif [[ "$REMOTE_REPO" -eq 1 ]]; then
+        borg extract -v --list \
+            $BORG_EXTRA_OPTS \
+            $BORG_REMOTE_EXTRA_OPTS \
+            "$REMOTE"::"$ARCHIVE_NAME" || fail "restoring [$REMOTE::$ARCHIVE_NAME] failed"
+    fi
+
+    KEEP_DIR=1  # from this point onward, we should not delete $RESTORE_DIR on failure
     restore_db
     popd
+}
+
+
+list_repos() {
+
+    if [[ "$LOCAL_REPO" -eq 1 ]]; then
+        borg list \
+            $BORG_EXTRA_OPTS \
+            $BORG_LOCAL_EXTRA_OPTS \
+            "$BORG_LOCAL_REPO" || fail "listing [$BORG_LOCAL_REPO] failed"
+    elif [[ "$REMOTE_REPO" -eq 1 ]]; then
+        borg list \
+            $BORG_EXTRA_OPTS \
+            $BORG_REMOTE_EXTRA_OPTS \
+            "$REMOTE" || fail "listing [$REMOTE] failed"
+    fi
 }
 
 
@@ -86,23 +115,23 @@ validate_config() {
 
     for i in "${vars[@]}"; do
         val="$(eval echo "\$$i")" || fail "evaling [echo $i] failed with code [$?]"
-        [[ -z "$val" ]] && fail "[$i] env var is not defined"
+        [[ -z "$val" ]] && fail "[$i] is not defined"
     done
 
     [[ "$REMOTE_OR_LOCAL_OPT_COUNTER" -ne 1 ]] && fail "need to select whether to restore from local or remote repo"
     [[ -d "$BACKUP_ROOT" ]] || fail "[$BACKUP_ROOT] is not mounted"
-    [[ "$-" != *i* ]] && fail "need to run in interactive mode"  # TODO you sure?
+    [[ "$-" != *i* ]] && fail "need to run in interactive mode"  # TODO: sure?
     [[ "$BORG_LOCAL_REPO_NAME" == /* ]] && fail "BORG_LOCAL_REPO_NAME should not start with a slash"
 }
 
 
 create_dirs() {
-    mkdir -p "$RESTORE_DIR" || fail "dir [$RESTORE_DIR] creation failed"
+    mkdir -p -- "$RESTORE_DIR" || fail "dir [$RESTORE_DIR] creation failed"
 }
 
 
 cleanup() {
-    [[ "$RM_DIR" -eq 1 && -d "$RESTORE_DIR" ]] && rm -r -- "$RESTORE_DIR"
+    [[ "$KEEP_DIR" -ne 1 && -d "$RESTORE_DIR" ]] && rm -r -- "$RESTORE_DIR"
     [[ -d "$RESTORE_DIR" ]] && echo -e "restored files are in [$RESTORE_DIR]"
 }
 
@@ -115,7 +144,7 @@ source /scripts_common.sh || { echo -e "failed to import /scripts_common.sh"; ex
 source /env_vars.sh || fail "failed to import /env_vars.sh"
 REMOTE_OR_LOCAL_OPT_COUNTER=0
 
-while getopts "dc:rlN:a:h" opt; do
+while getopts "dc:rlLN:a:h" opt; do
     case "$opt" in
         d) RESTORE_DB=1
             ;;
@@ -126,6 +155,8 @@ while getopts "dc:rlN:a:h" opt; do
             ;;
         l) LOCAL_REPO=1
            let REMOTE_OR_LOCAL_OPT_COUNTER+=1
+            ;;
+        L) LIST_REPOS=1
             ;;
         N) BORG_LOCAL_REPO_NAME="$OPTARG"  # overrides env var of same name
             ;;
@@ -142,6 +173,7 @@ done
 readonly RESTORE_DIR="$BACKUP_ROOT/restored-${ARCHIVE_NAME}"  # dir where selected borg archive will be restored into
 readonly BORG_LOCAL_REPO="$BACKUP_ROOT/${BORG_LOCAL_REPO_NAME:-repo}"
 
+[[ "$LIST_REPOS" -eq 1 ]] && { list_repos; exit 0; }
 validate_config
 check_dependencies
 create_dirs

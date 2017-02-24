@@ -2,15 +2,15 @@
 #
 # common vars & functions
 
-readonly CRON_FILE='/config/crontab'
-readonly SSH_KEY='/config/id_rsa'  # TODO 'key' filename
 readonly BACKUP_ROOT='/backup'
+readonly CRON_FILE='/config/crontab'
+readonly SSH_KEY='/config/id_rsa'
 
 
 check_dependencies() {
     local i
 
-    for i in docker mysqldump borg; do
+    for i in docker mysql mysqldump borg; do
         command -v "$i" >/dev/null || fail "[$i] not installed"
     done
 }

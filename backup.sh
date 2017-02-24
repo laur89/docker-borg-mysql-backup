@@ -1,12 +1,10 @@
 #!/bin/bash
 #
-# TODO: write up usage
-# accepts optional database names to back up as arguments; if none are provided,
-# backs up ALL databases.
+# backs up mysql dump and/or other data to local and/or remote borg repository
 
 
 readonly usage="
-    usage: backup [-h] [-d MYSQL_DBS] [-n NODES_TO_BACKUP] [-c CONTAINERS]
+    usage: ${0##*/} [-h] [-d MYSQL_DBS] [-n NODES_TO_BACKUP] [-c CONTAINERS]
                   [-r] [-l] [-P BORG_PRUNE_OPTS] [-N BORG_LOCAL_REPO_NAME] -p PREFIX
 
     Create new archive
@@ -48,7 +46,7 @@ dump_db() {
         output_filename='all-dbs'
         MYSQL_DB='--all-databases'
     else
-        output_filename="${MYSQL_DB// /-}"  # let the filename reflect which dbs it contains
+        output_filename="${MYSQL_DB// /+}"  # let the filename reflect which dbs it contains
         MYSQL_DB="--databases $MYSQL_DB"
     fi
 
@@ -73,7 +71,7 @@ do_backup() {
 
     echo "=> Backup started at [$start_time]"
 
-    dump_db || { echo -e "db dump failed with [$?]"; rm -rf "${TMP:?}/"*; return 1; }  # TODO fail?
+    dump_db || fail "db dump failed with [$?]"
     expand_nodes_to_back_up
 
     [[ "${#NODES_TO_BACK_UP[@]}" -eq 0 ]] && fail "no items selected for backup"
@@ -152,12 +150,12 @@ validate_config() {
 
     for i in "${vars[@]}"; do
         val="$(eval echo "\$$i")" || fail "evaling [echo $i] failed with code [$?]"
-        [[ -z "$val" ]] && fail "[$i] env var is not defined"
+        [[ -z "$val" ]] && fail "[$i] is not defined"
     done
 
     if [[ "${#NODES_TO_BACK_UP[@]}" -gt 0 ]]; then
         for i in "${NODES_TO_BACK_UP[@]}"; do
-            [[ -e "$i" ]] || fail "node [$i] to back up does not exist"  # TODO: fail?
+            [[ -e "$i" ]] || fail "node [$i] to back up does not exist"
         done
     fi
 
@@ -172,7 +170,7 @@ validate_config() {
 
 
 create_dirs() {
-    mkdir -p "$TMP" || fail "dir [$TMP] creation failed"
+    mkdir -p -- "$TMP" || fail "dir [$TMP] creation failed"
 }
 
 
