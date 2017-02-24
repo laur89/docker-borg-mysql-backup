@@ -3,8 +3,8 @@
 This image is mainly intended for backing up mysql dumps to local and/or remote [borg](https://github.com/borgbackup/borg) repos.
 Other files may be included in the backup, and database dumps can be excluded altogether.
 
-The container features `backup` and `restore` scripts that can either be ran directly with docker,
-or by cron, latter being the preferred method.
+The container features `backup`, `restore` and `list` scripts that can either be ran
+directly with docker, or by cron, latter being the preferred method.
 
 For cron and/or remote borg usage, you also need to mount container configuration
 at `/config`, containing ssh key (named `id_rsa`) and/or crontab file (named `crontab`).
@@ -44,7 +44,7 @@ root permissions on the host).
 
 ## Script usage
 
-Container incorporates `backup` and `restore` scripts.
+Container incorporates `backup`, `restore` and `list` scripts.
 
 ### backup
 
@@ -86,7 +86,7 @@ directly via docker for one off backup.
         -e BORG_EXTRA_OPTS='--compression zlib,5 --lock-wait 60' \
         -e BORG_PASSPHRASE=borgrepopassword \
         -e BORG_PRUNE_OPTS='--keep-daily=7 --keep-weekly=4' \
-        -v /backup:/backup:ro \
+        -v /backup:/backup \
         -v /borg-mysql-backup/config:/config:ro \
         -v /app1-data-on-host:/app1-data:ro \
            layr/borg-mysql-backup
@@ -107,7 +107,7 @@ directly via docker for one off backup.
         -e BORG_PASSPHRASE=borgrepopassword \
         -e BORG_PRUNE_OPTS='--keep-daily=7 --keep-weekly=4' \
         -v /var/run/docker.sock:/var/run/docker.sock \
-        -v /backup:/backup:ro \
+        -v /backup:/backup \
         -v /borg-mysql-backup/config:/config:ro \
            layr/borg-mysql-backup
 
@@ -121,7 +121,7 @@ directly via docker for one off backup.
         -e HOST_HOSTNAME=hostname-to-use-in-archive-prefix \
         -e BORG_PASSPHRASE=borgrepopassword \
         -e BORG_PRUNE_OPTS='--keep-daily=7 --keep-weekly=4' \
-        -v /backup:/backup:ro \
+        -v /backup:/backup \
         -v /borg-mysql-backup/config:/config:ro \
         -v /app1:/app1:ro \
         -v /app2:/app2:ro \
@@ -141,7 +141,7 @@ Also there's no need to have ssh key in `/config`, as we're not connecting to a 
         -e REMOTE=remoteuser@server.com:repo/location \
         -e BORG_PASSPHRASE=borgrepopassword \
         -e BORG_PRUNE_OPTS='--keep-daily=7 --keep-weekly=4' \
-        -v /backup:/backup:ro \
+        -v /backup:/backup \
         -v /borg-mysql-backup/config:/config:ro \
         -v /app3/on/host:/app3:ro \
            layr/borg-mysql-backup -- backup -r -n /app3 -p my_prefix
@@ -155,10 +155,7 @@ the `backup` command returns.
 Script will restore db from the restored dump, if respective param is provided. All data
 will be extracted into `/backup/restored-{archive_name}`
 
-Repository contents can be listed with the `-L` option, or simply run directly `borg list`
-instead of `restore`
-
-    usage: restore [-h] [-d] [-c CONTAINERS] [-r] [-l] [-L]
+    usage: restore [-h] [-d] [-c CONTAINERS] [-r] [-l]
                    [-N BORG_LOCAL_REPO_NAME] -a ARCHIVE_NAME
     
     Restore data from borg archive
@@ -172,31 +169,10 @@ instead of `restore`
                               requires mounting the docker socket (-v /var/run/docker.sock:/var/run/docker.sock)
       -r                      restore from remote borg repo
       -l                      restore from local borg repo
-      -L                      instead of restoring, simply list the repository contents and exit;
-                              in this case, naturally, -a option is not mandatory
       -N BORG_LOCAL_REPO_NAME overrides container env variable BORG_LOCAL_REPO_NAME; optional;
       -a ARCHIVE_NAME         name of the borg archive to restore data from
 
 #### Usage examples
-
-##### List the local repository contents
-
-    docker run -it --rm \
-        -e BORG_PASSPHRASE=borgrepopassword \
-        -v /tmp:/backup:ro \
-           layr/borg-mysql-backup -- restore -lL
-
-##### List the remote repository contents
-
-    docker run -it --rm \
-        -e BORG_EXTRA_OPTS="-P my-prefix" \
-        -e REMOTE=remoteuser@server.com:repo/location \
-        -e BORG_PASSPHRASE=borgrepopassword \
-        -v /borg-mysql-backup/config:/config:ro \
-           layr/borg-mysql-backup -- restore -rL
-
-Note the `BORG_EXTRA_OPTS`, `BORG_LOCAL_EXTRA_OPTS`, `BORG_REMOTE_EXTRA_OPTS` env
-variables are still usable with -L option.
 
 ##### Restore archive from remote borg repo & restore mysql with restored dumpfile
 
@@ -207,7 +183,7 @@ variables are still usable with -L option.
         -e MYSQL_PASS=password \
         -e REMOTE=remoteuser@server.com:repo/location \
         -e BORG_PASSPHRASE=borgrepopassword \
-        -v /tmp:/backup:ro \
+        -v /tmp:/backup \
         -v /borg-mysql-backup/config:/config:ro \
            layr/borg-mysql-backup -- restore -r -d -a my_prefix-HOSTNAME-2017-02-27-160159
 
@@ -215,7 +191,7 @@ variables are still usable with -L option.
 
     docker run -it --rm \
         -e BORG_PASSPHRASE=borgrepopassword \
-        -v /tmp:/backup:ro \
+        -v /tmp:/backup \
            layr/borg-mysql-backup -- restore -l -c app1 -a my_prefix-HOSTNAME-2017-02-27-160159
 
 Note there's no need to mount `/config`, as we're not using cron nor connecting to remote borg.
@@ -225,9 +201,44 @@ db won't be automatically restored with the included .sql dumpfile (if there was
 ##### Restore archive from non-default local borg repo
 
     docker run -it --rm \
-        -v /tmp:/backup:ro \
+        -v /tmp:/backup \
            layr/borg-mysql-backup -- restore -l -N otherrepo -a my_prefix-HOSTNAME-2017-02-27-160159
 
 Data will be restored from non-default local borg repo `otherrepo`. Also note missing `BORG_PASSPHRASE`,
 which is required to be typed in manually.
+
+### list
+
+`list` script is for listing archives in a borg repo.
+
+    usage: list [-h] [-r] [-l] [-N BORG_LOCAL_REPO_NAME]
+    
+    List archives in a borg repository
+    
+    arguments:
+      -h                      show help and exit
+      -r                      list remote borg repo
+      -l                      list local borg repo
+      -N BORG_LOCAL_REPO_NAME overrides container env variable BORG_LOCAL_REPO_NAME; optional;
+
+#### Usage examples
+
+##### List the local repository contents
+
+    docker run -it --rm \
+        -e BORG_PASSPHRASE=borgrepopassword \
+        -v /tmp:/backup \
+           layr/borg-mysql-backup -- list -l
+
+##### List the remote repository contents
+
+    docker run -it --rm \
+        -e BORG_EXTRA_OPTS="-P my-prefix" \
+        -e REMOTE=remoteuser@server.com:repo/location \
+        -e BORG_PASSPHRASE=borgrepopassword \
+        -v /borg-mysql-backup/config:/config:ro \
+           layr/borg-mysql-backup -- list -r
+
+Note the `BORG_EXTRA_OPTS`, `BORG_LOCAL_EXTRA_OPTS`, `BORG_REMOTE_EXTRA_OPTS` env
+variables are still usable with `list`.
 

@@ -1,0 +1,85 @@
+#!/bin/bash
+#
+# lists contents of local or remote archive
+
+
+readonly usage="
+    usage: ${0##*/} [-h] [-r] [-l] [-N BORG_LOCAL_REPO_NAME]
+
+    List archives in a borg repository
+
+    arguments:
+      -h                      show help and exit
+      -r                      list remote borg repo
+      -l                      list local borg repo
+      -N BORG_LOCAL_REPO_NAME overrides container env variable BORG_LOCAL_REPO_NAME; optional;
+"
+
+
+list_repos() {
+
+    if [[ "$LOCAL_REPO" -eq 1 ]]; then
+        borg list \
+            $BORG_EXTRA_OPTS \
+            $BORG_LOCAL_EXTRA_OPTS \
+            "$BORG_LOCAL_REPO" || fail "listing [$BORG_LOCAL_REPO] failed"
+    elif [[ "$REMOTE_REPO" -eq 1 ]]; then
+        borg list \
+            $BORG_EXTRA_OPTS \
+            $BORG_REMOTE_EXTRA_OPTS \
+            "$REMOTE" || fail "listing [$REMOTE] failed"
+    else
+        fail "need to select local or remote repo"
+    fi
+}
+
+
+validate_config() {
+    local i val vars
+
+    declare -a vars
+
+    [[ "$REMOTE_REPO" -eq 1 ]] && vars+=(REMOTE)
+
+    for i in "${vars[@]}"; do
+        val="$(eval echo "\$$i")" || fail "evaling [echo $i] failed with code [$?]"
+        [[ -z "$val" ]] && fail "[$i] is not defined"
+    done
+
+    [[ "$REMOTE_OR_LOCAL_OPT_COUNTER" -ne 1 ]] && fail "need to select whether to list local or remote repo"
+    [[ "$BORG_LOCAL_REPO_NAME" == /* ]] && fail "BORG_LOCAL_REPO_NAME should not start with a slash"
+}
+
+# ================
+# Entry
+# ================
+trap -- 'cleanup; exit' EXIT HUP INT QUIT PIPE TERM
+source /scripts_common.sh || { echo -e "failed to import /scripts_common.sh"; exit 1; }
+source /env_vars.sh || fail "failed to import /env_vars.sh"
+REMOTE_OR_LOCAL_OPT_COUNTER=0
+
+while getopts "rlNh" opt; do
+    case "$opt" in
+        r) REMOTE_REPO=1
+           let REMOTE_OR_LOCAL_OPT_COUNTER+=1
+            ;;
+        l) LOCAL_REPO=1
+           let REMOTE_OR_LOCAL_OPT_COUNTER+=1
+            ;;
+        N) BORG_LOCAL_REPO_NAME="$OPTARG"  # overrides env var of same name
+            ;;
+        h) echo -e "$usage"
+           exit 0
+            ;;
+        *) exit 1
+            ;;
+    esac
+done
+
+readonly BORG_LOCAL_REPO="$BACKUP_ROOT/${BORG_LOCAL_REPO_NAME:-repo}"
+
+validate_config
+list_repos
+
+exit 0
+

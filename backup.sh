@@ -104,7 +104,7 @@ do_backup() {
             $BORG_PRUNE_OPTS
     fi
 
-    popd
+    popd &> /dev/null
     readonly end_time="$(date +%H:%M:%S)"
     echo "=> Backup finished at [$end_time]"
 
@@ -160,7 +160,7 @@ validate_config() {
     fi
 
     [[ "$REMOTE_OR_LOCAL_OPT_COUNTER" -gt 1 ]] && fail "-r & -l options are exclusive"
-    [[ -d "$BACKUP_ROOT" ]] || fail "[$BACKUP_ROOT] is not mounted"
+    [[ "$REMOTE_ONLY" -ne 1 && ! -d "$BACKUP_ROOT" ]] && fail "[$BACKUP_ROOT] is not mounted"
     [[ "$BORG_LOCAL_REPO_NAME" == /* ]] && fail "BORG_LOCAL_REPO_NAME should not start with a slash"
 
     if [[ "$LOCAL_ONLY" -ne 1 && "$-" != *i* ]]; then
