@@ -10,7 +10,7 @@ readonly SSH_KEY='/config/id_rsa'
 check_dependencies() {
     local i
 
-    for i in docker mysql mysqldump borg; do
+    for i in docker mysql mysqldump borg ssh-keygen ssh-keyscan; do
         command -v "$i" >/dev/null || fail "[$i] not installed"
     done
 }

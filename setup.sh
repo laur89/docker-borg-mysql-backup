@@ -26,10 +26,23 @@ install_ssh_key() {
 }
 
 
+add_remote_to_known_hosts_if_missing() {
+    local remote_host
+
+	remote_host="$(grep -Po '^.*@\K.*(?=:.*$)' <<< "$REMOTE")"
+	[[ -z "$remote_host" ]] && fail "could not extract remote host from REMOTE [$REMOTE]"
+
+    if [[ -z "$(ssh-keygen -F "$remote_host")" ]]; then
+        ssh-keyscan -H "$remote_host" >> ~/.ssh/known_hosts || fail "adding host [$remote_host] to ~/.ssh/known_hosts failed"
+    fi
+}
+
+
 source /scripts_common.sh || { echo -e "failed to import /scripts_common.sh"; exit 1; }
 printenv | sed 's/^\(\w\+\)=\(.*\)$/export \1="\2"/g' > /env_vars.sh
 
 install_crontab
 install_ssh_key
+[[ -n "$REMOTE" ]] && add_remote_to_known_hosts_if_missing
 
 exit 0
