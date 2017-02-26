@@ -2,9 +2,11 @@
 #
 # lists contents of local or remote archive
 
+readonly SELF="${0##*/}"
+readonly LOG="/var/log/${SELF}.log"
 
 readonly usage="
-    usage: ${0##*/} [-h] [-r] [-l] [-N BORG_LOCAL_REPO_NAME]
+    usage: $SELF [-h] [-r] [-l] [-N BORG_LOCAL_REPO_NAME]
 
     List archives in a borg repository
 
@@ -54,7 +56,7 @@ validate_config() {
 # Entry
 # ================
 trap -- 'cleanup; exit' EXIT HUP INT QUIT PIPE TERM
-source /scripts_common.sh || { echo -e "failed to import /scripts_common.sh"; exit 1; }
+source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_common.sh" | tee "$LOG"; exit 1; }
 source /env_vars.sh || fail "failed to import /env_vars.sh"
 REMOTE_OR_LOCAL_OPT_COUNTER=0
 

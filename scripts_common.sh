@@ -5,6 +5,8 @@
 readonly BACKUP_ROOT='/backup'
 readonly CRON_FILE='/config/crontab'
 readonly SSH_KEY='/config/id_rsa'
+readonly LOG_TIMESTAMP_FORMAT='+%Y-%m-%d %H:%M'
+readonly ID="id-$$"  # for logging
 
 
 check_dependencies() {
@@ -65,8 +67,24 @@ confirm() {
 
 
 fail() {
+    err "$@"
+    exit 1
+}
+
+
+# info lvl logging
+log() {
+    local msg
+    readonly msg="$1"
+    echo -e "[$(date "$LOG_TIMESTAMP_FORMAT")] [$ID]\tINFO  $msg" | tee --append "$LOG"
+    return 0
+}
+
+
+err() {
     local msg
     readonly msg="$1"
     echo -e "\n\n    ERROR: $msg\n\n"
-    exit 1
+    echo -e "[$(date "$LOG_TIMESTAMP_FORMAT")] [$ID]\t    ERROR  $msg" >> "$LOG"
 }
+

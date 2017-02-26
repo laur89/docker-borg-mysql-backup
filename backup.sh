@@ -2,9 +2,11 @@
 #
 # backs up mysql dump and/or other data to local and/or remote borg repository
 
+readonly SELF="${0##*/}"
+readonly LOG="/var/log/${SELF}.log"
 
 readonly usage="
-    usage: ${0##*/} [-h] [-d MYSQL_DBS] [-n NODES_TO_BACKUP] [-c CONTAINERS]
+    usage: $SELF [-h] [-d MYSQL_DBS] [-n NODES_TO_BACKUP] [-c CONTAINERS]
                   [-r] [-l] [-P BORG_PRUNE_OPTS] [-N BORG_LOCAL_REPO_NAME] -p PREFIX
 
     Create new archive
@@ -63,13 +65,44 @@ dump_db() {
 }
 
 
+backup_local() {
+    borg create -v --stats \
+        $BORG_EXTRA_OPTS \
+        $BORG_LOCAL_EXTRA_OPTS \
+        "$BORG_LOCAL_REPO"::"$ARCHIVE_NAME" \
+        "${NODES_TO_BACK_UP[@]}" || err "local borg create failed with [$?]"
+
+    borg prune -v --list \
+        "$BORG_LOCAL_REPO" \
+        --prefix "$PREFIX_WITH_HOSTNAME" \
+        $BORG_PRUNE_OPTS || err "local borg prune failed with [$?]"
+}
+
+
+backup_remote() {
+    # duplicate to remote location: (http://borgbackup.readthedocs.io/en/latest/faq.html#can-i-copy-or-synchronize-my-repo-to-another-location)
+    borg create -v --stats \
+        $BORG_EXTRA_OPTS \
+        $BORG_REMOTE_EXTRA_OPTS \
+        "$REMOTE"::"$ARCHIVE_NAME" \
+        "${NODES_TO_BACK_UP[@]}" || err "remote borg create failed with [$?]"
+
+    borg prune -v --list \
+        "$REMOTE" \
+        --prefix "$PREFIX_WITH_HOSTNAME" \
+        $BORG_PRUNE_OPTS || err "remote borg prune failed with [$?]"
+}
+
+
 # backup selected data
+# note the borg processes are executed in a sub-shell, so local & remote backup could be
+# run in parallel
 do_backup() {
-    local start_time end_time
+    local started_pids
 
-    readonly start_time="$(date +%H:%M:%S)"
+    declare -a started_pids=()
 
-    echo "=> Backup started at [$start_time]"
+    log "=> Backup started"
 
     dump_db || fail "db dump failed with [$?]"
     expand_nodes_to_back_up
@@ -78,35 +111,19 @@ do_backup() {
     pushd -- "$TMP" || fail "unable to pushd into [$TMP]"  # cd there because files in $TMP are added without full path (to avoid "$TMP_ROOT" prefix in borg repo)
 
     if [[ "$REMOTE_ONLY" -ne 1 ]]; then
-        borg create -v --stats \
-            $BORG_EXTRA_OPTS \
-            $BORG_LOCAL_EXTRA_OPTS \
-            "$BORG_LOCAL_REPO"::"$ARCHIVE_NAME" \
-            "${NODES_TO_BACK_UP[@]}"
-
-        borg prune -v --list \
-            "$BORG_LOCAL_REPO" \
-            --prefix "$PREFIX_WITH_HOSTNAME" \
-            $BORG_PRUNE_OPTS
+        backup_local &
+        started_pids+=("$!")
     fi
 
     if [[ "$LOCAL_ONLY" -ne 1 ]]; then
-        # duplicate to remote location: (http://borgbackup.readthedocs.io/en/latest/faq.html#can-i-copy-or-synchronize-my-repo-to-another-location)
-        borg create -v --stats \
-            $BORG_EXTRA_OPTS \
-            $BORG_REMOTE_EXTRA_OPTS \
-            "$REMOTE"::"$ARCHIVE_NAME" \
-            "${NODES_TO_BACK_UP[@]}"
-
-        borg prune -v --list \
-            "$REMOTE" \
-            --prefix "$PREFIX_WITH_HOSTNAME" \
-            $BORG_PRUNE_OPTS
+        backup_remote &
+        started_pids+=("$!")
     fi
 
+    wait "${started_pids[@]}"
+
     popd &> /dev/null
-    readonly end_time="$(date +%H:%M:%S)"
-    echo "=> Backup finished at [$end_time]"
+    log "=> Backup finished"
 
     return 0
 }
@@ -184,7 +201,7 @@ cleanup() {
 # Entry
 # ================
 trap -- 'cleanup; exit' EXIT HUP INT QUIT PIPE TERM
-source /scripts_common.sh || { echo -e "failed to import /scripts_common.sh"; exit 1; }
+source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_common.sh" | tee "$LOG"; exit 1; }
 source /env_vars.sh || fail "failed to import /env_vars.sh"
 REMOTE_OR_LOCAL_OPT_COUNTER=0
 

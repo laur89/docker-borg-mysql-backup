@@ -2,9 +2,11 @@
 #
 # restores selected borg archive from either local or remote repo to $BACKUP_ROOT
 
+readonly SELF="${0##*/}"
+readonly LOG="/var/log/${SELF}.log"
 
 readonly usage="
-    usage: ${0##*/} [-h] [-d] [-c CONTAINERS] [-r] [-l]
+    usage: $SELF [-h] [-d] [-c CONTAINERS] [-r] [-l]
                    [-N BORG_LOCAL_REPO_NAME] -a ARCHIVE_NAME
 
     Restore data from borg archive
@@ -46,38 +48,37 @@ restore_db() {
     [[ "${#sql_files[@]}" -ne 1 ]] && fail "expected to find 1 .sql file in the root of [$RESTORE_DIR], but found ${#sql_files[@]}"
     confirm "restore db from mysql dump [${sql_files[*]}]?" || return
 
-    if mysql \
+    mysql \
             -h${MYSQL_HOST} \
             -P${MYSQL_PORT} \
             -u${MYSQL_USER} \
-            -p${MYSQL_PASS} < "${sql_files[@]}"; then
+            -p${MYSQL_PASS} < "${sql_files[@]}"
 
-        echo "   Restore succeeded"
-    else
-        echo "   Restore failed"
-    fi
+    return $?
 }
 
 
 do_restore() {
 
+    log "=> Restore started"
     pushd -- "$RESTORE_DIR" || fail "unable to pushd into [$RESTORE_DIR]"
 
     if [[ "$LOCAL_REPO" -eq 1 ]]; then
         borg extract -v --list \
             $BORG_EXTRA_OPTS \
             $BORG_LOCAL_EXTRA_OPTS \
-            "$BORG_LOCAL_REPO"::"$ARCHIVE_NAME" || fail "restoring [$BORG_LOCAL_REPO::$ARCHIVE_NAME] failed"
+            "$BORG_LOCAL_REPO"::"$ARCHIVE_NAME" || fail "restoring [$BORG_LOCAL_REPO::$ARCHIVE_NAME] failed with [$?]"
     elif [[ "$REMOTE_REPO" -eq 1 ]]; then
         borg extract -v --list \
             $BORG_EXTRA_OPTS \
             $BORG_REMOTE_EXTRA_OPTS \
-            "$REMOTE"::"$ARCHIVE_NAME" || fail "restoring [$REMOTE::$ARCHIVE_NAME] failed"
+            "$REMOTE"::"$ARCHIVE_NAME" || fail "restoring [$REMOTE::$ARCHIVE_NAME] failed with [$?]"
     fi
 
     popd &> /dev/null
     KEEP_DIR=1  # from this point onward, we should not delete $RESTORE_DIR on failure
-    restore_db
+    restore_db || fail "db restore failed"
+    log "=> Restore finished"
 }
 
 
@@ -113,7 +114,7 @@ create_dirs() {
 
 cleanup() {
     [[ "$KEEP_DIR" -ne 1 && -d "$RESTORE_DIR" ]] && rm -r -- "$RESTORE_DIR"
-    [[ -d "$RESTORE_DIR" ]] && echo -e "\n\n    -> restored files are in [$RESTORE_DIR]"
+    [[ -d "$RESTORE_DIR" ]] && log "\n\n    -> restored files are in [$RESTORE_DIR]"
 }
 
 
@@ -121,7 +122,7 @@ cleanup() {
 # Entry
 # ================
 trap -- 'cleanup; exit' EXIT HUP INT QUIT PIPE TERM
-source /scripts_common.sh || { echo -e "failed to import /scripts_common.sh"; exit 1; }
+source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_common.sh" | tee "$LOG"; exit 1; }
 source /env_vars.sh || fail "failed to import /env_vars.sh"
 REMOTE_OR_LOCAL_OPT_COUNTER=0
 

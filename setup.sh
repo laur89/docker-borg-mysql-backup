@@ -5,6 +5,9 @@
 # writes down env vars so they can be sourced by the scripts executed by cron.
 # also initialises cron & sets ssh key, if available.
 
+readonly SELF="${0##*/}"
+readonly LOG="/var/log/${SELF}.log"
+
 install_crontab() {
     local cron_dir
 
@@ -38,7 +41,7 @@ add_remote_to_known_hosts_if_missing() {
 }
 
 
-source /scripts_common.sh || { echo -e "failed to import /scripts_common.sh"; exit 1; }
+source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_common.sh" | tee "$LOG"; exit 1; }
 printenv | sed 's/^\(\w\+\)=\(.*\)$/export \1="\2"/g' > /env_vars.sh
 
 install_crontab
