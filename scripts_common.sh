@@ -6,7 +6,7 @@ readonly BACKUP_ROOT='/backup'
 readonly CRON_FILE='/config/crontab'
 readonly SSH_KEY='/config/id_rsa'
 readonly LOG_TIMESTAMP_FORMAT='+%Y-%m-%d %H:%M'
-readonly ID="id-$$"  # for logging
+JOB_ID="id-$$"  # default id for logging
 
 
 check_dependencies() {
@@ -76,7 +76,7 @@ fail() {
 log() {
     local msg
     readonly msg="$1"
-    echo -e "[$(date "$LOG_TIMESTAMP_FORMAT")] [$ID]\tINFO  $msg" | tee --append "$LOG"
+    echo -e "[$(date "$LOG_TIMESTAMP_FORMAT")] [$JOB_ID]\tINFO  $msg" | tee --append "$LOG"
     return 0
 }
 
@@ -85,6 +85,7 @@ err() {
     local msg
     readonly msg="$1"
     echo -e "\n\n    ERROR: $msg\n\n"
-    echo -e "[$(date "$LOG_TIMESTAMP_FORMAT")] [$ID]\t    ERROR  $msg" >> "$LOG"
+    echo -e "[$(date "$LOG_TIMESTAMP_FORMAT")] [$JOB_ID]\t    ERROR  $msg" >> "$LOG"
 }
 
+source /env_vars.sh || fail "failed to import /env_vars.sh"
