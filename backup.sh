@@ -192,6 +192,9 @@ create_dirs() {
 
 
 cleanup() {
+    # make sure stopped containers are started on failures:
+    start_or_stop_containers start "${CONTAINERS[@]}"
+
     [[ -d "$TMP" ]] && rm -rf -- "$TMP"
     [[ -d "$TMP_ROOT" ]] && is_dir_empty "$TMP_ROOT" && rm -rf -- "$TMP_ROOT"
 }
@@ -247,7 +250,6 @@ init_or_verify_borg
 
 start_or_stop_containers stop "${CONTAINERS[@]}"
 do_backup
-start_or_stop_containers start "${CONTAINERS[@]}"
 
 exit 0
 
