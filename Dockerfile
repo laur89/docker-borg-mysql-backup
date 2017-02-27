@@ -24,12 +24,12 @@ ADD backup.sh /usr/local/sbin/backup.sh
 ADD restore.sh /usr/local/sbin/restore.sh
 ADD list.sh /usr/local/sbin/list.sh
 
-# add to / for simpler reference point for cron:
+# link to / for simpler reference point for cron:
 RUN ln -s /usr/local/sbin/backup.sh /backup.sh
 
-# clean up for smaller image
+# clean up for smaller image:
 RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# baseimage init process
+# baseimage init process:
 ENTRYPOINT ["/sbin/my_init"]
 

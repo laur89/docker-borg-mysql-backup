@@ -54,14 +54,14 @@ Container incorporates `backup`, `restore` and `list` scripts.
 `backup` script is mostly intended to be ran by the cron, but can also be executed
 directly via docker for one off backup.
 
-    usage: backup [-h] [-d MYSQL_DBS] [-n NODES_TO_BACKUP] [-c CONTAINERS]
-                  [-r] [-l] [-P BORG_PRUNE_OPTS] [-N BORG_LOCAL_REPO_NAME] -p PREFIX
+    usage: backup [-h] [-d MYSQL_DBS] [-n NODES_TO_BACKUP] [-c CONTAINERS] [-r] [-l]
+                  [-P BORG_PRUNE_OPTS] [-N BORG_LOCAL_REPO_NAME] [-i JOB_ID] -p PREFIX
     
     Create new archive
     
     arguments:
       -h                      show help and exit
-      -d MYSQL_DBS            space separated database names to back up; __all__ to back up
+      -d MYSQL_DBS            space separated database names to back up; use __all__ to back up
                               all dbs on the server
       -n NODES_TO_BACKUP      space separated files/directories to back up (in addition to db dumps);
                               filenames may not contain spaces, as space is the separator
@@ -71,7 +71,8 @@ directly via docker for one off backup.
       -l                      only back to local borg repo (local-only)
       -P BORG_PRUNE_OPTS      overrides container env variable BORG_PRUNE_OPTS; only required when
                               container var is not defined;
-      -N BORG_LOCAL_REPO_NAME overrides container env variable BORG_LOCAL_REPO_NAME; optional;
+      -N BORG_LOCAL_REPO_NAME overrides container env variable BORG_LOCAL_REPO_NAME;
+      -i JOB_ID               descriptive id used for logging to differentiate between running jobs;
       -p PREFIX               borg archive name prefix. note that the full archive name already
                               contains hostname and timestamp.
 
