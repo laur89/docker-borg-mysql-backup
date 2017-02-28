@@ -15,7 +15,7 @@ install_crontab() {
 
     [[ -d "$cron_dir" ]] || fail "[$cron_dir] is not a dir; is cron installed?"
     rm -r "${cron_dir:?}/"* 2> /dev/null  # remove previous cron file(s)
-    [[ -f "$CRON_FILE" ]] && cp -- "$CRON_FILE" "$cron_dir/"
+    [[ -f "$CRON_FILE" ]] && ln -s -- "$CRON_FILE" "$cron_dir/"
 }
 
 

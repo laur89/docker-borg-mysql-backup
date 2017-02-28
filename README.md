@@ -150,8 +150,9 @@ Also there's no need to have ssh key in `/config`, as we're not connecting to a 
         -v /app3/on/host:/app3:ro \
            layr/borg-mysql-backup -- backup.sh -r -n /app3 -p my_prefix
 
-Note there's no need to have a crontab file in `/config`, as container only lives until
-the `backup` command returns.
+Note there's no need to have a crontab file in `/config`, as we're executing this
+command just once, after which container exits and is removed (ie we're not using
+scheduled backups).
 
 ### restore
 
@@ -208,8 +209,8 @@ db won't be automatically restored with the included .sql dumpfile (if there was
         -v /tmp:/backup \
            layr/borg-mysql-backup -- restore.sh -l -N otherrepo -a my_prefix-HOSTNAME-2017-02-27-160159
 
-Data will be restored from non-default local borg repo `otherrepo`. Also note missing `BORG_PASSPHRASE`,
-which is required to be typed in manually.
+Data will be restored from non-default local borg repo `otherrepo`. Also note missing
+env variable `BORG_PASSPHRASE`, which will be required to be typed in manually.
 
 ### list
 

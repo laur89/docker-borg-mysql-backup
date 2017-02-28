@@ -200,7 +200,7 @@ create_dirs() {
 
 
 cleanup() {
-    # make sure stopped containers are started on failures:
+    # make sure stopped containers are started on exit:
     start_or_stop_containers start "${CONTAINERS[@]}"
 
     [[ -d "$TMP" ]] && rm -rf -- "$TMP"
