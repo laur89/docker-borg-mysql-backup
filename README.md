@@ -21,6 +21,8 @@ root permissions on the host).
 Avoid using the `latest` version of this image, as you'd want to be tied to a certain
 version of borg - different borg versions can be non-compatible.
 
+Every time ssh key or crontab are changed in `/config`, container needs to be restarted.
+
 
 ## Container Parameters
 
