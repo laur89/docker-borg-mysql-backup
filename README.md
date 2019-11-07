@@ -249,3 +249,6 @@ env variable `BORG_PASSPHRASE`, which will be required to be typed in manually.
 Note the `BORG_EXTRA_OPTS`, `BORG_LOCAL_EXTRA_OPTS`, `BORG_REMOTE_EXTRA_OPTS` env
 variables are still usable with `list`.
 
+## TODO
+- see also [restic](https://github.com/restic/restic) and
+  [duplicacy](https://github.com/gilbertchen/duplicacy) - alternatives to borg.
