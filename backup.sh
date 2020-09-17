@@ -22,11 +22,11 @@ readonly usage="
       -r                      only back to remote borg repo (remote-only)
       -l                      only back to local borg repo (local-only)
       -P BORG_PRUNE_OPTS      overrides container env variable BORG_PRUNE_OPTS; only required when
-                              container var is not defined;
+                              container var is not defined or needs to be overridden;
       -N BORG_LOCAL_REPO_NAME overrides container env variable BORG_LOCAL_REPO_NAME;
       -i JOB_ID               descriptive id used for logging to differentiate between running jobs;
       -p PREFIX               borg archive name prefix. note that the full archive name already
-                              contains hostname and timestamp.
+                              contains hostname and timestamp. defaults to JOB_ID when defined.
 "
 
 # expands the $NODES_TO_BACK_UP with files in $TMP/, if there are any
@@ -236,6 +236,7 @@ while getopts "d:n:p:c:rlP:N:i:h" opt; do
         N) BORG_LOCAL_REPO_NAME="$OPTARG"  # overrides env var of same name
             ;;
         i) JOB_ID="${OPTARG}-$$"
+           JOB_ID_DEF="$OPTARG"
             ;;
         h) echo -e "$usage"
            exit 0
@@ -248,6 +249,7 @@ done
 readonly TMP_ROOT="$BACKUP_ROOT/.tmp"
 readonly TMP="$TMP_ROOT/$RANDOM"
 
+[[ -z "$ARCHIVE_PREFIX" && -n "$JOB_ID_DEF" ]] && ARCHIVE_PREFIX="$JOB_ID_DEF"
 readonly PREFIX_WITH_HOSTNAME="${ARCHIVE_PREFIX}-${HOST_HOSTNAME:-$HOSTNAME}-"  # used for pruning
 readonly ARCHIVE_NAME="$PREFIX_WITH_HOSTNAME"'{now:%Y-%m-%d-%H%M%S}'
 readonly BORG_LOCAL_REPO="$BACKUP_ROOT/${BORG_LOCAL_REPO_NAME:-repo}"

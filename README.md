@@ -72,11 +72,11 @@ directly via docker for one off backup.
       -r                      only back to remote borg repo (remote-only)
       -l                      only back to local borg repo (local-only)
       -P BORG_PRUNE_OPTS      overrides container env variable BORG_PRUNE_OPTS; only required when
-                              container var is not defined;
+                              container var is not defined or needs to be overridden;
       -N BORG_LOCAL_REPO_NAME overrides container env variable BORG_LOCAL_REPO_NAME;
       -i JOB_ID               descriptive id used for logging to differentiate between running jobs;
       -p PREFIX               borg archive name prefix. note that the full archive name already
-                              contains hostname and timestamp.
+                              contains hostname and timestamp. defaults to JOB_ID when defined.
 
 #### Usage examples
 
