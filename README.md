@@ -253,3 +253,5 @@ variables are still usable with `list`.
 - see also [restic](https://github.com/restic/restic) and
   [duplicacy](https://github.com/gilbertchen/duplicacy) - alternatives to borg.
 - see also [docker-db-backup](https://github.com/tiredofit/docker-db-backup)
+- see [this blog](https://ifnull.org/articles/borgbackup_rsyncnet/) for borg setup
+- main hosings: rsync.net & BorgBase
