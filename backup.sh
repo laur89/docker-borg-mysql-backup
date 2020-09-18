@@ -7,7 +7,7 @@ readonly LOG="/var/log/${SELF}.log"
 
 readonly usage="
     usage: $SELF [-h] [-d MYSQL_DBS] [-n NODES_TO_BACKUP] [-c CONTAINERS] [-r] [-l]
-                  [-P BORG_PRUNE_OPTS] [-N BORG_LOCAL_REPO_NAME] -p PREFIX
+                  [-P BORG_PRUNE_OPTS] [-B BORG_EXTRA_OPTS] [-N BORG_LOCAL_REPO_NAME] -p PREFIX
 
     Create new archive
 
@@ -23,6 +23,8 @@ readonly usage="
       -l                      only back to local borg repo (local-only)
       -P BORG_PRUNE_OPTS      overrides container env variable BORG_PRUNE_OPTS; only required when
                               container var is not defined or needs to be overridden;
+      -B BORG_EXTRA_OPTS      additional borg params; note it doesn't overwrite
+                              the BORG_EXTRA_OPTS env var, but extends it;
       -N BORG_LOCAL_REPO_NAME overrides container env variable BORG_LOCAL_REPO_NAME;
       -p PREFIX               borg archive name prefix. note that the full archive name already
                               contains hostname and timestamp.
@@ -217,7 +219,7 @@ trap -- 'cleanup; exit' EXIT HUP INT QUIT PIPE TERM
 source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_common.sh" | tee "$LOG"; exit 1; }
 REMOTE_OR_LOCAL_OPT_COUNTER=0
 
-while getopts "d:n:p:c:rlP:N:h" opt; do
+while getopts "d:n:p:c:rlP:B:N:h" opt; do
     case "$opt" in
         d) MYSQL_DB="$OPTARG"
             ;;
@@ -235,6 +237,8 @@ while getopts "d:n:p:c:rlP:N:h" opt; do
            let REMOTE_OR_LOCAL_OPT_COUNTER+=1
             ;;
         P) BORG_PRUNE_OPTS="$OPTARG"  # overrides env var of same name
+            ;;
+        B) BORG_EXTRA_OPTS+=" $OPTARG"  # _extends_ env var of same name
             ;;
         N) BORG_LOCAL_REPO_NAME="$OPTARG"  # overrides env var of same name
             ;;
