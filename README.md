@@ -42,6 +42,8 @@ Every time ssh key or crontab are changed in `/config`, container needs to be re
     BORG_EXTRA_OPTS         additional borg params (for both local & remote borg commands); optional
     BORG_LOCAL_EXTRA_OPTS   additional borg params for local borg command; optional
     BORG_REMOTE_EXTRA_OPTS  additional borg params for remote borg command; optional
+    BORG_REMOTE_PATH        remote borg executable path; eg with rsync.net
+                            you'll likely want to use value 'borg1'
     BORG_PASSPHRASE         borg repo password
     BORG_PRUNE_OPTS         options for borg prune (both local and remote); not required when
                             restoring or if it's defined by backup script -P param
