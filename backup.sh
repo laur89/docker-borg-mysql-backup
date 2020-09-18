@@ -7,7 +7,7 @@ readonly LOG="/var/log/${SELF}.log"
 
 readonly usage="
     usage: $SELF [-h] [-d MYSQL_DBS] [-n NODES_TO_BACKUP] [-c CONTAINERS] [-r] [-l]
-                  [-P BORG_PRUNE_OPTS] [-N BORG_LOCAL_REPO_NAME] [-i JOB_ID] -p PREFIX
+                  [-P BORG_PRUNE_OPTS] [-N BORG_LOCAL_REPO_NAME] -p PREFIX
 
     Create new archive
 
@@ -24,18 +24,19 @@ readonly usage="
       -P BORG_PRUNE_OPTS      overrides container env variable BORG_PRUNE_OPTS; only required when
                               container var is not defined or needs to be overridden;
       -N BORG_LOCAL_REPO_NAME overrides container env variable BORG_LOCAL_REPO_NAME;
-      -i JOB_ID               descriptive id used for logging to differentiate between running jobs;
       -p PREFIX               borg archive name prefix. note that the full archive name already
-                              contains hostname and timestamp. defaults to JOB_ID when defined.
+                              contains hostname and timestamp.
 "
 
 # expands the $NODES_TO_BACK_UP with files in $TMP/, if there are any
 expand_nodes_to_back_up() {
-    if ! is_dir_empty "$TMP"; then
-        for i in "$TMP/"*; do
-            NODES_TO_BACK_UP+=("$(basename -- "$i")")  # note relative path; we don't want borg archive to contain "$TMP_ROOT" path
-        done
-    fi
+    local i
+
+    is_dir_empty "$TMP" && return 0
+
+    for i in "$TMP/"*; do
+        NODES_TO_BACK_UP+=("$(basename -- "$i")")  # note relative path; we don't want borg archive to contain "$TMP_ROOT" path
+    done
 }
 
 
@@ -216,13 +217,14 @@ trap -- 'cleanup; exit' EXIT HUP INT QUIT PIPE TERM
 source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_common.sh" | tee "$LOG"; exit 1; }
 REMOTE_OR_LOCAL_OPT_COUNTER=0
 
-while getopts "d:n:p:c:rlP:N:i:h" opt; do
+while getopts "d:n:p:c:rlP:N:h" opt; do
     case "$opt" in
         d) MYSQL_DB="$OPTARG"
             ;;
         n) NODES_TO_BACK_UP+=($OPTARG)
             ;;
         p) ARCHIVE_PREFIX="$OPTARG"
+           JOB_ID="${OPTARG}-$$"
             ;;
         c) declare -ar CONTAINERS=($OPTARG)
             ;;
@@ -236,9 +238,6 @@ while getopts "d:n:p:c:rlP:N:i:h" opt; do
             ;;
         N) BORG_LOCAL_REPO_NAME="$OPTARG"  # overrides env var of same name
             ;;
-        i) JOB_ID="${OPTARG}-$$"
-           JOB_ID_DEF="$OPTARG"
-            ;;
         h) echo -e "$usage"
            exit 0
             ;;
@@ -250,7 +249,6 @@ done
 readonly TMP_ROOT="$BACKUP_ROOT/.tmp"
 readonly TMP="$TMP_ROOT/$RANDOM"
 
-[[ -z "$ARCHIVE_PREFIX" && -n "$JOB_ID_DEF" ]] && ARCHIVE_PREFIX="$JOB_ID_DEF"
 readonly PREFIX_WITH_HOSTNAME="${ARCHIVE_PREFIX}-${HOST_HOSTNAME:-$HOSTNAME}-"  # used for pruning
 readonly ARCHIVE_NAME="$PREFIX_WITH_HOSTNAME"'{now:%Y-%m-%d-%H%M%S}'
 readonly BORG_LOCAL_REPO="$BACKUP_ROOT/${BORG_LOCAL_REPO_NAME:-repo}"

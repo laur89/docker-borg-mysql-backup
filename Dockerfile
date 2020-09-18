@@ -9,7 +9,7 @@ RUN apt-get install -y --no-install-recommends \
         wget
 RUN update-locale LANG=C.UTF-8
 
-RUN wget -q https://github.com/borgbackup/borg/releases/download/1.0.10/borg-linux64
+RUN wget -q https://github.com/borgbackup/borg/releases/download/1.1.13/borg-linux64
 RUN mv borg-linux64 /usr/local/sbin/borg
 RUN chown root:root /usr/local/sbin/borg
 RUN chmod 755 /usr/local/sbin/borg
