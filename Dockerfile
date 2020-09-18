@@ -1,4 +1,4 @@
-FROM        phusion/baseimage
+FROM phusion/baseimage:master-amd64
 MAINTAINER Laur
 
 ENV DEBIAN_FRONTEND=noninteractive
