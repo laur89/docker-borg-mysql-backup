@@ -34,8 +34,7 @@ Every time ssh key or crontab are changed in `/config`, container needs to be re
       mysql env variables are only required if you intend to back up databases
 
 
-    HOST_HOSTNAME           hostname to include in the borg archive name;
-                            defaults to container's hostname (which is not really descriptive)
+    HOST_HOSTNAME           hostname to include in the borg archive name; mandatory;
     REMOTE                  remote connection, including repository, eg remoteuser@remoteserver.com:/backup/location
                             optional - can be omitted when only backing up to local borg repo.
     BORG_LOCAL_REPO_NAME    local borg repo name; optional, defaults to 'repo'

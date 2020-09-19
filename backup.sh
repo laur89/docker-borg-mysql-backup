@@ -168,6 +168,7 @@ validate_config() {
         ARCHIVE_PREFIX
         BORG_PASSPHRASE
         BORG_PRUNE_OPTS
+        HOST_HOSTNAME
     )
     [[ -n "$MYSQL_DB" ]] && vars+=(
             MYSQL_HOST
@@ -245,25 +246,33 @@ while getopts "d:n:p:c:rlP:B:N:h" opt; do
         h) echo -e "$usage"
            exit 0
             ;;
-        *) exit 1
+        *) fail "backup.sh called with unsupported flag(s)"
             ;;
     esac
 done
 
-readonly TMP_ROOT="$BACKUP_ROOT/.tmp"
-readonly TMP="$TMP_ROOT/$RANDOM"
+readonly TMP_ROOT="$BACKUP_ROOT/.backup.tmp"
+readonly TMP="$TMP_ROOT/${ARCHIVE_PREFIX}-$RANDOM"
 
-readonly PREFIX_WITH_HOSTNAME="${ARCHIVE_PREFIX}-${HOST_HOSTNAME:-$HOSTNAME}-"  # used for pruning
+readonly PREFIX_WITH_HOSTNAME="${ARCHIVE_PREFIX}-${HOST_HOSTNAME}-"  # used for pruning
 readonly ARCHIVE_NAME="$PREFIX_WITH_HOSTNAME"'{now:%Y-%m-%d-%H%M%S}'
 readonly BORG_LOCAL_REPO="$BACKUP_ROOT/${BORG_LOCAL_REPO_NAME:-repo}"
 
-validate_config
-check_dependencies
-create_dirs
-init_or_verify_borg
+readonly LOCK="$BACKUP_ROOT/.borg-${ARCHIVE_PREFIX}-lock"  # make sure lockfile lives outside of container
 
-start_or_stop_containers stop "${CONTAINERS[@]}"
-do_backup
+(
+    flock -n 9 || fail "lock [$LOCK] already held"
+
+    validate_config
+    check_dependencies
+    create_dirs
+    init_or_verify_borg
+
+    start_or_stop_containers stop "${CONTAINERS[@]}"
+    do_backup
+
+    exit 0
+) 9>"$LOCK"
 
 exit 0
 
