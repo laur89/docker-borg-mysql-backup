@@ -58,6 +58,7 @@ dump_db() {
 
     mysqldump \
             --add-drop-database \
+            --column-statistics=0 \
             --max-allowed-packet=512M \
             -h${MYSQL_HOST} \
             -P${MYSQL_PORT} \
