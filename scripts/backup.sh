@@ -265,7 +265,7 @@ readonly TMP="$TMP_ROOT/${ARCHIVE_PREFIX}-$RANDOM"
 
 readonly PREFIX_WITH_HOSTNAME="${ARCHIVE_PREFIX}-${HOST_HOSTNAME}-"  # used for pruning
 readonly ARCHIVE_NAME="$PREFIX_WITH_HOSTNAME"'{now:%Y-%m-%d-%H%M%S}'
-readonly BORG_LOCAL_REPO="$BACKUP_ROOT/${BORG_LOCAL_REPO_NAME:-repo}"
+readonly BORG_LOCAL_REPO="$BACKUP_ROOT/${BORG_LOCAL_REPO_NAME:-$DEFAULT_LOCAL_REPO_NAME}"
 
 readonly LOCK="$BACKUP_ROOT/.borg-${ARCHIVE_PREFIX}-lock"  # make sure lockfile lives outside of container
 

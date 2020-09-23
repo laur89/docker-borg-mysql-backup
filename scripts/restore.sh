@@ -150,7 +150,9 @@ while getopts "dc:rlN:a:h" opt; do
 done
 
 readonly RESTORE_DIR="$BACKUP_ROOT/restored-${ARCHIVE_NAME}"  # dir where selected borg archive will be restored into
-readonly BORG_LOCAL_REPO="$BACKUP_ROOT/${BORG_LOCAL_REPO_NAME:-repo}"
+readonly BORG_LOCAL_REPO="$BACKUP_ROOT/${BORG_LOCAL_REPO_NAME:-$DEFAULT_LOCAL_REPO_NAME}"
+
+[[ -e "$RESTORE_DIR" ]] && fail "[$RESTORE_DIR] already exists, abort"
 
 validate_config
 create_dirs

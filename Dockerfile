@@ -11,10 +11,9 @@ RUN apt-get update && \
         mysql-client \
         wget && \
     update-locale LANG=C.UTF-8 && \
-    wget -q https://github.com/borgbackup/borg/releases/download/1.1.13/borg-linux64 && \
-    mv borg-linux64 /usr/local/sbin/borg && \
-    chown root:root /usr/local/sbin/borg && \
-    chmod 755 /usr/local/sbin/borg && \
+    wget -q -O /usr/local/sbin/borg https://github.com/borgbackup/borg/releases/download/1.1.13/borg-linux64 && \
+    chown -R root:root /usr/local/sbin/ && \
+    chmod -R 755 /usr/local/sbin/ && \
     wget -qO- https://get.docker.com/ | sh && \
     ln -s /usr/local/sbin/backup.sh /backup.sh && \
     ln -s /usr/local/sbin/scripts_common.sh /scripts_common.sh && \

@@ -6,6 +6,7 @@ readonly BACKUP_ROOT='/backup'
 readonly CRON_FILE='/config/crontab'
 readonly SSH_KEY='/config/id_rsa'
 readonly LOG_TIMESTAMP_FORMAT='+%Y-%m-%d %H:%M'
+readonly DEFAULT_LOCAL_REPO_NAME=repo
 JOB_ID="id-$$"  # default id for logging
 
 
