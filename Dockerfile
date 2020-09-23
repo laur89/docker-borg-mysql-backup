@@ -2,7 +2,9 @@ FROM phusion/baseimage:master-amd64
 MAINTAINER Laur
 
 # check docker versions from https://download.docker.com/linux/static/stable/x86_64/
-# docker-cli installation outside of packages: https://stackoverflow.com/a/43594065/1803648
+
+ENV DOCKER_VERSION=18.06.3-ce
+ENV BORG_VERSION=1.1.13
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -17,10 +19,12 @@ ADD scripts/* /usr/local/sbin/
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         mysql-client \
-        wget \
-        docker-ce-cli && \
+        tar \
+        curl && \
     update-locale LANG=C.UTF-8 && \
-    wget -q -O /usr/local/sbin/borg https://github.com/borgbackup/borg/releases/download/1.1.13/borg-linux64 && \
+    curl -fsSL -o /usr/local/sbin/borg https://github.com/borgbackup/borg/releases/download/${BORG_VERSION}/borg-linux64 && \
+    curl -fsSL -o /tmp/docker.tgz https://download.docker.com/linux/static/stable/x86_64/docker-${DOCKER_VERSION}.tgz && \
+        tar xzvf /tmp/docker.tgz --strip 1 -C /usr/local/sbin docker/docker && \
     chown -R root:root /usr/local/sbin/ && \
     chmod -R 755 /usr/local/sbin/ && \
     ln -s /usr/local/sbin/backup.sh /backup.sh && \
