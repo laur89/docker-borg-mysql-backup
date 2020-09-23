@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # restores selected borg archive from either local or remote repo to $BACKUP_ROOT
 

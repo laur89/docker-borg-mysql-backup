@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # backs up mysql dump and/or other data to local and/or remote borg repository
 

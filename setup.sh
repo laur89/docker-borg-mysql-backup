@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # this file is to be placed in /etc/my_init.d/
 #
@@ -43,7 +43,6 @@ install_ssh_key() {
 }
 
 
-printenv | sed 's/^\(\w\+\)=\(.*\)$/export \1="\2"/g' > /env_vars.sh
 source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_common.sh" | tee "$LOG"; exit 1; }
 
 install_crontab
