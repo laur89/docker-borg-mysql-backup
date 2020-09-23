@@ -67,7 +67,7 @@ directly via docker for one off backup.
       -d MYSQL_DBS            space separated database names to back up; use __all__ to back up
                               all dbs on the server
       -n NODES_TO_BACKUP      space separated files/directories to back up (in addition to db dumps);
-                              filenames may not contain spaces, as space is the separator
+                              path may not contain spaces, as space is the separator
       -c CONTAINERS           space separated container names to stop for the backup process;
                               requires mounting the docker socket (-v /var/run/docker.sock:/var/run/docker.sock)
       -r                      only back to remote borg repo (remote-only)

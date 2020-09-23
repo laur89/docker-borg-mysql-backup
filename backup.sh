@@ -16,7 +16,7 @@ readonly usage="
       -d MYSQL_DBS            space separated database names to back up; use __all__ to back up
                               all dbs on the server
       -n NODES_TO_BACKUP      space separated files/directories to back up (in addition to db dumps);
-                              filenames may not contain spaces, as space is the separator
+                              path may not contain spaces, as space is the separator
       -c CONTAINERS           space separated container names to stop for the backup process;
                               requires mounting the docker socket (-v /var/run/docker.sock:/var/run/docker.sock)
       -r                      only back to remote borg repo (remote-only)
@@ -60,10 +60,10 @@ dump_db() {
             --add-drop-database \
             --column-statistics=0 \
             --max-allowed-packet=512M \
-            -h${MYSQL_HOST} \
-            -P${MYSQL_PORT} \
-            -u${MYSQL_USER} \
-            -p${MYSQL_PASS} \
+            "-h${MYSQL_HOST}" \
+            "-P${MYSQL_PORT}" \
+            "-u${MYSQL_USER}" \
+            "-p${MYSQL_PASS}" \
             ${MYSQL_EXTRA_OPTS} \
             ${MYSQL_DB} > "$TMP/${output_filename}.sql"
 
@@ -75,7 +75,7 @@ backup_local() {
     borg create -v --stats \
         $BORG_EXTRA_OPTS \
         $BORG_LOCAL_EXTRA_OPTS \
-        "$BORG_LOCAL_REPO"::"$ARCHIVE_NAME" \
+        "${BORG_LOCAL_REPO}::${ARCHIVE_NAME}" \
         "${NODES_TO_BACK_UP[@]}" || err "local borg create failed with [$?]"
 
     borg prune -v --list \
@@ -90,7 +90,7 @@ backup_remote() {
     borg create -v --stats \
         $BORG_EXTRA_OPTS \
         $BORG_REMOTE_EXTRA_OPTS \
-        "$REMOTE"::"$ARCHIVE_NAME" \
+        "${REMOTE}::${ARCHIVE_NAME}" \
         "${NODES_TO_BACK_UP[@]}" || err "remote borg create failed with [$?]"
 
     borg prune -v --list \
@@ -247,7 +247,7 @@ while getopts "d:n:p:c:rlP:B:N:h" opt; do
         h) echo -e "$usage"
            exit 0
             ;;
-        *) fail "backup.sh called with unsupported flag(s)"
+        *) fail "$SELF called with unsupported flag(s)"
             ;;
     esac
 done

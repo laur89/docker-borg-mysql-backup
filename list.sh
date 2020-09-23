@@ -71,7 +71,7 @@ while getopts "rlNh" opt; do
         h) echo -e "$usage"
            exit 0
             ;;
-        *) exit 1
+        *) fail "$SELF called with unsupported flag(s)"
             ;;
     esac
 done
