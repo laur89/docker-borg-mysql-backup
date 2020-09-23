@@ -7,7 +7,7 @@ readonly LOG="/var/log/${SELF}.log"
 
 readonly usage="
     usage: $SELF [-h] [-d MYSQL_DBS] [-n NODES_TO_BACKUP] [-c CONTAINERS] [-r] [-l]
-                  [-P BORG_PRUNE_OPTS] [-B BORG_EXTRA_OPTS] [-N BORG_LOCAL_REPO_NAME] -p PREFIX
+                  [-P BORG_PRUNE_OPTS] [-B|-Z BORG_EXTRA_OPTS] [-N BORG_LOCAL_REPO_NAME] -p PREFIX
 
     Create new archive
 
@@ -25,6 +25,8 @@ readonly usage="
                               container var is not defined or needs to be overridden;
       -B BORG_EXTRA_OPTS      additional borg params; note it doesn't overwrite
                               the BORG_EXTRA_OPTS env var, but extends it;
+      -Z BORG_EXTRA_OPTS      additional borg params; note it _overrides_
+                              the BORG_EXTRA_OPTS env var;
       -N BORG_LOCAL_REPO_NAME overrides container env variable BORG_LOCAL_REPO_NAME;
       -p PREFIX               borg archive name prefix. note that the full archive name already
                               contains hostname and timestamp.
@@ -191,6 +193,7 @@ validate_config() {
     fi
 
     [[ "$REMOTE_OR_LOCAL_OPT_COUNTER" -gt 1 ]] && fail "-r & -l options are exclusive"
+    [[ "$BORG_OTPS_COUNTER" -gt 1 ]] && fail "-B & -Z options are exclusive"
     [[ "$REMOTE_ONLY" -ne 1 && ! -d "$BACKUP_ROOT" ]] && fail "[$BACKUP_ROOT] is not mounted"
     [[ "$BORG_LOCAL_REPO_NAME" == /* ]] && fail "BORG_LOCAL_REPO_NAME should not start with a slash"
 
@@ -220,8 +223,9 @@ cleanup() {
 trap -- 'cleanup; exit' EXIT HUP INT QUIT PIPE TERM
 source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_common.sh" | tee "$LOG"; exit 1; }
 REMOTE_OR_LOCAL_OPT_COUNTER=0
+BORG_OTPS_COUNTER=0
 
-while getopts "d:n:p:c:rlP:B:N:h" opt; do
+while getopts "d:n:p:c:rlP:B:Z:N:h" opt; do
     case "$opt" in
         d) MYSQL_DB="$OPTARG"
             ;;
@@ -241,6 +245,10 @@ while getopts "d:n:p:c:rlP:B:N:h" opt; do
         P) BORG_PRUNE_OPTS="$OPTARG"  # overrides env var of same name
             ;;
         B) BORG_EXTRA_OPTS+=" $OPTARG"  # _extends_ env var of same name
+           let BORG_OTPS_COUNTER+=1
+            ;;
+        Z) BORG_EXTRA_OPTS="$OPTARG"  # overrides env var of same name
+           let BORG_OTPS_COUNTER+=1
             ;;
         N) BORG_LOCAL_REPO_NAME="$OPTARG"  # overrides env var of same name
             ;;
@@ -265,7 +273,6 @@ readonly LOCK="$BACKUP_ROOT/.borg-${ARCHIVE_PREFIX}-lock"  # make sure lockfile 
     flock -n 9 || fail "lock [$LOCK] already held"
 
     validate_config
-    check_dependencies
     create_dirs
     init_or_verify_borg
 

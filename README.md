@@ -58,7 +58,7 @@ Container incorporates `backup`, `restore` and `list` scripts.
 directly via docker for one off backup.
 
     usage: backup [-h] [-d MYSQL_DBS] [-n NODES_TO_BACKUP] [-c CONTAINERS] [-r] [-l]
-                  [-P BORG_PRUNE_OPTS] [-B BORG_EXTRA_OPTS] [-N BORG_LOCAL_REPO_NAME] -p PREFIX
+                  [-P BORG_PRUNE_OPTS] [-B|-Z BORG_EXTRA_OPTS] [-N BORG_LOCAL_REPO_NAME] -p PREFIX
     
     Create new archive
     
@@ -76,6 +76,8 @@ directly via docker for one off backup.
                               container var is not defined or needs to be overridden;
       -B BORG_EXTRA_OPTS      additional borg params; note it doesn't overwrite
                               the BORG_EXTRA_OPTS env var, but extends it;
+      -Z BORG_EXTRA_OPTS      additional borg params; note it _overrides_
+                              the BORG_EXTRA_OPTS env var;
       -N BORG_LOCAL_REPO_NAME overrides container env variable BORG_LOCAL_REPO_NAME;
       -p PREFIX               borg archive name prefix. note that the full archive name already
                               contains hostname and timestamp.

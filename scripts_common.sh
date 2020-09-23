@@ -89,3 +89,4 @@ err() {
 }
 
 source /env_vars.sh || fail "failed to import /env_vars.sh"
+check_dependencies

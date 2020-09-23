@@ -153,7 +153,6 @@ readonly RESTORE_DIR="$BACKUP_ROOT/restored-${ARCHIVE_NAME}"  # dir where select
 readonly BORG_LOCAL_REPO="$BACKUP_ROOT/${BORG_LOCAL_REPO_NAME:-repo}"
 
 validate_config
-check_dependencies
 create_dirs
 verify_borg
 
