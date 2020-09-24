@@ -5,7 +5,12 @@
 # TODO: remove these 3 lines:
 echo "    number of args: [$#]"
 echo "    args: [$*]"
-exit 0
+#exit 0
 
-# start cron
-/usr/sbin/crond -f -l 8 -L /dev/stdout -c /var/spool/cron/crontabs
+if [ $# -ne 0 ]; then
+    [ "$1" = '--' ] && shift
+    "$@"
+else
+    # start cron
+    /usr/sbin/crond -f -l 8 -L /dev/stdout -c /var/spool/cron/crontabs
+fi
