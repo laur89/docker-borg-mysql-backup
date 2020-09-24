@@ -89,7 +89,5 @@ err() {
     echo -e "[$(date "$LOG_TIMESTAMP_FORMAT")] [$JOB_ID]\t    ERROR  $msg" >> "$LOG"
 }
 
-# source phusion-provided env vars:
-source /etc/container_environment.sh || fail "failed to import /etc/container_environment.sh"
-
+source /env_vars.sh || fail "failed to import /env_vars.sh"
 check_dependencies

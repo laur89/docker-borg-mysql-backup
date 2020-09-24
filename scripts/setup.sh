@@ -11,10 +11,10 @@ readonly LOG="/var/log/${SELF}.log"
 install_crontab() {
     local cron_dir
 
-    readonly cron_dir='/etc/cron.d'
+    readonly cron_dir='/var/spool/cron/crontabs'
 
     [[ -d "$cron_dir" ]] || fail "[$cron_dir] is not a dir; is cron installed?"
-    rm -r "${cron_dir:?}/"* 2> /dev/null  # remove previous cron file(s)
+    #rm -r "${cron_dir:?}/"* 2> /dev/null  # remove previous cron file(s)
     [[ -f "$CRON_FILE" ]] && cp -- "$CRON_FILE" "$cron_dir/"
 }
 
@@ -38,11 +38,13 @@ install_ssh_key() {
     [[ -d ~/.ssh ]] || fail "[~/.ssh] is not a dir; is ssh client installed?"
     [[ -f "$SSH_KEY" ]] && cp -- "$SSH_KEY" "$ssh_key_target"
     [[ -n "$REMOTE" ]] && _add_remote_to_known_hosts_if_missing
+
     # sanitize .ssh perms:
     chmod -R u=rwX,g=,o= -- ~/.ssh
 }
 
 
+printenv | sed 's/^\(\w\+\)=\(.*\)$/export \1="\2"/g' > /env_vars.sh || { echo -e "    ERROR: printenv failed" | tee "$LOG"; exit 1; }
 source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_common.sh" | tee "$LOG"; exit 1; }
 
 install_crontab
