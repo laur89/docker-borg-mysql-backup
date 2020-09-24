@@ -48,6 +48,6 @@ printenv | sed 's/^\(\w\+\)=\(.*\)$/export \1="\2"/g' > /env_vars.sh || { echo -
 source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_common.sh" | tee "$LOG"; exit 1; }
 
 install_crontab
-#install_ssh_key
+install_ssh_key
 
 exit 0

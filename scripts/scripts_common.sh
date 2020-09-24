@@ -13,8 +13,7 @@ JOB_ID="id-$$"  # default id for logging
 check_dependencies() {
     local i
 
-    #for i in docker mysql mysqldump borg ssh-keygen ssh-keyscan flock; do
-    for i in docker mysql mysqldump borg flock; do
+    for i in docker mysql mysqldump borg ssh-keygen ssh-keyscan flock; do
         command -v "$i" >/dev/null || fail "[$i] not installed"
     done
 }
