@@ -77,7 +77,7 @@ fail() {
 log() {
     local msg
     readonly msg="$1"
-    echo -e "[$(date "$LOG_TIMESTAMP_FORMAT")] [$JOB_ID]\tINFO  $msg" | tee --append "$LOG"
+    echo -e "[$(date "$LOG_TIMESTAMP_FORMAT")] [$JOB_ID]\tINFO  $msg" | tee -a "$LOG"
     return 0
 }
 
@@ -86,7 +86,7 @@ err() {
     local msg
     readonly msg="$1"
     echo -e "\n\n    ERROR: $msg\n\n"
-    echo -e "[$(date "$LOG_TIMESTAMP_FORMAT")] [$JOB_ID]\t    ERROR  $msg" >> "$LOG"
+    echo -e "[$(date "$LOG_TIMESTAMP_FORMAT")] [$JOB_ID]\t    ERROR  $msg" | tee -a "$LOG"
 }
 
 source /env_vars.sh || fail "failed to import /env_vars.sh"

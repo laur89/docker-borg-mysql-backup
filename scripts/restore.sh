@@ -122,7 +122,7 @@ cleanup() {
 # Entry
 # ================
 trap -- 'cleanup; exit' EXIT HUP INT QUIT PIPE TERM
-source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_common.sh" | tee "$LOG"; exit 1; }
+source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_common.sh" | tee -a "$LOG"; exit 1; }
 REMOTE_OR_LOCAL_OPT_COUNTER=0
 
 while getopts "dc:rlN:a:h" opt; do
