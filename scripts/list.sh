@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # lists contents of local or remote archive
 
@@ -71,12 +71,12 @@ while getopts "rlNh" opt; do
         h) echo -e "$usage"
            exit 0
             ;;
-        *) exit 1
+        *) fail "$SELF called with unsupported flag(s)"
             ;;
     esac
 done
 
-readonly BORG_LOCAL_REPO="$BACKUP_ROOT/${BORG_LOCAL_REPO_NAME:-repo}"
+readonly BORG_LOCAL_REPO="$BACKUP_ROOT/${BORG_LOCAL_REPO_NAME:-$DEFAULT_LOCAL_REPO_NAME}"
 
 validate_config
 list_repos

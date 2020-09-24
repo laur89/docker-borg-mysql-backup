@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # backs up mysql dump and/or other data to local and/or remote borg repository
 
@@ -7,7 +7,7 @@ readonly LOG="/var/log/${SELF}.log"
 
 readonly usage="
     usage: $SELF [-h] [-d MYSQL_DBS] [-n NODES_TO_BACKUP] [-c CONTAINERS] [-r] [-l]
-                  [-P BORG_PRUNE_OPTS] [-B BORG_EXTRA_OPTS] [-N BORG_LOCAL_REPO_NAME] -p PREFIX
+                  [-P BORG_PRUNE_OPTS] [-B|-Z BORG_EXTRA_OPTS] [-N BORG_LOCAL_REPO_NAME] -p PREFIX
 
     Create new archive
 
@@ -16,7 +16,7 @@ readonly usage="
       -d MYSQL_DBS            space separated database names to back up; use __all__ to back up
                               all dbs on the server
       -n NODES_TO_BACKUP      space separated files/directories to back up (in addition to db dumps);
-                              filenames may not contain spaces, as space is the separator
+                              path may not contain spaces, as space is the separator
       -c CONTAINERS           space separated container names to stop for the backup process;
                               requires mounting the docker socket (-v /var/run/docker.sock:/var/run/docker.sock)
       -r                      only back to remote borg repo (remote-only)
@@ -25,6 +25,8 @@ readonly usage="
                               container var is not defined or needs to be overridden;
       -B BORG_EXTRA_OPTS      additional borg params; note it doesn't overwrite
                               the BORG_EXTRA_OPTS env var, but extends it;
+      -Z BORG_EXTRA_OPTS      additional borg params; note it _overrides_
+                              the BORG_EXTRA_OPTS env var;
       -N BORG_LOCAL_REPO_NAME overrides container env variable BORG_LOCAL_REPO_NAME;
       -p PREFIX               borg archive name prefix. note that the full archive name already
                               contains hostname and timestamp.
@@ -60,10 +62,10 @@ dump_db() {
             --add-drop-database \
             --column-statistics=0 \
             --max-allowed-packet=512M \
-            -h${MYSQL_HOST} \
-            -P${MYSQL_PORT} \
-            -u${MYSQL_USER} \
-            -p${MYSQL_PASS} \
+            "-h${MYSQL_HOST}" \
+            "-P${MYSQL_PORT}" \
+            "-u${MYSQL_USER}" \
+            "-p${MYSQL_PASS}" \
             ${MYSQL_EXTRA_OPTS} \
             ${MYSQL_DB} > "$TMP/${output_filename}.sql"
 
@@ -75,7 +77,7 @@ backup_local() {
     borg create -v --stats \
         $BORG_EXTRA_OPTS \
         $BORG_LOCAL_EXTRA_OPTS \
-        "$BORG_LOCAL_REPO"::"$ARCHIVE_NAME" \
+        "${BORG_LOCAL_REPO}::${ARCHIVE_NAME}" \
         "${NODES_TO_BACK_UP[@]}" || err "local borg create failed with [$?]"
 
     borg prune -v --list \
@@ -90,7 +92,7 @@ backup_remote() {
     borg create -v --stats \
         $BORG_EXTRA_OPTS \
         $BORG_REMOTE_EXTRA_OPTS \
-        "$REMOTE"::"$ARCHIVE_NAME" \
+        "${REMOTE}::${ARCHIVE_NAME}" \
         "${NODES_TO_BACK_UP[@]}" || err "remote borg create failed with [$?]"
 
     borg prune -v --list \
@@ -191,6 +193,7 @@ validate_config() {
     fi
 
     [[ "$REMOTE_OR_LOCAL_OPT_COUNTER" -gt 1 ]] && fail "-r & -l options are exclusive"
+    [[ "$BORG_OTPS_COUNTER" -gt 1 ]] && fail "-B & -Z options are exclusive"
     [[ "$REMOTE_ONLY" -ne 1 && ! -d "$BACKUP_ROOT" ]] && fail "[$BACKUP_ROOT] is not mounted"
     [[ "$BORG_LOCAL_REPO_NAME" == /* ]] && fail "BORG_LOCAL_REPO_NAME should not start with a slash"
 
@@ -220,8 +223,9 @@ cleanup() {
 trap -- 'cleanup; exit' EXIT HUP INT QUIT PIPE TERM
 source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_common.sh" | tee "$LOG"; exit 1; }
 REMOTE_OR_LOCAL_OPT_COUNTER=0
+BORG_OTPS_COUNTER=0
 
-while getopts "d:n:p:c:rlP:B:N:h" opt; do
+while getopts "d:n:p:c:rlP:B:Z:N:h" opt; do
     case "$opt" in
         d) MYSQL_DB="$OPTARG"
             ;;
@@ -241,13 +245,17 @@ while getopts "d:n:p:c:rlP:B:N:h" opt; do
         P) BORG_PRUNE_OPTS="$OPTARG"  # overrides env var of same name
             ;;
         B) BORG_EXTRA_OPTS+=" $OPTARG"  # _extends_ env var of same name
+           let BORG_OTPS_COUNTER+=1
+            ;;
+        Z) BORG_EXTRA_OPTS="$OPTARG"  # overrides env var of same name
+           let BORG_OTPS_COUNTER+=1
             ;;
         N) BORG_LOCAL_REPO_NAME="$OPTARG"  # overrides env var of same name
             ;;
         h) echo -e "$usage"
            exit 0
             ;;
-        *) fail "backup.sh called with unsupported flag(s)"
+        *) fail "$SELF called with unsupported flag(s)"
             ;;
     esac
 done
@@ -257,7 +265,7 @@ readonly TMP="$TMP_ROOT/${ARCHIVE_PREFIX}-$RANDOM"
 
 readonly PREFIX_WITH_HOSTNAME="${ARCHIVE_PREFIX}-${HOST_HOSTNAME}-"  # used for pruning
 readonly ARCHIVE_NAME="$PREFIX_WITH_HOSTNAME"'{now:%Y-%m-%d-%H%M%S}'
-readonly BORG_LOCAL_REPO="$BACKUP_ROOT/${BORG_LOCAL_REPO_NAME:-repo}"
+readonly BORG_LOCAL_REPO="$BACKUP_ROOT/${BORG_LOCAL_REPO_NAME:-$DEFAULT_LOCAL_REPO_NAME}"
 
 readonly LOCK="$BACKUP_ROOT/.borg-${ARCHIVE_PREFIX}-lock"  # make sure lockfile lives outside of container
 
@@ -265,7 +273,6 @@ readonly LOCK="$BACKUP_ROOT/.borg-${ARCHIVE_PREFIX}-lock"  # make sure lockfile 
     flock -n 9 || fail "lock [$LOCK] already held"
 
     validate_config
-    check_dependencies
     create_dirs
     init_or_verify_borg
 

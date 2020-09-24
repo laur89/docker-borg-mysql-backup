@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # common vars & functions
 
@@ -6,6 +6,7 @@ readonly BACKUP_ROOT='/backup'
 readonly CRON_FILE='/config/crontab'
 readonly SSH_KEY='/config/id_rsa'
 readonly LOG_TIMESTAMP_FORMAT='+%Y-%m-%d %H:%M'
+readonly DEFAULT_LOCAL_REPO_NAME=repo
 JOB_ID="id-$$"  # default id for logging
 
 
@@ -88,4 +89,7 @@ err() {
     echo -e "[$(date "$LOG_TIMESTAMP_FORMAT")] [$JOB_ID]\t    ERROR  $msg" >> "$LOG"
 }
 
-source /env_vars.sh || fail "failed to import /env_vars.sh"
+# source phusion-provided env vars:
+source /etc/container_environment.sh || fail "failed to import /etc/container_environment.sh"
+
+check_dependencies

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # restores selected borg archive from either local or remote repo to $BACKUP_ROOT
 
@@ -45,14 +45,14 @@ restore_db() {
     while IFS= read -r -d $'\0' i; do
         sql_files+=("$i")
     done < <(find "$RESTORE_DIR" -mindepth 1 -maxdepth 1 -type f -name '*.sql' -print0)
-    [[ "${#sql_files[@]}" -ne 1 ]] && fail "expected to find 1 .sql file in the root of [$RESTORE_DIR], but found ${#sql_files[@]}"
+    [[ "${#sql_files[@]}" -ne 1 ]] && fail "expected to find exactly 1 .sql file in the root of [$RESTORE_DIR], but found ${#sql_files[@]}"
     confirm "restore db from mysql dump [${sql_files[*]}]?" || return
 
     mysql \
-            -h${MYSQL_HOST} \
-            -P${MYSQL_PORT} \
-            -u${MYSQL_USER} \
-            -p${MYSQL_PASS} < "${sql_files[@]}"
+            "-h${MYSQL_HOST}" \
+            "-P${MYSQL_PORT}" \
+            "-u${MYSQL_USER}" \
+            "-p${MYSQL_PASS}" < "${sql_files[@]}"
 
     return $?
 }
@@ -67,12 +67,12 @@ do_restore() {
         borg extract -v --list \
             $BORG_EXTRA_OPTS \
             $BORG_LOCAL_EXTRA_OPTS \
-            "$BORG_LOCAL_REPO"::"$ARCHIVE_NAME" || fail "restoring [$BORG_LOCAL_REPO::$ARCHIVE_NAME] failed with [$?]"
+            "${BORG_LOCAL_REPO}::${ARCHIVE_NAME}" || fail "restoring [$BORG_LOCAL_REPO::$ARCHIVE_NAME] failed with [$?]"
     elif [[ "$REMOTE_REPO" -eq 1 ]]; then
         borg extract -v --list \
             $BORG_EXTRA_OPTS \
             $BORG_REMOTE_EXTRA_OPTS \
-            "$REMOTE"::"$ARCHIVE_NAME" || fail "restoring [$REMOTE::$ARCHIVE_NAME] failed with [$?]"
+            "${REMOTE}::${ARCHIVE_NAME}" || fail "restoring [$REMOTE::$ARCHIVE_NAME] failed with [$?]"
     fi
 
     popd &> /dev/null
@@ -144,16 +144,17 @@ while getopts "dc:rlN:a:h" opt; do
         h) echo -e "$usage"
            exit 0
             ;;
-        *) exit 1
+        *) fail "$SELF called with unsupported flag(s)"
             ;;
     esac
 done
 
 readonly RESTORE_DIR="$BACKUP_ROOT/restored-${ARCHIVE_NAME}"  # dir where selected borg archive will be restored into
-readonly BORG_LOCAL_REPO="$BACKUP_ROOT/${BORG_LOCAL_REPO_NAME:-repo}"
+readonly BORG_LOCAL_REPO="$BACKUP_ROOT/${BORG_LOCAL_REPO_NAME:-$DEFAULT_LOCAL_REPO_NAME}"
+
+[[ -e "$RESTORE_DIR" ]] && fail "[$RESTORE_DIR] already exists, abort"
 
 validate_config
-check_dependencies
 create_dirs
 verify_borg
 

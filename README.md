@@ -12,7 +12,7 @@ at `/config`, containing ssh key (named `id_rsa`) and/or crontab file (named `cr
 Local borg repo will be located under the dir you mount container `/backup` at.
 Remote borg repo needs to be initialised manually beforehand.
 
-In case some containers need to be stopped for the backup (eg to assert there won't be any
+In case some containers need to be stopped for the backup (eg to ensure there won't be any
 mismatch between data and database), you can specify those container names to
 the `backup` script (see below). Note that this requires mounting docker socket with `-v /var/run/docker.sock:/var/run/docker.sock`,
 but keep in mind it has security implications (borg-mysql-backup will have essentially
@@ -58,7 +58,7 @@ Container incorporates `backup`, `restore` and `list` scripts.
 directly via docker for one off backup.
 
     usage: backup [-h] [-d MYSQL_DBS] [-n NODES_TO_BACKUP] [-c CONTAINERS] [-r] [-l]
-                  [-P BORG_PRUNE_OPTS] [-B BORG_EXTRA_OPTS] [-N BORG_LOCAL_REPO_NAME] -p PREFIX
+                  [-P BORG_PRUNE_OPTS] [-B|-Z BORG_EXTRA_OPTS] [-N BORG_LOCAL_REPO_NAME] -p PREFIX
     
     Create new archive
     
@@ -67,7 +67,7 @@ directly via docker for one off backup.
       -d MYSQL_DBS            space separated database names to back up; use __all__ to back up
                               all dbs on the server
       -n NODES_TO_BACKUP      space separated files/directories to back up (in addition to db dumps);
-                              filenames may not contain spaces, as space is the separator
+                              path may not contain spaces, as space is the separator
       -c CONTAINERS           space separated container names to stop for the backup process;
                               requires mounting the docker socket (-v /var/run/docker.sock:/var/run/docker.sock)
       -r                      only back to remote borg repo (remote-only)
@@ -76,6 +76,8 @@ directly via docker for one off backup.
                               container var is not defined or needs to be overridden;
       -B BORG_EXTRA_OPTS      additional borg params; note it doesn't overwrite
                               the BORG_EXTRA_OPTS env var, but extends it;
+      -Z BORG_EXTRA_OPTS      additional borg params; note it _overrides_
+                              the BORG_EXTRA_OPTS env var;
       -N BORG_LOCAL_REPO_NAME overrides container env variable BORG_LOCAL_REPO_NAME;
       -p PREFIX               borg archive name prefix. note that the full archive name already
                               contains hostname and timestamp.
@@ -152,7 +154,7 @@ Also there's no need to have ssh key in `/config`, as we're not connecting to a 
         -v /backup:/backup \
         -v /borg-mysql-backup/config:/config:ro \
         -v /app3/on/host:/app3:ro \
-           layr/borg-mysql-backup -- backup.sh -r -n /app3 -p my_prefix
+           layr/borg-mysql-backup --skip-runit -- backup.sh -r -n /app3 -p my_prefix
 
 Note there's no need to have a crontab file in `/config`, as we're executing this
 command just once, after which container exits and is removed (ie we're not using
@@ -194,14 +196,14 @@ will be extracted into `/backup/restored-{archive_name}`
         -e BORG_PASSPHRASE=borgrepopassword \
         -v /tmp:/backup \
         -v /borg-mysql-backup/config:/config:ro \
-           layr/borg-mysql-backup -- restore.sh -r -d -a my_prefix-HOSTNAME-2017-02-27-160159
+           layr/borg-mysql-backup --skip-runit -- restore.sh -r -d -a my_prefix-HOSTNAME-2017-02-27-160159
 
 ##### Restore archive from local borg repo & stop container app1 beforehand
 
     docker run -it --rm \
         -e BORG_PASSPHRASE=borgrepopassword \
         -v /tmp:/backup \
-           layr/borg-mysql-backup -- restore.sh -l -c app1 -a my_prefix-HOSTNAME-2017-02-27-160159
+           layr/borg-mysql-backup --skip-runit -- restore.sh -l -c app1 -a my_prefix-HOSTNAME-2017-02-27-160159
 
 Note there's no need to mount `/config`, as we're not using cron nor connecting to remote borg.
 Also we're not providing mysql env vars, as script isn't invoked with `-d` option, meaning
@@ -211,7 +213,7 @@ db won't be automatically restored with the included .sql dumpfile (if there was
 
     docker run -it --rm \
         -v /tmp:/backup \
-           layr/borg-mysql-backup -- restore.sh -l -N otherrepo -a my_prefix-HOSTNAME-2017-02-27-160159
+           layr/borg-mysql-backup --skip-runit -- restore.sh -l -N otherrepo -a my_prefix-HOSTNAME-2017-02-27-160159
 
 Data will be restored from non-default local borg repo `otherrepo`. Also note missing
 env variable `BORG_PASSPHRASE`, which will be required to be typed in manually.
@@ -237,7 +239,7 @@ env variable `BORG_PASSPHRASE`, which will be required to be typed in manually.
     docker run -it --rm \
         -e BORG_PASSPHRASE=borgrepopassword \
         -v /tmp:/backup \
-           layr/borg-mysql-backup -- list.sh -l
+           layr/borg-mysql-backup --skip-runit -- list.sh -l
 
 ##### List the remote repository contents
 
@@ -246,7 +248,7 @@ env variable `BORG_PASSPHRASE`, which will be required to be typed in manually.
         -e REMOTE=remoteuser@server.com:repo/location \
         -e BORG_PASSPHRASE=borgrepopassword \
         -v /borg-mysql-backup/config:/config:ro \
-           layr/borg-mysql-backup -- list.sh -r
+           layr/borg-mysql-backup --skip-runit -- list.sh -r
 
 Note the `BORG_EXTRA_OPTS`, `BORG_LOCAL_EXTRA_OPTS`, `BORG_REMOTE_EXTRA_OPTS` env
 variables are still usable with `list`.
