@@ -2,10 +2,6 @@ FROM          alpine:3.12.0
 MAINTAINER    Laur Aliste
 
 ENV LANG=C.UTF-8
-
-# check docker versions from https://download.docker.com/linux/static/stable/x86_64/
-
-#ENV DOCKER_VERSION=18.06.3-ce
 ENV BORG_VERSION=1.1.13-r1
 
 ADD scripts/* /usr/local/sbin/
@@ -27,6 +23,5 @@ RUN echo "http://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repos
     ln -s /usr/local/sbin/scripts_common.sh /scripts_common.sh && \
     rm -rf /var/cache/apk/*
 
-#CMD ["/entry.sh"]
 ENTRYPOINT ["/usr/local/sbin/entry.sh"]
 
