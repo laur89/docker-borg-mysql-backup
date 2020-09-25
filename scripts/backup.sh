@@ -58,9 +58,10 @@ dump_db() {
         MYSQL_DB="--databases $MYSQL_DB"
     fi
 
+    # TODO: add following column-stats option back once mysqldump from alpine accepts it:
+            #--column-statistics=0 \
     mysqldump \
             --add-drop-database \
-            --column-statistics=0 \
             --max-allowed-packet=512M \
             "-h${MYSQL_HOST}" \
             "-P${MYSQL_PORT}" \
@@ -221,7 +222,7 @@ cleanup() {
 # Entry
 # ================
 trap -- 'cleanup; exit' EXIT HUP INT QUIT PIPE TERM
-source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_common.sh" | tee "$LOG"; exit 1; }
+source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_common.sh" | tee -a "$LOG"; exit 1; }
 REMOTE_OR_LOCAL_OPT_COUNTER=0
 BORG_OTPS_COUNTER=0
 

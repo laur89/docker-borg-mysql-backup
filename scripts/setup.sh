@@ -9,13 +9,12 @@ readonly SELF="${0##*/}"
 readonly LOG="/var/log/${SELF}.log"
 
 install_crontab() {
-    local cron_dir
+    local cron_target
 
-    readonly cron_dir='/var/spool/cron/crontabs'
+    readonly cron_target='/var/spool/cron/crontabs/root'
 
-    [[ -d "$cron_dir" ]] || fail "[$cron_dir] is not a dir; is cron installed?"
-    #rm -r "${cron_dir:?}/"* 2> /dev/null  # remove previous cron file(s)
-    [[ -f "$CRON_FILE" ]] && cp -- "$CRON_FILE" "$cron_dir/"
+    [[ -f "$cron_target" ]] || fail "[$cron_target] does not exist; is cron installed?"
+    [[ -f "$CRON_FILE" ]] && cp -- "$CRON_FILE" "$cron_target"
 }
 
 
@@ -44,8 +43,8 @@ install_ssh_key() {
 }
 
 
-printenv | sed 's/^\(\w\+\)=\(.*\)$/export \1="\2"/g' > /env_vars.sh || { echo -e "    ERROR: printenv failed" | tee "$LOG"; exit 1; }
-source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_common.sh" | tee "$LOG"; exit 1; }
+printenv | sed 's/^\(\w\+\)=\(.*\)$/export \1="\2"/g' > /env_vars.sh || { echo -e "    ERROR: printenv failed" | tee -a "$LOG"; exit 1; }
+source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_common.sh" | tee -a "$LOG"; exit 1; }
 
 install_crontab
 install_ssh_key
