@@ -15,8 +15,8 @@ Remote borg repo needs to be initialised manually beforehand.
 In case some containers need to be stopped for the backup (eg to ensure there won't be any
 mismatch between data and database), you can specify those container names to
 the `backup` script (see below). Note that this requires mounting docker socket with `-v /var/run/docker.sock:/var/run/docker.sock`,
-but keep in mind it has security implications (borg-mysql-backup will have essentially
-root permissions on the host).
+but keep in mind it has security implications - borg-mysql-backup will have essentially
+root permissions on the host.
 
 To synchronize container tz with that of host's, then also add following mount:
 `-v /etc/localtime:/etc/localtime:ro`
@@ -99,6 +99,7 @@ directly via docker for one off backup.
         -e BORG_EXTRA_OPTS='--compression zlib,5 --lock-wait 60' \
         -e BORG_PASSPHRASE=borgrepopassword \
         -e BORG_PRUNE_OPTS='--keep-daily=7 --keep-weekly=4' \
+        -v /etc/localtime:/etc/localtime:ro \
         -v /backup:/backup \
         -v /borg-mysql-backup/config:/config:ro \
         -v /app1-data-on-host:/app1-data:ro \
@@ -120,6 +121,7 @@ directly via docker for one off backup.
         -e BORG_PASSPHRASE=borgrepopassword \
         -e BORG_PRUNE_OPTS='--keep-daily=7 --keep-weekly=4' \
         -v /var/run/docker.sock:/var/run/docker.sock \
+        -v /etc/localtime:/etc/localtime:ro \
         -v /backup:/backup \
         -v /borg-mysql-backup/config:/config:ro \
            layr/borg-mysql-backup
@@ -146,6 +148,8 @@ directly via docker for one off backup.
 
 Note we didn't need to define mysql- or remote borg repo related docker env vars.
 Also there's no need to have ssh key in `/config`, as we're not connecting to a remote server.
+Additionally, there was no need to mount `/etc/localtime`, as cron doesn't
+define absolute time, but simply an interval.
 
 ##### Back up directory /app3 once to remote borg repo (ie local is excluded)
 
