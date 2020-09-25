@@ -9,13 +9,12 @@ readonly SELF="${0##*/}"
 readonly LOG="/var/log/${SELF}.log"
 
 install_crontab() {
-    local cron_dir
+    local cron_target
 
-    readonly cron_dir='/var/spool/cron/crontabs'
+    readonly cron_target='/var/spool/cron/crontabs/root'
 
-    [[ -d "$cron_dir" ]] || fail "[$cron_dir] is not a dir; is cron installed?"
-    #rm -r "${cron_dir:?}/"* 2> /dev/null  # remove previous cron file(s)
-    [[ -f "$CRON_FILE" ]] && cp -- "$CRON_FILE" "$cron_dir/"
+    [[ -f "$cron_target" ]] || fail "[$cron_target] does not exist; is cron installed?"
+    [[ -f "$CRON_FILE" ]] && cp -- "$CRON_FILE" "$cron_target"
 }
 
 
