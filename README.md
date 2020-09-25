@@ -18,6 +18,9 @@ the `backup` script (see below). Note that this requires mounting docker socket 
 but keep in mind it has security implications (borg-mysql-backup will have essentially
 root permissions on the host).
 
+To synchronize container tz with that of host's, then also add following mount:
+`-v /etc/localtime:/etc/localtime:ro`
+
 Avoid using the `latest` version of this image, as you'd want to be tied to a certain
 version of borg - different borg versions can be non-compatible.
 
