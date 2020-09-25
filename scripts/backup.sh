@@ -58,9 +58,10 @@ dump_db() {
         MYSQL_DB="--databases $MYSQL_DB"
     fi
 
+    # TODO: add following column-stats option back once mysqldump from alpine accepts it:
+            #--column-statistics=0 \
     mysqldump \
             --add-drop-database \
-            --column-statistics=0 \
             --max-allowed-packet=512M \
             "-h${MYSQL_HOST}" \
             "-P${MYSQL_PORT}" \
