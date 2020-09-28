@@ -27,7 +27,7 @@ install_ssh_key() {
         local remote_host
 
         remote_host="$(grep -Po '^.*@\K.*(?=:.*$)' <<< "$REMOTE")"
-        [[ -z "$remote_host" ]] && fail "could not extract remote host from REMOTE [$REMOTE]"
+        [[ $? -ne 0 || -z "$remote_host" ]] && fail "could not extract remote host from REMOTE [$REMOTE]"
 
         if [[ -z "$(ssh-keygen -F "$remote_host")" ]]; then
             ssh-keyscan -H "$remote_host" >> ~/.ssh/known_hosts || fail "adding host [$remote_host] to ~/.ssh/known_hosts failed"
@@ -44,43 +44,44 @@ install_ssh_key() {
 
 
 setup_msmtp() {
+    local target_conf
+
+    target_conf='/etc/msmtprc'
+
     rm -f /usr/sbin/sendmail || fail "rm sendmail failed w/ $?"
     ln -s /usr/bin/msmtp /usr/sbin/sendmail || fail "linking sendmail failed w/ $?"
 
-    if true; then  # TODO
-        rm -f /usr/sbin/sendmail
-        ln -s /usr/bin/msmtp /usr/sbin/sendmail
-
-        if [[ -f "$MSMTPRC" ]]; then
-            cat -- "$MSMTPRC" > /etc/msmtprc
-        else
-            cat > /etc/msmtprc <<EOF
-### Automatically generated on container start. See documentation on how to set!'
+    if [[ -f "$MSMTPRC" ]]; then
+        cat -- "$MSMTPRC" > "$target_conf"
+    else
+        cat > "$target_conf" <<EOF
+### Auto-generated at container startup ###
 account default
 host ${SMTP_HOST}
-port ${SMTP_PORT}
-#from ${SMTP_FROM}
-${SMTP_AUTH:+auth $SMTP_AUTH}
-${SMTP_USER:+user $SMTP_USER}
-${SMTP_PASS:+password $SMTP_PASS}
-tls ${SMTP_TLS}
-tls_starttls ${SMTP_STARTTLS}
-tls_certcheck ${SMTP_TLSCERTCHECK}
+port ${SMTP_PORT:-587}
+user ${SMTP_USER}
+password ${SMTP_PASS}
+auth ${SMTP_AUTH:-on}
+tls ${SMTP_TLS:-on}
+tls_starttls ${SMTP_STARTTLS:-on}
+#tls_certcheck ${SMTP_TLSCERTCHECK}
+tls_trust_file /etc/ssl/certs/ca-certificates.crt
 logfile /var/log/msmtp.log
-### Gmail Specific SMTP Config
-#if var_true "$ENABLE_SMTP_GMAIL" ; then echo "auto_from on"; fi
+protocol smtp
 EOF
-        fi
     fi
 }
 
 
+NO_SEND_MAIL=true  # stop sending mails during startup/setup
 printenv | sed 's/^\(\w\+\)=\(.*\)$/export \1="\2"/g' > /env_vars.sh || { echo -e "    ERROR: printenv failed" | tee -a "$LOG"; exit 1; }
 source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_common.sh" | tee -a "$LOG"; exit 1; }
 chmod 600 /env_vars.sh || fail "chmod-ing /env_vars.sh failed w/ $?"
 
+validate_config_common
 setup_crontab
 install_ssh_key
 setup_msmtp
+unset NO_SEND_MAIL
 
 exit 0

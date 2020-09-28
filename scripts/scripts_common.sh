@@ -24,12 +24,24 @@ check_dependencies() {
 
 
 start_or_stop_containers() {
-    local start_or_stop
+    local start_or_stop c idx
 
-    readonly start_or_stop="$1"; shift
+    readonly start_or_stop="$1"
 
-    [[ "$#" -eq 0 ]] && return 0  # no container names were passed, return
-    docker "$start_or_stop" "$@" || fail "${start_or_stop}ing container(s) [$*] failed"
+    [[ "${#CONTAINERS[@]}" -eq 0 ]] && return 0  # no containers defined, return
+    #docker "$start_or_stop" "${CONTAINERS[@]}" || fail "${start_or_stop}ing container(s) [${CONTAINERS[*]}] failed w/ [$?]"
+
+
+    if [[ "$start_or_stop" == stop ]]; then
+        for c in "${CONTAINERS[@]}"; do
+            docker stop "$c" || fail "stopping container [$c] failed w/ [$?]"
+        done
+    else
+        for (( idx=${#CONTAINERS[@]}-1 ; idx>=0 ; idx-- )); do
+            c="${CONTAINERS[idx]}"
+            docker start "$c" || fail "starting container [$c] failed w/ [$?]"
+        done
+    fi
 
     return 0
 }
@@ -89,37 +101,101 @@ log() {
 err() {
     local msg f
 
-    [[ "$1" == '--fail' ]] && { f=1; shift; }
+    [[ "$1" == '--fail' ]] && { f='--fail'; shift; }
 
     readonly msg="$1"
-    echo -e "\n\n    ERROR: $msg\n\n"
     echo -e "[$(date "$LOG_TIMESTAMP_FORMAT")] [$JOB_ID]\t    ERROR  $msg" | tee -a "$LOG"
-    notif "$msg"
+    notif $f "$msg"
 }
 
 
 notif() {
-    local msg
+    local msg f
+    [[ "$1" == '--fail' ]] && { f='-F'; shift; }
+
     readonly msg="$1"
 
-    mail "$msg"
+    if [[ "$ERR_NOTIF" == *mail* && -z "$NO_SEND_MAIL" ]]; then
+        mail $f -t "$MAIL_TO" -f "$MAIL_FROM" -s "$MAIL_SUBJECT" -a "$SMTP_ACCOUNT" -b "$msg"
+    fi
 }
 
 
-# TODO: WIP
 mail() {
-    local body
+    local opt to from subj acc body is_fail
 
-    body="$1"
+    is_fail=false
 
-    msmtp -a default --read-envelope-from -t <<EOF
-To: $MAIL_TO
-From: $MAIL_FROM
-Subject: $MAIL_SUBJECT
+    while getopts "Ft:f:s:b:a:" opt; do
+        case "$opt" in
+            F) is_fail=true
+                ;;
+            t) to="$OPTARG"
+                ;;
+            f) from="$OPTARG"
+                ;;
+            s) subj="$OPTARG"
+                ;;
+            b) body="$OPTARG"
+                ;;
+            a) acc="$OPTARG"
+                ;;
+            *) fail "$FUNCNAME called with unsupported flag(s)"
+                ;;
+        esac
+    done
 
-TEST: $body
+    msmtp -a "${acc:-default}" --read-envelope-from -t <<EOF
+To: $to
+From: $(expand_placeholders "$from" "$is_fail")
+Subject: $(expand_placeholders "$subj" "$is_fail")
+
+$(expand_placeholders "$body" "$is_fail")
 EOF
+}
 
+
+validate_config_common() {
+    local i vars val
+
+    if [[ -n "$ERR_NOTIF" ]]; then
+        for i in $ERR_NOTIF; do
+            [[ "$i" == mail || "$i" == unraid ]] || fail "unsupported [ERR_NOTIF] value: [$i]"
+        done
+
+        if [[ "$ERR_NOTIF" == *mail* ]]; then
+            declare -a vars=(
+                MAIL_TO
+                MAIL_FROM
+                MAIL_SUBJECT
+            )
+
+            [[ -f "$MSMTPRC" ]] || vars+=(
+                SMTP_HOST
+                SMTP_USER
+                SMTP_PASS
+            )
+
+            for i in "${vars[@]}"; do
+                val="$(eval echo "\$$i")" || fail "evaling [echo \"\$$i\"] failed w/ [$?]"
+                [[ -z "$val" ]] && fail "[$i] is not defined"
+            done
+        fi
+    fi
+}
+
+
+expand_placeholders() {
+    local m is_fail
+    m="$1"
+    is_fail="$2"
+
+    m="$(sed "s/{h}/$HOST_NAME/g" <<< "$m")"
+    m="$(sed "s/{p}/$ARCHIVE_PREFIX/g" <<< "$m")"
+    m="$(sed "s/{i}/$JOB_ID/g" <<< "$m")"
+    m="$(sed "s/{f}/$is_fail/g" <<< "$m")"
+
+    echo "$m"
 }
 
 

@@ -6,8 +6,9 @@ readonly SELF="${0##*/}"
 readonly LOG="/var/log/${SELF}.log"
 
 readonly usage="
-    usage: $SELF [-h] [-d MYSQL_DBS] [-n NODES_TO_BACKUP] [-c CONTAINERS] [-r] [-l]
-                  [-P BORG_PRUNE_OPTS] [-B|-Z BORG_EXTRA_OPTS] [-N BORG_LOCAL_REPO_NAME] -p PREFIX
+    usage: $SELF [-h] [-d MYSQL_DBS] [-n NODES_TO_BACKUP] [-c CONTAINERS] [-rl]
+                  [-P BORG_PRUNE_OPTS] [-B|-Z BORG_EXTRA_OPTS] [-N BORG_LOCAL_REPO_NAME]
+                  [-e ERR_NOTIF] [-A SMTP_ACCOUNT] -p PREFIX
 
     Create new archive
 
@@ -18,7 +19,9 @@ readonly usage="
       -n NODES_TO_BACKUP      space separated files/directories to back up (in addition to db dumps);
                               path may not contain spaces, as space is the separator
       -c CONTAINERS           space separated container names to stop for the backup process;
-                              requires mounting the docker socket (-v /var/run/docker.sock:/var/run/docker.sock)
+                              requires mounting the docker socket (-v /var/run/docker.sock:/var/run/docker.sock);
+                              note containers will be stopped in given order; after backup
+                              completion, containers are started in reverse order;
       -r                      only back to remote borg repo (remote-only)
       -l                      only back to local borg repo (local-only)
       -P BORG_PRUNE_OPTS      overrides container env variable BORG_PRUNE_OPTS; only required when
@@ -28,8 +31,11 @@ readonly usage="
       -Z BORG_EXTRA_OPTS      additional borg params; note it _overrides_
                               the BORG_EXTRA_OPTS env var;
       -N BORG_LOCAL_REPO_NAME overrides container env variable BORG_LOCAL_REPO_NAME;
+      -e ERR_NOTIF            space separated error notification methods; overrides
+                              env var of same name;
+      -A SMTP_ACCOUNT         msmtp account to use; defaults to 'default';
       -p PREFIX               borg archive name prefix. note that the full archive name already
-                              contains hostname and timestamp.
+                              contains HOST_NAME and timestamp, so omit those.
 "
 
 # expands the $NODES_TO_BACK_UP with files in $TMP/, if there are any
@@ -46,13 +52,14 @@ expand_nodes_to_back_up() {
 
 # dumps selected db(s) to $TMP
 dump_db() {
-    local output_filename
+    local output_filename mysql_db_orig
 
     MYSQL_DB="$(sed 's/^[[:space:]]*//;s/[[:space:]]*$//' <<< "$MYSQL_DB")"  # strip leading&trailing whitespace
 
     [[ -z "$MYSQL_DB" ]] && return 0  # no db specified, meaning db dump not required
 
     MYSQL_DB="$(tr -s ' ' <<< "$MYSQL_DB")"  # squash multiple spaces
+    readonly mysql_db_orig="$MYSQL_DB"
 
     # alternatively this, to squash multiple spaces & replace w/ '+' in one go:   MYSQL_DB="${MYSQL_DB//+( )/+}"
     if [[ "$MYSQL_DB" == __all__ ]]; then
@@ -73,9 +80,7 @@ dump_db() {
             -u "${MYSQL_USER}" \
             -p "${MYSQL_PASS}" \
             ${MYSQL_EXTRA_OPTS} \
-            ${MYSQL_DB} > "$TMP/${output_filename}.sql"
-
-    return "$?"
+            ${MYSQL_DB} > "$TMP/${output_filename}.sql" || fail "db dump for [$mysql_db_orig] failed w/ [$?]"
 }
 
 
@@ -84,27 +89,26 @@ backup_local() {
         $BORG_EXTRA_OPTS \
         $BORG_LOCAL_EXTRA_OPTS \
         "${BORG_LOCAL_REPO}::${ARCHIVE_NAME}" \
-        "${NODES_TO_BACK_UP[@]}" || err "local borg create failed with [$?]"
+        "${NODES_TO_BACK_UP[@]}" || err "local borg create failed w/ [$?]"
 
     borg prune -v --list \
         "$BORG_LOCAL_REPO" \
         --prefix "$PREFIX_WITH_HOSTNAME" \
-        $BORG_PRUNE_OPTS || err "local borg prune failed with [$?]"
+        $BORG_PRUNE_OPTS || err "local borg prune failed w/ [$?]"
 }
 
 
 backup_remote() {
-    # duplicate to remote location: (http://borgbackup.readthedocs.io/en/latest/faq.html#can-i-copy-or-synchronize-my-repo-to-another-location)
     borg create -v --stats \
         $BORG_EXTRA_OPTS \
         $BORG_REMOTE_EXTRA_OPTS \
         "${REMOTE}::${ARCHIVE_NAME}" \
-        "${NODES_TO_BACK_UP[@]}" || err "remote borg create failed with [$?]"
+        "${NODES_TO_BACK_UP[@]}" || err "remote borg create failed w/ [$?]"
 
     borg prune -v --list \
         "$REMOTE" \
         --prefix "$PREFIX_WITH_HOSTNAME" \
-        $BORG_PRUNE_OPTS || err "remote borg prune failed with [$?]"
+        $BORG_PRUNE_OPTS || err "remote borg prune failed w/ [$?]"
 }
 
 
@@ -112,13 +116,14 @@ backup_remote() {
 # note the borg processes are executed in a sub-shell, so local & remote backup could be
 # run in parallel
 do_backup() {
-    local started_pids
+    local started_pids start_timestamp
 
     declare -a started_pids=()
 
     log "=> Backup started"
+    start_timestamp="$(date +%s)"
 
-    dump_db || fail "db dump failed with [$?]"
+    dump_db
     expand_nodes_to_back_up
 
     [[ "${#NODES_TO_BACK_UP[@]}" -eq 0 ]] && fail "no items selected for backup"
@@ -137,7 +142,7 @@ do_backup() {
     wait "${started_pids[@]}"
 
     popd &> /dev/null
-    log "=> Backup finished"
+    log "=> Backup finished, duration $(( $(date +%s) - start_timestamp )) seconds"
 
     return 0
 }
@@ -151,9 +156,9 @@ init_or_verify_borg() {
 
     if [[ "$REMOTE_ONLY" -ne 1 ]]; then
         if [[ ! -d "$BORG_LOCAL_REPO" ]] || is_dir_empty "$BORG_LOCAL_REPO"; then
-            borg init "$BORG_LOCAL_REPO" || { err "borg repo init @ [$BORG_LOCAL_REPO] failed"; local_verif_fail=1; }
+            borg init "$BORG_LOCAL_REPO" || { err "borg repo init @ [$BORG_LOCAL_REPO] failed w/ [$?]"; local_verif_fail=1; }
         else
-            borg list "$BORG_LOCAL_REPO" > /dev/null || { err "[borg list $BORG_LOCAL_REPO] failed. is it a borg repo?"; local_verif_fail=1; }
+            borg list "$BORG_LOCAL_REPO" > /dev/null || { err "[borg list $BORG_LOCAL_REPO] failed w/ [$?]; is it a borg repo?"; local_verif_fail=1; }
         fi
 
         if [[ "$local_verif_fail" -eq 1 ]]; then
@@ -163,7 +168,7 @@ init_or_verify_borg() {
 
     if [[ "$LOCAL_ONLY" -ne 1 ]]; then
         if ! borg list "$REMOTE" > /dev/null; then
-            err "[borg list $REMOTE] failed; please create remote repos manually beforehand"
+            err "[borg list $REMOTE] failed w/ [$?]; please create remote repos manually beforehand"
             [[ "$REMOTE_ONLY" -eq 1 ]] && fail || { REMOTE_ONLY=0; LOCAL_ONLY=1; }  # remote would fail for sure; force local_only
         fi
     fi
@@ -173,28 +178,30 @@ init_or_verify_borg() {
 validate_config() {
     local i val vars
 
+    validate_config_common
+
     declare -a vars=(
         ARCHIVE_PREFIX
         BORG_PASSPHRASE
         BORG_PRUNE_OPTS
-        HOST_HOSTNAME
+        HOST_NAME
     )
     [[ -n "$MYSQL_DB" ]] && vars+=(
-            MYSQL_HOST
-            MYSQL_PORT
-            MYSQL_USER
-            MYSQL_PASS
-        )
+        MYSQL_HOST
+        MYSQL_PORT
+        MYSQL_USER
+        MYSQL_PASS
+    )
     [[ "$LOCAL_ONLY" -ne 1 ]] && vars+=(REMOTE)
 
     for i in "${vars[@]}"; do
-        val="$(eval echo "\$$i")" || fail "evaling [echo $i] failed with code [$?]"
+        val="$(eval echo "\$$i")" || fail "evaling [echo \"\$$i\"] failed w/ [$?]"
         [[ -z "$val" ]] && fail "[$i] is not defined"
     done
 
     if [[ "${#NODES_TO_BACK_UP[@]}" -gt 0 ]]; then
         for i in "${NODES_TO_BACK_UP[@]}"; do
-            [[ -e "$i" ]] || err "node [$i] to back up does not exist"
+            [[ -e "$i" ]] || err "node [$i] to back up does not exist; missing mount?"
         done
     fi
 
@@ -210,13 +217,13 @@ validate_config() {
 
 
 create_dirs() {
-    mkdir -p -- "$TMP" || fail "dir [$TMP] creation failed"
+    mkdir -p -- "$TMP" || fail "dir [$TMP] creation failed w/ [$?]"
 }
 
 
 cleanup() {
     # make sure stopped containers are started on exit:
-    start_or_stop_containers start "${CONTAINERS[@]}"
+    start_or_stop_containers start
 
     [[ -d "$TMP" ]] && rm -rf -- "$TMP"
     [[ -d "$TMP_ROOT" ]] && is_dir_empty "$TMP_ROOT" && rm -rf -- "$TMP_ROOT"
@@ -231,7 +238,7 @@ source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_com
 REMOTE_OR_LOCAL_OPT_COUNTER=0
 BORG_OTPS_COUNTER=0
 
-while getopts "d:n:p:c:rlP:B:Z:N:h" opt; do
+while getopts "d:n:p:c:rlP:B:Z:N:e:A:h" opt; do
     case "$opt" in
         d) MYSQL_DB="$OPTARG"
             ;;
@@ -258,6 +265,10 @@ while getopts "d:n:p:c:rlP:B:Z:N:h" opt; do
             ;;
         N) BORG_LOCAL_REPO_NAME="$OPTARG"  # overrides env var of same name
             ;;
+        e) ERR_NOTIF="$OPTARG"  # overrides env var of same name
+            ;;
+        A) SMTP_ACCOUNT="$OPTARG"
+            ;;
         h) echo -e "$usage"
            exit 0
             ;;
@@ -269,7 +280,7 @@ done
 readonly TMP_ROOT="$BACKUP_ROOT/.backup.tmp"
 readonly TMP="$TMP_ROOT/${ARCHIVE_PREFIX}-$RANDOM"
 
-readonly PREFIX_WITH_HOSTNAME="${ARCHIVE_PREFIX}-${HOST_HOSTNAME}-"  # used for pruning
+readonly PREFIX_WITH_HOSTNAME="${ARCHIVE_PREFIX}-${HOST_NAME}-"  # used for pruning
 readonly ARCHIVE_NAME="$PREFIX_WITH_HOSTNAME"'{now:%Y-%m-%d-%H%M%S}'
 readonly BORG_LOCAL_REPO="$BACKUP_ROOT/${BORG_LOCAL_REPO_NAME:-$DEFAULT_LOCAL_REPO_NAME}"
 
@@ -282,7 +293,7 @@ readonly LOCK="$BACKUP_ROOT/.borg-${ARCHIVE_PREFIX}-lock"  # make sure lockfile 
     create_dirs
     init_or_verify_borg
 
-    start_or_stop_containers stop "${CONTAINERS[@]}"
+    start_or_stop_containers stop
     do_backup
 
     exit 0

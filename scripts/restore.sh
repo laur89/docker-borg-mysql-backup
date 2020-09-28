@@ -28,9 +28,9 @@ readonly usage="
 verify_borg() {
 
     if [[ "$LOCAL_REPO" -eq 1 ]]; then
-        borg list "$BORG_LOCAL_REPO" > /dev/null || fail "[borg list $BORG_LOCAL_REPO] failed. is it a borg repo?"
+        borg list "$BORG_LOCAL_REPO" > /dev/null || fail "[borg list $BORG_LOCAL_REPO] failed w/ [$?]; is it a borg repo?"
     elif [[ "$REMOTE_REPO" -eq 1 ]]; then
-        borg list "$REMOTE" > /dev/null || fail "[borg list $REMOTE] failed; please create remote repos manually beforehand"
+        borg list "$REMOTE" > /dev/null || fail "[borg list $REMOTE] failed w/ [$?]; please create remote repos manually beforehand"
     fi
 }
 
@@ -67,12 +67,12 @@ do_restore() {
         borg extract -v --list \
             $BORG_EXTRA_OPTS \
             $BORG_LOCAL_EXTRA_OPTS \
-            "${BORG_LOCAL_REPO}::${ARCHIVE_NAME}" || fail "restoring [$BORG_LOCAL_REPO::$ARCHIVE_NAME] failed with [$?]"
+            "${BORG_LOCAL_REPO}::${ARCHIVE_NAME}" || fail "extracting local [$BORG_LOCAL_REPO::$ARCHIVE_NAME] failed w/ [$?]"
     elif [[ "$REMOTE_REPO" -eq 1 ]]; then
         borg extract -v --list \
             $BORG_EXTRA_OPTS \
             $BORG_REMOTE_EXTRA_OPTS \
-            "${REMOTE}::${ARCHIVE_NAME}" || fail "restoring [$REMOTE::$ARCHIVE_NAME] failed with [$?]"
+            "${REMOTE}::${ARCHIVE_NAME}" || fail "extracting [$REMOTE::$ARCHIVE_NAME] failed w/ [$?]"
     fi
 
     popd &> /dev/null
@@ -97,7 +97,7 @@ validate_config() {
     [[ "$REMOTE_REPO" -eq 1 ]] && vars+=(REMOTE)
 
     for i in "${vars[@]}"; do
-        val="$(eval echo "\$$i")" || fail "evaling [echo $i] failed with code [$?]"
+        val="$(eval echo "\$$i")" || fail "evaling [echo \"\$$i\"] failed w/ [$?]"
         [[ -z "$val" ]] && fail "[$i] is not defined"
     done
 
@@ -108,7 +108,7 @@ validate_config() {
 
 
 create_dirs() {
-    mkdir -p -- "$RESTORE_DIR" || fail "dir [$RESTORE_DIR] creation failed"
+    mkdir -p -- "$RESTORE_DIR" || fail "dir [$RESTORE_DIR] creation failed w/ [$?]"
 }
 
 

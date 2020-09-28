@@ -21,6 +21,14 @@ root permissions on the host.
 To synchronize container tz with that of host's, then also add following mount:
 `-v /etc/localtime:/etc/localtime:ro`
 
+It's possible to get notified of any errors. Currently supported methods are
+
+- sending mail via SMTP
+- sending unraid UI notification pop-ups if your host is running unraid
+
+If you wish to provide your own msmtprc config file instead of defining `SMTP_*` env vars,
+create it at the `/config` mount, named `msmtprc`.
+
 Avoid using the `latest` version of this image, as you'd want to be tied to a certain
 version of borg - different borg versions can be non-compatible.
 
@@ -37,7 +45,7 @@ Every time ssh key or crontab are changed in `/config`, container needs to be re
       mysql env variables are only required if you intend to back up databases
 
 
-    HOST_HOSTNAME           hostname to include in the borg archive name; mandatory;
+    HOST_NAME               hostname to include in the borg archive name; mandatory;
     REMOTE                  remote connection, including repository, eg remoteuser@remoteserver.com:/backup/location
                             optional - can be omitted when only backing up to local borg repo.
     BORG_LOCAL_REPO_NAME    local borg repo name; optional, defaults to 'repo'
@@ -51,6 +59,25 @@ Every time ssh key or crontab are changed in `/config`, container needs to be re
                             restoring or if it's defined by backup script -P param
                             (which overrides this container env var)
 
+
+    ERR_NOTIF               space separated error notification methods; supported values
+                            are {mail,unraid}
+
+      following params {MAIL,SMTP}_* are only used if ERR_NOTIF value contains 'mail';
+      also note SMTP_* env vars are ignored if you've provided smtp config at /config/msmtprc
+    MAIL_TO                 address to send notifications to
+    MAIL_FROM               name of the notificatoin sender
+    MAIL_SUBJECT            mail notification subject
+    SMTP_HOST               smtp server host; only required if MSMTPRC file not provided
+    SMTP_USER               login user to the smtp account; only required if MSMTPRC file not provided
+    SMTP_PASS               login password to the smtp account; only required if MSMTPRC file not provided
+    SMTP_PORT               smtp server port; defaults to 587
+    SMTP_AUTH               defaults to 'on'
+    SMTP_TLS                defaults to 'on'
+    SMTP_STARTTLS           defaults to 'on'
+    SMTP_ACCOUNT            smtp account to use, defaults to 'default'; makes sense only if you've
+                            provided your own MSMTPRC config at /config/msmtprc;
+
 ## Script usage
 
 Container incorporates `backup`, `restore` and `list` scripts.
@@ -60,8 +87,9 @@ Container incorporates `backup`, `restore` and `list` scripts.
 `backup` script is mostly intended to be ran by the cron, but can also be executed
 directly via docker for one off backup.
 
-    usage: backup [-h] [-d MYSQL_DBS] [-n NODES_TO_BACKUP] [-c CONTAINERS] [-r] [-l]
-                  [-P BORG_PRUNE_OPTS] [-B|-Z BORG_EXTRA_OPTS] [-N BORG_LOCAL_REPO_NAME] -p PREFIX
+    usage: backup [-h] [-d MYSQL_DBS] [-n NODES_TO_BACKUP] [-c CONTAINERS] [-rl]
+                  [-P BORG_PRUNE_OPTS] [-B|-Z BORG_EXTRA_OPTS] [-N BORG_LOCAL_REPO_NAME]
+                  [-e ERR_NOTIF] [-A SMTP_ACCOUNT] -p PREFIX
     
     Create new archive
     
@@ -72,7 +100,9 @@ directly via docker for one off backup.
       -n NODES_TO_BACKUP      space separated files/directories to back up (in addition to db dumps);
                               path may not contain spaces, as space is the separator
       -c CONTAINERS           space separated container names to stop for the backup process;
-                              requires mounting the docker socket (-v /var/run/docker.sock:/var/run/docker.sock)
+                              requires mounting the docker socket (-v /var/run/docker.sock:/var/run/docker.sock);
+                              note containers will be stopped in given order; after backup
+                              completion, containers are started in reverse order;
       -r                      only back to remote borg repo (remote-only)
       -l                      only back to local borg repo (local-only)
       -P BORG_PRUNE_OPTS      overrides container env variable BORG_PRUNE_OPTS; only required when
@@ -82,8 +112,12 @@ directly via docker for one off backup.
       -Z BORG_EXTRA_OPTS      additional borg params; note it _overrides_
                               the BORG_EXTRA_OPTS env var;
       -N BORG_LOCAL_REPO_NAME overrides container env variable BORG_LOCAL_REPO_NAME;
+      -e ERR_NOTIF            space separated error notification methods; overrides
+                              env var of same name;
+      -A SMTP_ACCOUNT         msmtp account to use; defaults to 'default'; overrides
+                              env var of same name;
       -p PREFIX               borg archive name prefix. note that the full archive name already
-                              contains hostname and timestamp.
+                              contains HOST_NAME and timestamp, so omit those.
 
 #### Usage examples
 
@@ -94,7 +128,7 @@ directly via docker for one off backup.
         -e MYSQL_PORT=27017 \
         -e MYSQL_USER=admin \
         -e MYSQL_PASS=password \
-        -e HOST_HOSTNAME=hostname-to-use-in-archive-prefix \
+        -e HOST_NAME=hostname-to-use-in-archive-prefix \
         -e REMOTE=remoteuser@server.com:repo/location \
         -e BORG_EXTRA_OPTS='--compression zlib,5 --lock-wait 60' \
         -e BORG_PASSPHRASE=borgrepopassword \
@@ -116,7 +150,7 @@ directly via docker for one off backup.
         -e MYSQL_PORT=27017 \
         -e MYSQL_USER=admin \
         -e MYSQL_PASS=password \
-        -e HOST_HOSTNAME=hostname-to-use-in-archive-prefix \
+        -e HOST_NAME=hostname-to-use-in-archive-prefix \
         -e REMOTE=remoteuser@server.com:repo/location \
         -e BORG_PASSPHRASE=borgrepopassword \
         -e BORG_PRUNE_OPTS='--keep-daily=7 --keep-weekly=4' \
@@ -133,7 +167,7 @@ directly via docker for one off backup.
 ##### Back up directores /app1 & /app2 every 6 hours to local borg repo (ie remote is excluded)
 
     docker run -d \
-        -e HOST_HOSTNAME=hostname-to-use-in-archive-prefix \
+        -e HOST_NAME=hostname-to-use-in-archive-prefix \
         -e BORG_PASSPHRASE=borgrepopassword \
         -e BORG_PRUNE_OPTS='--keep-daily=7 --keep-weekly=4' \
         -v /backup:/backup \
@@ -154,7 +188,7 @@ define absolute time, but simply an interval.
 ##### Back up directory /app3 once to remote borg repo (ie local is excluded)
 
     docker run -it --rm \
-        -e HOST_HOSTNAME=hostname-to-use-in-archive-prefix \
+        -e HOST_NAME=hostname-to-use-in-archive-prefix \
         -e REMOTE=remoteuser@server.com:repo/location \
         -e BORG_PASSPHRASE=borgrepopassword \
         -e BORG_PRUNE_OPTS='--keep-daily=7 --keep-weekly=4' \
