@@ -48,8 +48,13 @@ expand_nodes_to_back_up() {
 dump_db() {
     local output_filename
 
+    MYSQL_DB="$(sed 's/^[[:space:]]*//;s/[[:space:]]*$//' <<< "$MYSQL_DB")"  # strip leading&trailing whitespace
+
     [[ -z "$MYSQL_DB" ]] && return 0  # no db specified, meaning db dump not required
 
+    MYSQL_DB="$(tr -s ' ' <<< "$MYSQL_DB")"  # squash multiple spaces
+
+    # alternatively this, to squash multiple spaces & replace w/ '+' in one go:   MYSQL_DB="${MYSQL_DB//+( )/+}"
     if [[ "$MYSQL_DB" == __all__ ]]; then
         output_filename='all-dbs'
         MYSQL_DB='--all-databases'
@@ -63,10 +68,10 @@ dump_db() {
     mysqldump \
             --add-drop-database \
             --max-allowed-packet=512M \
-            "-h${MYSQL_HOST}" \
-            "-P${MYSQL_PORT}" \
-            "-u${MYSQL_USER}" \
-            "-p${MYSQL_PASS}" \
+            -h "${MYSQL_HOST}" \
+            -P "${MYSQL_PORT}" \
+            -u "${MYSQL_USER}" \
+            -p "${MYSQL_PASS}" \
             ${MYSQL_EXTRA_OPTS} \
             ${MYSQL_DB} > "$TMP/${output_filename}.sql"
 

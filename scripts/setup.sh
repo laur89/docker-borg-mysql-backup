@@ -8,7 +8,7 @@
 readonly SELF="${0##*/}"
 readonly LOG="/var/log/${SELF}.log"
 
-install_crontab() {
+setup_crontab() {
     local cron_target
 
     readonly cron_target='/var/spool/cron/crontabs/root'
@@ -43,10 +43,44 @@ install_ssh_key() {
 }
 
 
+setup_msmtp() {
+    rm -f /usr/sbin/sendmail || fail "rm sendmail failed w/ $?"
+    ln -s /usr/bin/msmtp /usr/sbin/sendmail || fail "linking sendmail failed w/ $?"
+
+    if true; then  # TODO
+        rm -f /usr/sbin/sendmail
+        ln -s /usr/bin/msmtp /usr/sbin/sendmail
+
+        if [[ -f "$MSMTPRC" ]]; then
+            cat -- "$MSMTPRC" > /etc/msmtprc
+        else
+            cat > /etc/msmtprc <<EOF
+### Automatically generated on container start. See documentation on how to set!'
+account default
+host ${SMTP_HOST}
+port ${SMTP_PORT}
+#from ${SMTP_FROM}
+${SMTP_AUTH:+auth $SMTP_AUTH}
+${SMTP_USER:+user $SMTP_USER}
+${SMTP_PASS:+password $SMTP_PASS}
+tls ${SMTP_TLS}
+tls_starttls ${SMTP_STARTTLS}
+tls_certcheck ${SMTP_TLSCERTCHECK}
+logfile /var/log/msmtp.log
+### Gmail Specific SMTP Config
+#if var_true "$ENABLE_SMTP_GMAIL" ; then echo "auto_from on"; fi
+EOF
+        fi
+    fi
+}
+
+
 printenv | sed 's/^\(\w\+\)=\(.*\)$/export \1="\2"/g' > /env_vars.sh || { echo -e "    ERROR: printenv failed" | tee -a "$LOG"; exit 1; }
 source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_common.sh" | tee -a "$LOG"; exit 1; }
+chmod 600 /env_vars.sh || fail "chmod-ing /env_vars.sh failed w/ $?"
 
-install_crontab
+setup_crontab
 install_ssh_key
+setup_msmtp
 
 exit 0
