@@ -75,10 +75,10 @@ dump_db() {
     mysqldump \
             --add-drop-database \
             --max-allowed-packet=512M \
-            -h "${MYSQL_HOST}" \
-            -P "${MYSQL_PORT}" \
-            -u "${MYSQL_USER}" \
-            -p "${MYSQL_PASS}" \
+            --host="${MYSQL_HOST}" \
+            --port="${MYSQL_PORT}" \
+            --user="${MYSQL_USER}" \
+            --password="${MYSQL_PASS}" \
             ${MYSQL_EXTRA_OPTS} \
             ${MYSQL_DB} > "$TMP/${output_filename}.sql" || fail "db dump for [$mysql_db_orig] failed w/ [$?]"
 }
