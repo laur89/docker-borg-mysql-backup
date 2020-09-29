@@ -51,7 +51,7 @@ setup_msmtp() {
     rm -f /usr/sbin/sendmail || fail "rm sendmail failed w/ $?"
     ln -s /usr/bin/msmtp /usr/sbin/sendmail || fail "linking sendmail failed w/ $?"
 
-    if [[ -f "$MSMTPRC" ]]; then
+    if [[ -f "$MSMTPRC" && -s "$MSMTPRC" ]]; then
         cat -- "$MSMTPRC" > "$target_conf"
     else
         cat > "$target_conf" <<EOF

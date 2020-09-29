@@ -172,7 +172,7 @@ validate_config_common() {
                 MAIL_SUBJECT
             )
 
-            [[ -f "$MSMTPRC" ]] || vars+=(
+            [[ -f "$MSMTPRC" && -s "$MSMTPRC" ]] || vars+=(
                 SMTP_HOST
                 SMTP_USER
                 SMTP_PASS

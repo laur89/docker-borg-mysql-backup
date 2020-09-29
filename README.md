@@ -19,20 +19,22 @@ but keep in mind it has security implications - borg-mysql-backup will have esse
 root permissions on the host.
 
 To synchronize container tz with that of host's, then also add following mount:
-`-v /etc/localtime:/etc/localtime:ro`
+`-v /etc/localtime:/etc/localtime:ro`. You'll likely want to do this for cron times
+to match your local time.
 
-It's possible to get notified of any errors. Currently supported methods are
+It's possible to get notified of any errors that occur during backups.
+Currently supported notification methods are
 
 - sending mail via SMTP
-- sending unraid UI notification pop-ups if your host is running unraid
+- sending unraid UI notification pop-ups if your host is running [unraid](https://unraid.net/)
 
-If you wish to provide your own msmtprc config file instead of defining `SMTP_*` env vars,
-create it at the `/config` mount, named `msmtprc`.
+If you wish to provide your own msmtprc config file instead of defining `SMTP_*` env
+vars, create it at the `/config` mount, named `msmtprc`.
 
-Avoid using the `latest` version of this image, as you'd want to be tied to a certain
-version of borg - different borg versions can be non-compatible.
+Try to avoid using the `latest` version of this image, as you'd want to be tied to a 
+certain version of borg - different borg versions can be non-compatible.
 
-Every time ssh key or crontab are changed in `/config`, container needs to be restarted.
+Every time any config is changed in `/config`, container needs to be restarted.
 
 
 ## Container Parameters
@@ -63,7 +65,8 @@ Every time ssh key or crontab are changed in `/config`, container needs to be re
                             are {mail,unraid}
 
       following params {MAIL,SMTP}_* are only used if ERR_NOTIF value contains 'mail';
-      also note SMTP_* env vars are ignored if you've provided smtp config at /config/msmtprc
+      also note all SMTP_* env vars besides SMTP_ACCOUNT are ignored if you've
+      provided smtp config at /config/msmtprc
     MAIL_TO                 address to send notifications to
     MAIL_FROM               name of the notificatoin sender
     MAIL_SUBJECT            mail notification subject
@@ -74,14 +77,15 @@ Every time ssh key or crontab are changed in `/config`, container needs to be re
     SMTP_AUTH               defaults to 'on'
     SMTP_TLS                defaults to 'on'
     SMTP_STARTTLS           defaults to 'on'
-    SMTP_ACCOUNT            smtp account to use, defaults to 'default'; makes sense only if you've
-                            provided your own MSMTPRC config at /config/msmtprc;
+    SMTP_ACCOUNT            smtp account to use for sending mail, defaults to 'default';
+                            makes sense only if you've provided your own MSMTPRC
+                            config at /config/msmtprc
 
 ## Script usage
 
 Container incorporates `backup`, `restore` and `list` scripts.
 
-### backup
+### backup.sh
 
 `backup` script is mostly intended to be ran by the cron, but can also be executed
 directly via docker for one off backup.
@@ -200,7 +204,7 @@ command just once, after which container exits and is removed (ie we're not usin
 scheduled backups). Also note there's no `/backup` mount as we're operating only
 against the remote borg repo.
 
-### restore
+### restore.sh
 
 `restore` script should be executed directly with docker in interactive mode.
 Script will restore db from the restored dump, if respective param is provided. All data
@@ -221,7 +225,7 @@ will be extracted into `/backup/restored-{archive_name}`
       -r                      restore from remote borg repo
       -l                      restore from local borg repo
       -N BORG_LOCAL_REPO_NAME overrides container env variable BORG_LOCAL_REPO_NAME; optional;
-      -a ARCHIVE_NAME         name of the borg archive to restore data from
+      -a ARCHIVE_NAME         name of the borg archive to restore/extract data from
 
 #### Usage examples
 
@@ -258,7 +262,7 @@ db won't be automatically restored with the included .sql dumpfile (if there was
 Data will be restored from non-default local borg repo `otherrepo`. Also note missing
 env variable `BORG_PASSPHRASE`, which will be required to be typed in manually.
 
-### list
+### list.sh
 
 `list` script is for listing archives in a borg repo.
 

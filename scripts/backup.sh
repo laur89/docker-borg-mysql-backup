@@ -277,7 +277,7 @@ while getopts "d:n:p:c:rlP:B:Z:N:e:A:h" opt; do
     esac
 done
 
-readonly TMP_ROOT='/tmp/.backup.tmp'
+readonly TMP_ROOT="/tmp/${SELF}.tmp"
 readonly TMP="$TMP_ROOT/${ARCHIVE_PREFIX}-$RANDOM"
 
 readonly PREFIX_WITH_HOSTNAME="${ARCHIVE_PREFIX}-${HOST_NAME}-"  # used for pruning

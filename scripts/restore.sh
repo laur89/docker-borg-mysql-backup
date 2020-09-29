@@ -21,7 +21,7 @@ readonly usage="
       -r                      restore from remote borg repo
       -l                      restore from local borg repo
       -N BORG_LOCAL_REPO_NAME overrides container env variable BORG_LOCAL_REPO_NAME; optional;
-      -a ARCHIVE_NAME         name of the borg archive to restore data from
+      -a ARCHIVE_NAME         name of the borg archive to restore/extract data from
 "
 
 # checks whether chosen borg repo really is a valid repo
