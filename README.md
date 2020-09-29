@@ -26,7 +26,7 @@ It's possible to get notified of any errors that occur during backups.
 Currently supported notification methods are
 
 - sending mail via SMTP
-- sending unraid UI notification pop-ups if your host is running [unraid](https://unraid.net/)
+- sending [pushover](https://pushover.net/) notifications
 
 If you wish to provide your own msmtprc config file instead of defining `SMTP_*` env
 vars, create it at the `/config` mount, named `msmtprc`.
@@ -43,7 +43,7 @@ Every time any config is changed in `/config`, container needs to be restarted.
     MYSQL_PORT              the port number of your mysql database
     MYSQL_USER              the username of your mysql database
     MYSQL_PASS              the password of your mysql database
-    MYSQL_EXTRA_OPTS        the extra options to pass to `mysqldump` command; optional
+    MYSQL_EXTRA_OPTS        the extra options to pass to 'mysqldump' command; optional
       mysql env variables are only required if you intend to back up databases
 
 
@@ -62,14 +62,14 @@ Every time any config is changed in `/config`, container needs to be restarted.
                             (which overrides this container env var)
 
     ERR_NOTIF               space separated error notification methods; supported values
-                            are {mail,unraid}
+                            are {mail,pushover}
+    NOTIF_SUBJECT           notifications' subject/title; defaults to '[{p}] backup error on {h}'
 
       following params {MAIL,SMTP}_* are only used if ERR_NOTIF value contains 'mail';
       also note all SMTP_* env vars besides SMTP_ACCOUNT are ignored if you've
       provided smtp config at /config/msmtprc
     MAIL_TO                 address to send notifications to
-    MAIL_FROM               name of the notification sender; defaults to `{h} backup reporter`
-    MAIL_SUBJECT            mail notification subject; defaults to `[{p}] backup error on {h}`
+    MAIL_FROM               name of the notification sender; defaults to '{h} backup reporter'
     SMTP_HOST               smtp server host; only required if MSMTPRC file not provided
     SMTP_USER               login user to the smtp account; only required if MSMTPRC file not provided
     SMTP_PASS               login password to the smtp account; only required if MSMTPRC file not provided
@@ -80,6 +80,10 @@ Every time any config is changed in `/config`, container needs to be restarted.
     SMTP_ACCOUNT            smtp account to use for sending mail, defaults to 'default';
                             makes sense only if you've provided your own MSMTPRC
                             config at /config/msmtprc
+
+      following params are only used/required if ERR_NOTIF value contains 'pushover':
+    PUSHOVER_USER_KEY       your pushover account key
+    PUSHOVER_APP_TOKEN      token of a registered app to send notifications from
 
 ## Script usage
 
@@ -200,7 +204,7 @@ define absolute time, but simply an interval.
         -v /app2:/app2:ro \
         -e ERR_NOTIF=mail \
         -e MAIL_TO=receiver@example.com \
-        -e MAIL_SUBJECT='{i} backup error' \
+        -e NOTIF_SUBJECT='{i} backup error' \
         -e SMTP_HOST='smtp.gmail.com' \
         -e SMTP_USER='your.google.username' \
         -e SMTP_PASS='your-google-app-password' \

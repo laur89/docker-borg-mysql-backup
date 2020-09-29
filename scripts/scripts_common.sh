@@ -8,12 +8,13 @@ readonly SCRIPTS_ROOT="$CONF_ROOT/scripts"
 
 readonly CRON_FILE="$CONF_ROOT/crontab"
 readonly MSMTPRC="$CONF_ROOT/msmtprc"
+readonly PUSHOVER_CONF="$CONF_ROOT/pushover.conf"
 readonly SSH_KEY="$CONF_ROOT/id_rsa"
 readonly LOG_TIMESTAMP_FORMAT='+%F %T'
 
 readonly DEFAULT_LOCAL_REPO_NAME=repo
 readonly DEFAULT_MAIL_FROM='{h} backup reporter'
-readonly DEFAULT_MAIL_SUBJECT='[{p}] backup error on {h}'
+readonly DEFAULT_NOTIF_SUBJECT='[{p}] backup error on {h}'
 
 
 start_or_stop_containers() {
@@ -127,15 +128,17 @@ notif() {
     readonly msg="$1"
 
     if [[ "$ERR_NOTIF" == *mail* && "$NO_SEND_MAIL" != true ]]; then
-        mail $f -t "$MAIL_TO" -f "$MAIL_FROM" -s "$MAIL_SUBJECT" -a "$SMTP_ACCOUNT" -b "$msg"
+        mail $f -t "$MAIL_TO" -f "$MAIL_FROM" -s "$NOTIF_SUBJECT" -a "$SMTP_ACCOUNT" -b "$msg"
+    fi
+
+    if [[ "$ERR_NOTIF" == *pushover* ]]; then
+        pushover $f -s "$NOTIF_SUBJECT" -b "$msg"
     fi
 }
 
 
 mail() {
     local opt to from subj acc body is_fail OPTIND
-
-    is_fail=false  # default
 
     while getopts "Ft:f:s:b:a:" opt; do
         case "$opt" in
@@ -160,45 +163,83 @@ mail() {
     msmtp -a "${acc:-default}" --read-envelope-from -t <<EOF
 To: $to
 From: $(expand_placeholders "${from:-$DEFAULT_MAIL_FROM}" "$is_fail")
-Subject: $(expand_placeholders "${subj:-$DEFAULT_MAIL_SUBJECT}" "$is_fail")
+Subject: $(expand_placeholders "${subj:-$DEFAULT_NOTIF_SUBJECT}" "$is_fail")
 
 $(expand_placeholders "${body:-NO MESSAGE BODY PROVIDED}" "$is_fail")
 EOF
+
+    [[ $? -ne 0 ]] && err -N "sending mail failed w/ [$?]"
+}
+
+
+pushover() {
+    local opt is_fail subj body OPTIND
+
+    while getopts "Fs:b:" opt; do
+        case "$opt" in
+            F) is_fail=true
+                ;;
+            s) subj="$OPTARG"
+                ;;
+            b) body="$OPTARG"
+                ;;
+            *) fail -N "$FUNCNAME called with unsupported flag(s)"
+                ;;
+        esac
+    done
+    shift "$((OPTIND-1))"
+
+    curl -sSLf \
+        --form-string "token=$PUSHOVER_APP_TOKEN" \
+        --form-string "user=$PUSHOVER_USER_KEY" \
+        --form-string "title=$(expand_placeholders "${subj:-$DEFAULT_NOTIF_SUBJECT}" "$is_fail")" \
+        --form-string "message=$(expand_placeholders "${body:-NO MESSAGE BODY PROVIDED}" "$is_fail")" \
+        --form-string "priority=${PUSHOVER_PRIORITY:-1}" \
+        --form-string "timestamp=$(date +%s)" \
+        "https://api.pushover.net/1/messages.json" || err -N "sending pushover notification failed w/ [$?]"
 }
 
 
 validate_config_common() {
     local i vars val
 
+    declare -a vars
     if [[ -n "$ERR_NOTIF" ]]; then
         for i in $ERR_NOTIF; do
-            [[ "$i" == mail || "$i" == unraid ]] || fail "unsupported [ERR_NOTIF] value: [$i]"
+            [[ "$i" == mail || "$i" == pushover ]] || fail "unsupported [ERR_NOTIF] value: [$i]"
         done
 
         if [[ "$ERR_NOTIF" == *mail* ]]; then
-            declare -a vars=(
-                MAIL_TO
-            )
+            vars+=(MAIL_TO)
 
             [[ -f "$MSMTPRC" && -s "$MSMTPRC" ]] || vars+=(
                 SMTP_HOST
                 SMTP_USER
                 SMTP_PASS
             )
+        fi
 
-            for i in "${vars[@]}"; do
-                val="$(eval echo "\$$i")" || fail "evaling [echo \"\$$i\"] failed w/ [$?]"
-                [[ -z "$val" ]] && fail "[$i] is not defined"
-            done
+        if [[ "$ERR_NOTIF" == *pushover* ]]; then
+            vars+=(
+                PUSHOVER_APP_TOKEN
+                PUSHOVER_USER_KEY
+            )
+
         fi
     fi
+
+    for i in "${vars[@]}"; do
+        val="$(eval echo "\$$i")" || fail "evaling [echo \"\$$i\"] failed w/ [$?]"
+        [[ -z "$val" ]] && fail "[$i] is not defined"
+    done
 }
 
 
 expand_placeholders() {
     local m is_fail
+
     m="$1"
-    is_fail="$2"
+    is_fail="${2:-false}"
 
     m="$(sed "s/{h}/$HOST_NAME/g" <<< "$m")"
     m="$(sed "s/{p}/$ARCHIVE_PREFIX/g" <<< "$m")"
@@ -210,3 +251,5 @@ expand_placeholders() {
 
 
 source /env_vars.sh || fail "failed to import /env_vars.sh"
+[[ -f "$PUSHOVER_CONF" ]] && source "$PUSHOVER_CONF"
+
