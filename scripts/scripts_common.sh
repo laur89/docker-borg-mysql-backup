@@ -16,15 +16,6 @@ readonly DEFAULT_MAIL_FROM='{h} backup reporter'
 readonly DEFAULT_MAIL_SUBJECT='[{p}] backup error on {h}'
 
 
-check_dependencies() {
-    local i
-
-    for i in docker mysql mysqldump borg ssh-keygen ssh-keyscan tr sed msmtp; do
-        command -v "$i" >/dev/null || fail "[$i] not installed"
-    done
-}
-
-
 start_or_stop_containers() {
     local start_or_stop c idx
 
@@ -101,13 +92,17 @@ log() {
 
 
 err() {
-    local opt msg f no_notif OPTIND
+    local opt msg f no_notif OPTIND no_mail_orig
 
-    while getopts "FN" opt; do
+    no_mail_orig="$NO_SEND_MAIL"
+
+    while getopts "FNM" opt; do
         case "$opt" in
             F) f='-F'
                 ;;
             N) no_notif=1
+                ;;
+            M) NO_SEND_MAIL=true
                 ;;
             *) fail -N "$FUNCNAME called with unsupported flag(s)"
                 ;;
@@ -118,6 +113,8 @@ err() {
     readonly msg="$1"
     echo -e "[$(date "$LOG_TIMESTAMP_FORMAT")] [$JOB_ID]\t    ERROR  $msg" | tee -a "$LOG"
     [[ "$no_notif" -ne 1 ]] && notif $f "$msg"
+
+    NO_SEND_MAIL="$no_mail_orig"  # reset to previous value
 }
 
 
@@ -213,4 +210,3 @@ expand_placeholders() {
 
 
 source /env_vars.sh || fail "failed to import /env_vars.sh"
-check_dependencies

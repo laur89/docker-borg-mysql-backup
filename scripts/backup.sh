@@ -33,7 +33,8 @@ readonly usage="
       -N BORG_LOCAL_REPO_NAME overrides container env variable BORG_LOCAL_REPO_NAME;
       -e ERR_NOTIF            space separated error notification methods; overrides
                               env var of same name;
-      -A SMTP_ACCOUNT         msmtp account to use; defaults to 'default';
+      -A SMTP_ACCOUNT         msmtp account to use; defaults to 'default'; overrides
+                              env var of same name;
       -p PREFIX               borg archive name prefix. note that the full archive name already
                               contains HOST_NAME and timestamp, so omit those.
 "
@@ -81,6 +82,7 @@ dump_db() {
             --password="${MYSQL_PASS}" \
             ${MYSQL_EXTRA_OPTS} \
             ${MYSQL_DB} > "$TMP/${output_filename}.sql" || fail "db dump for [$mysql_db_orig] failed w/ [$?]"
+     # TODO: should mysqldump fail or just err?
 }
 
 

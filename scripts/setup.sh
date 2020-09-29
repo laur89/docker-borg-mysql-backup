@@ -11,6 +11,16 @@ readonly SELF="${0##*/}"
 readonly LOG="/var/log/${SELF}.log"
 JOB_ID="setup-$$"
 
+
+check_dependencies() {
+    local i
+
+    for i in docker mysql mysqldump borg ssh-keygen ssh-keyscan tr sed find msmtp; do
+        command -v "$i" >/dev/null || fail "[$i] not installed"
+    done
+}
+
+
 setup_crontab() {
     local cron_target
 
@@ -81,6 +91,7 @@ printenv | sed 's/^\(\w\+\)=\(.*\)$/export \1="\2"/g' > /env_vars.sh || { echo -
 source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_common.sh" | tee -a "$LOG"; exit 1; }
 chmod 600 /env_vars.sh || fail "chmod-ing /env_vars.sh failed w/ $?"
 
+check_dependencies
 validate_config_common
 setup_crontab
 install_ssh_key
