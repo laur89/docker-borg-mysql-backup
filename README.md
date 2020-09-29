@@ -59,7 +59,6 @@ Every time ssh key or crontab are changed in `/config`, container needs to be re
                             restoring or if it's defined by backup script -P param
                             (which overrides this container env var)
 
-
     ERR_NOTIF               space separated error notification methods; supported values
                             are {mail,unraid}
 
@@ -192,14 +191,14 @@ define absolute time, but simply an interval.
         -e REMOTE=remoteuser@server.com:repo/location \
         -e BORG_PASSPHRASE=borgrepopassword \
         -e BORG_PRUNE_OPTS='--keep-daily=7 --keep-weekly=4' \
-        -v /backup:/backup \
         -v /borg-mysql-backup/config:/config:ro \
         -v /app3/on/host:/app3:ro \
            layr/borg-mysql-backup backup.sh -r -n /app3 -p my_prefix
 
 Note there's no need to have a crontab file in `/config`, as we're executing this
 command just once, after which container exits and is removed (ie we're not using
-scheduled backups).
+scheduled backups). Also note there's no `/backup` mount as we're operating only
+against the remote borg repo.
 
 ### restore
 
