@@ -219,13 +219,10 @@ validate_config_common() {
             )
         fi
 
-        if [[ "$ERR_NOTIF" == *pushover* ]]; then
-            vars+=(
+        [[ "$ERR_NOTIF" == *pushover* ]] && vars+=(
                 PUSHOVER_APP_TOKEN
                 PUSHOVER_USER_KEY
-            )
-
-        fi
+        )
     fi
 
     for i in "${vars[@]}"; do
