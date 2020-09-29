@@ -68,8 +68,8 @@ Every time any config is changed in `/config`, container needs to be restarted.
       also note all SMTP_* env vars besides SMTP_ACCOUNT are ignored if you've
       provided smtp config at /config/msmtprc
     MAIL_TO                 address to send notifications to
-    MAIL_FROM               name of the notificatoin sender
-    MAIL_SUBJECT            mail notification subject
+    MAIL_FROM               name of the notification sender; defaults to `{h} backup reporter`
+    MAIL_SUBJECT            mail notification subject; defaults to `[{p}] backup error on {h}`
     SMTP_HOST               smtp server host; only required if MSMTPRC file not provided
     SMTP_USER               login user to the smtp account; only required if MSMTPRC file not provided
     SMTP_PASS               login password to the smtp account; only required if MSMTPRC file not provided
@@ -188,7 +188,28 @@ Also there's no need to have ssh key in `/config`, as we're not connecting to a 
 Additionally, there was no need to mount `/etc/localtime`, as cron doesn't
 define absolute time, but simply an interval.
 
-##### Back up directory /app3 once to remote borg repo (ie local is excluded)
+##### Same as above, but report errors via mail
+
+    docker run -d \
+        -e HOST_NAME=hostname-to-use-in-archive-prefix \
+        -e BORG_PASSPHRASE=borgrepopassword \
+        -e BORG_PRUNE_OPTS='--keep-daily=7 --keep-weekly=4' \
+        -v /backup:/backup \
+        -v /borg-mysql-backup/config:/config:ro \
+        -v /app1:/app1:ro \
+        -v /app2:/app2:ro \
+        -e ERR_NOTIF=mail \
+        -e MAIL_TO=receiver@example.com \
+        -e MAIL_SUBJECT='{i} backup error' \
+        -e SMTP_HOST='smtp.gmail.com' \
+        -e SMTP_USER='your.google.username' \
+        -e SMTP_PASS='your-google-app-password' \
+           layr/borg-mysql-backup
+
+Same as the example before, but we've also opted to get notified of any backup
+errors via email.
+
+##### Back up directory /emby once to remote borg repo (ie local is excluded)
 
     docker run -it --rm \
         -e HOST_NAME=hostname-to-use-in-archive-prefix \
@@ -196,8 +217,8 @@ define absolute time, but simply an interval.
         -e BORG_PASSPHRASE=borgrepopassword \
         -e BORG_PRUNE_OPTS='--keep-daily=7 --keep-weekly=4' \
         -v /borg-mysql-backup/config:/config:ro \
-        -v /app3/on/host:/app3:ro \
-           layr/borg-mysql-backup backup.sh -r -n /app3 -p my_prefix
+        -v /emby/dir/on/host:/emby:ro \
+           layr/borg-mysql-backup backup.sh -r -n /emby -p emby
 
 Note there's no need to have a crontab file in `/config`, as we're executing this
 command just once, after which container exits and is removed (ie we're not using

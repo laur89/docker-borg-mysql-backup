@@ -10,7 +10,10 @@ readonly CRON_FILE="$CONF_ROOT/crontab"
 readonly MSMTPRC="$CONF_ROOT/msmtprc"
 readonly SSH_KEY="$CONF_ROOT/id_rsa"
 readonly LOG_TIMESTAMP_FORMAT='+%F %T'
+
 readonly DEFAULT_LOCAL_REPO_NAME=repo
+readonly DEFAULT_MAIL_FROM='{h} backup reporter'
+readonly DEFAULT_MAIL_SUBJECT='[{p}] backup error on {h}'
 JOB_ID="id-$$"  # default id for logging
 
 
@@ -149,8 +152,8 @@ mail() {
 
     msmtp -a "${acc:-default}" --read-envelope-from -t <<EOF
 To: $to
-From: $(expand_placeholders "$from" "$is_fail")
-Subject: $(expand_placeholders "$subj" "$is_fail")
+From: $(expand_placeholders "${from:-$DEFAULT_MAIL_FROM}" "$is_fail")
+Subject: $(expand_placeholders "${subj:-$DEFAULT_MAIL_SUBJECT}" "$is_fail")
 
 $(expand_placeholders "$body" "$is_fail")
 EOF
@@ -168,8 +171,6 @@ validate_config_common() {
         if [[ "$ERR_NOTIF" == *mail* ]]; then
             declare -a vars=(
                 MAIL_TO
-                MAIL_FROM
-                MAIL_SUBJECT
             )
 
             [[ -f "$MSMTPRC" && -s "$MSMTPRC" ]] || vars+=(
