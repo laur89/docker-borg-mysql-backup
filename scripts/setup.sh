@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 #
-# this file is to be placed in /etc/my_init.d/
+# this is service bootstrap logic to be called from container entrypoint.
 #
-# writes down env vars so they can be sourced by the scripts executed by cron.
-# also initialises cron & sets ssh key, if available.
+# - writes down env vars so they can be sourced by the scripts;
+# - initialises crontab;
+# - sets ssh key, if available & adds our remote borg to know_hosts;
+# - configures msmtprc for mail notifications;
 
 readonly SELF="${0##*/}"
 readonly LOG="/var/log/${SELF}.log"
