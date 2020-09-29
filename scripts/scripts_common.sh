@@ -87,7 +87,7 @@ confirm() {
 
 
 fail() {
-    err --fail "$@"
+    err -F "$@"
     exit 1
 }
 
@@ -102,20 +102,30 @@ log() {
 
 
 err() {
-    local msg f
+    local opt msg f no_notif OPTIND
 
-    [[ "$1" == '--fail' ]] && { f='--fail'; shift; }
+    while getopts "FN" opt; do
+        case "$opt" in
+            F) f='-F'
+                ;;
+            N) no_notif=1
+                ;;
+            *) fail -N "$FUNCNAME called with unsupported flag(s)"
+                ;;
+        esac
+    done
+    shift "$((OPTIND-1))"
 
     readonly msg="$1"
     echo -e "[$(date "$LOG_TIMESTAMP_FORMAT")] [$JOB_ID]\t    ERROR  $msg" | tee -a "$LOG"
-    notif $f "$msg"
+    [[ "$no_notif" -ne 1 ]] && notif $f "$msg"
 }
 
 
 notif() {
     local msg f
 
-    [[ "$1" == '--fail' ]] && { f='-F'; shift; }
+    [[ "$1" == '-F' ]] && { f='-F'; shift; }
     [[ "$-" == *i* || "$NO_NOTIF" == true ]] && return 0
 
     readonly msg="$1"
@@ -127,9 +137,9 @@ notif() {
 
 
 mail() {
-    local opt to from subj acc body is_fail
+    local opt to from subj acc body is_fail OPTIND
 
-    is_fail=false
+    is_fail=false  # default
 
     while getopts "Ft:f:s:b:a:" opt; do
         case "$opt" in
@@ -145,10 +155,11 @@ mail() {
                 ;;
             a) acc="$OPTARG"
                 ;;
-            *) fail "$FUNCNAME called with unsupported flag(s)"
+            *) fail -N "$FUNCNAME called with unsupported flag(s)"
                 ;;
         esac
     done
+    shift "$((OPTIND-1))"
 
     msmtp -a "${acc:-default}" --read-envelope-from -t <<EOF
 To: $to
