@@ -3,7 +3,6 @@
 # common vars & functions
 
 readonly BACKUP_ROOT='/backup'
-readonly SHARED_ROOT='/borg-backup-shared'
 readonly CONF_ROOT='/config'
 readonly SCRIPTS_ROOT="$CONF_ROOT/scripts"
 
@@ -18,7 +17,7 @@ JOB_ID="id-$$"  # default id for logging
 check_dependencies() {
     local i
 
-    for i in docker mysql mysqldump borg ssh-keygen ssh-keyscan flock tr sed msmtp; do
+    for i in docker mysql mysqldump borg ssh-keygen ssh-keyscan tr sed msmtp; do
         command -v "$i" >/dev/null || fail "[$i] not installed"
     done
 }
