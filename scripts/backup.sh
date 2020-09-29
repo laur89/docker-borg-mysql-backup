@@ -178,6 +178,8 @@ init_or_verify_borg() {
 validate_config() {
     local i val vars
 
+    [[ -d "$SHARED_ROOT" ]] || fail "need to create a named mount mounted at [$SHARED_ROOT]"
+
     validate_config_common
 
     declare -a vars=(
@@ -277,14 +279,14 @@ while getopts "d:n:p:c:rlP:B:Z:N:e:A:h" opt; do
     esac
 done
 
-readonly TMP_ROOT="$BACKUP_ROOT/.backup.tmp"
+readonly TMP_ROOT='/tmp/.backup.tmp'
 readonly TMP="$TMP_ROOT/${ARCHIVE_PREFIX}-$RANDOM"
 
 readonly PREFIX_WITH_HOSTNAME="${ARCHIVE_PREFIX}-${HOST_NAME}-"  # used for pruning
 readonly ARCHIVE_NAME="$PREFIX_WITH_HOSTNAME"'{now:%Y-%m-%d-%H%M%S}'
 readonly BORG_LOCAL_REPO="$BACKUP_ROOT/${BORG_LOCAL_REPO_NAME:-$DEFAULT_LOCAL_REPO_NAME}"
 
-readonly LOCK="$BACKUP_ROOT/.borg-${ARCHIVE_PREFIX}-lock"  # make sure lockfile lives outside of container
+readonly LOCK="$SHARED_ROOT/borg-${ARCHIVE_PREFIX}-lock"  # make sure lockfile lives in a share that all instances of this image have access to
 
 (
     flock -n 9 || fail "lock [$LOCK] already held"

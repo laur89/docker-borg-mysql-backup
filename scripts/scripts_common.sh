@@ -3,6 +3,7 @@
 # common vars & functions
 
 readonly BACKUP_ROOT='/backup'
+readonly SHARED_ROOT='/borg-backup-shared'
 readonly CONF_ROOT='/config'
 readonly SCRIPTS_ROOT="$CONF_ROOT/scripts"
 
@@ -111,11 +112,13 @@ err() {
 
 notif() {
     local msg f
+
     [[ "$1" == '--fail' ]] && { f='-F'; shift; }
+    [[ "$-" == *i* || "$NO_NOTIF" == true ]] && return 0
 
     readonly msg="$1"
 
-    if [[ "$ERR_NOTIF" == *mail* && -z "$NO_SEND_MAIL" ]]; then
+    if [[ "$ERR_NOTIF" == *mail* && "$NO_SEND_MAIL" != true ]]; then
         mail $f -t "$MAIL_TO" -f "$MAIL_FROM" -s "$MAIL_SUBJECT" -a "$SMTP_ACCOUNT" -b "$msg"
     fi
 }
