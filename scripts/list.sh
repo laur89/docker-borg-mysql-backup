@@ -4,6 +4,7 @@
 
 readonly SELF="${0##*/}"
 readonly LOG="/var/log/${SELF}.log"
+JOB_ID="list-$$"
 
 readonly usage="
     usage: $SELF [-h] [-r] [-l] [-N BORG_LOCAL_REPO_NAME]

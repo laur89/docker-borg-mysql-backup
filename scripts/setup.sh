@@ -7,6 +7,7 @@
 
 readonly SELF="${0##*/}"
 readonly LOG="/var/log/${SELF}.log"
+JOB_ID="setup-$$"
 
 setup_crontab() {
     local cron_target

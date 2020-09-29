@@ -14,7 +14,6 @@ readonly LOG_TIMESTAMP_FORMAT='+%F %T'
 readonly DEFAULT_LOCAL_REPO_NAME=repo
 readonly DEFAULT_MAIL_FROM='{h} backup reporter'
 readonly DEFAULT_MAIL_SUBJECT='[{p}] backup error on {h}'
-JOB_ID="id-$$"  # default id for logging
 
 
 check_dependencies() {
