@@ -155,7 +155,7 @@ To: $to
 From: $(expand_placeholders "${from:-$DEFAULT_MAIL_FROM}" "$is_fail")
 Subject: $(expand_placeholders "${subj:-$DEFAULT_MAIL_SUBJECT}" "$is_fail")
 
-$(expand_placeholders "$body" "$is_fail")
+$(expand_placeholders "${body:-NO MESSAGE BODY PROVIDED}" "$is_fail")
 EOF
 }
 

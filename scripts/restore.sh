@@ -159,7 +159,7 @@ validate_config
 create_dirs
 verify_borg
 
-start_or_stop_containers stop "${CONTAINERS[@]}"
+start_or_stop_containers stop
 do_restore
 # do not start containers, so we'd have time to manualy move the data files back, if any
 
