@@ -19,12 +19,22 @@ but keep in mind it has security implications - borg-mysql-backup will have esse
 root permissions on the host.
 
 To synchronize container tz with that of host's, then also add following mount:
-`-v /etc/localtime:/etc/localtime:ro`
+`-v /etc/localtime:/etc/localtime:ro`. You'll likely want to do this for cron times
+to match your local time.
 
-Avoid using the `latest` version of this image, as you'd want to be tied to a certain
-version of borg - different borg versions can be non-compatible.
+It's possible to get notified of any errors that occur during backups.
+Currently supported notification methods are
 
-Every time ssh key or crontab are changed in `/config`, container needs to be restarted.
+- sending mail via SMTP
+- sending [pushover](https://pushover.net/) notifications
+
+If you wish to provide your own msmtprc config file instead of defining `SMTP_*` env
+vars, create it at the `/config` mount, named `msmtprc`.
+
+Try to avoid using the `latest` version of this image, as you'd want to be tied to a 
+certain version of borg - different borg versions can be non-compatible.
+
+Every time any config is changed in `/config`, container needs to be restarted.
 
 
 ## Container Parameters
@@ -33,11 +43,11 @@ Every time ssh key or crontab are changed in `/config`, container needs to be re
     MYSQL_PORT              the port number of your mysql database
     MYSQL_USER              the username of your mysql database
     MYSQL_PASS              the password of your mysql database
-    MYSQL_EXTRA_OPTS        the extra options to pass to `mysqldump` command; optional
+    MYSQL_EXTRA_OPTS        the extra options to pass to 'mysqldump' command; optional
       mysql env variables are only required if you intend to back up databases
 
 
-    HOST_HOSTNAME           hostname to include in the borg archive name; mandatory;
+    HOST_NAME               hostname to include in the borg archive name; mandatory;
     REMOTE                  remote connection, including repository, eg remoteuser@remoteserver.com:/backup/location
                             optional - can be omitted when only backing up to local borg repo.
     BORG_LOCAL_REPO_NAME    local borg repo name; optional, defaults to 'repo'
@@ -51,17 +61,42 @@ Every time ssh key or crontab are changed in `/config`, container needs to be re
                             restoring or if it's defined by backup script -P param
                             (which overrides this container env var)
 
+    ERR_NOTIF               space separated error notification methods; supported values
+                            are {mail,pushover}
+    NOTIF_SUBJECT           notifications' subject/title; defaults to '[{p}] backup error on {h}'
+
+      following params {MAIL,SMTP}_* are only used if ERR_NOTIF value contains 'mail';
+      also note all SMTP_* env vars besides SMTP_ACCOUNT are ignored if you've
+      provided smtp config at /config/msmtprc
+    MAIL_TO                 address to send notifications to
+    MAIL_FROM               name of the notification sender; defaults to '{h} backup reporter'
+    SMTP_HOST               smtp server host; only required if MSMTPRC file not provided
+    SMTP_USER               login user to the smtp account; only required if MSMTPRC file not provided
+    SMTP_PASS               login password to the smtp account; only required if MSMTPRC file not provided
+    SMTP_PORT               smtp server port; defaults to 587
+    SMTP_AUTH               defaults to 'on'
+    SMTP_TLS                defaults to 'on'
+    SMTP_STARTTLS           defaults to 'on'
+    SMTP_ACCOUNT            smtp account to use for sending mail, defaults to 'default';
+                            makes sense only if you've provided your own MSMTPRC
+                            config at /config/msmtprc
+
+      following params are only used/required if ERR_NOTIF value contains 'pushover':
+    PUSHOVER_USER_KEY       your pushover account key
+    PUSHOVER_APP_TOKEN      token of a registered app to send notifications from
+
 ## Script usage
 
 Container incorporates `backup`, `restore` and `list` scripts.
 
-### backup
+### backup.sh
 
 `backup` script is mostly intended to be ran by the cron, but can also be executed
 directly via docker for one off backup.
 
-    usage: backup [-h] [-d MYSQL_DBS] [-n NODES_TO_BACKUP] [-c CONTAINERS] [-r] [-l]
-                  [-P BORG_PRUNE_OPTS] [-B|-Z BORG_EXTRA_OPTS] [-N BORG_LOCAL_REPO_NAME] -p PREFIX
+    usage: backup [-h] [-d MYSQL_DBS] [-n NODES_TO_BACKUP] [-c CONTAINERS] [-rl]
+                  [-P BORG_PRUNE_OPTS] [-B|-Z BORG_EXTRA_OPTS] [-N BORG_LOCAL_REPO_NAME]
+                  [-e ERR_NOTIF] [-A SMTP_ACCOUNT] -p PREFIX
     
     Create new archive
     
@@ -72,7 +107,9 @@ directly via docker for one off backup.
       -n NODES_TO_BACKUP      space separated files/directories to back up (in addition to db dumps);
                               path may not contain spaces, as space is the separator
       -c CONTAINERS           space separated container names to stop for the backup process;
-                              requires mounting the docker socket (-v /var/run/docker.sock:/var/run/docker.sock)
+                              requires mounting the docker socket (-v /var/run/docker.sock:/var/run/docker.sock);
+                              note containers will be stopped in given order; after backup
+                              completion, containers are started in reverse order;
       -r                      only back to remote borg repo (remote-only)
       -l                      only back to local borg repo (local-only)
       -P BORG_PRUNE_OPTS      overrides container env variable BORG_PRUNE_OPTS; only required when
@@ -82,8 +119,12 @@ directly via docker for one off backup.
       -Z BORG_EXTRA_OPTS      additional borg params; note it _overrides_
                               the BORG_EXTRA_OPTS env var;
       -N BORG_LOCAL_REPO_NAME overrides container env variable BORG_LOCAL_REPO_NAME;
+      -e ERR_NOTIF            space separated error notification methods; overrides
+                              env var of same name;
+      -A SMTP_ACCOUNT         msmtp account to use; defaults to 'default'; overrides
+                              env var of same name;
       -p PREFIX               borg archive name prefix. note that the full archive name already
-                              contains hostname and timestamp.
+                              contains HOST_NAME and timestamp, so omit those.
 
 #### Usage examples
 
@@ -94,7 +135,7 @@ directly via docker for one off backup.
         -e MYSQL_PORT=27017 \
         -e MYSQL_USER=admin \
         -e MYSQL_PASS=password \
-        -e HOST_HOSTNAME=hostname-to-use-in-archive-prefix \
+        -e HOST_NAME=hostname-to-use-in-archive-prefix \
         -e REMOTE=remoteuser@server.com:repo/location \
         -e BORG_EXTRA_OPTS='--compression zlib,5 --lock-wait 60' \
         -e BORG_PASSPHRASE=borgrepopassword \
@@ -116,7 +157,7 @@ directly via docker for one off backup.
         -e MYSQL_PORT=27017 \
         -e MYSQL_USER=admin \
         -e MYSQL_PASS=password \
-        -e HOST_HOSTNAME=hostname-to-use-in-archive-prefix \
+        -e HOST_NAME=hostname-to-use-in-archive-prefix \
         -e REMOTE=remoteuser@server.com:repo/location \
         -e BORG_PASSPHRASE=borgrepopassword \
         -e BORG_PRUNE_OPTS='--keep-daily=7 --keep-weekly=4' \
@@ -133,7 +174,7 @@ directly via docker for one off backup.
 ##### Back up directores /app1 & /app2 every 6 hours to local borg repo (ie remote is excluded)
 
     docker run -d \
-        -e HOST_HOSTNAME=hostname-to-use-in-archive-prefix \
+        -e HOST_NAME=hostname-to-use-in-archive-prefix \
         -e BORG_PASSPHRASE=borgrepopassword \
         -e BORG_PRUNE_OPTS='--keep-daily=7 --keep-weekly=4' \
         -v /backup:/backup \
@@ -151,23 +192,44 @@ Also there's no need to have ssh key in `/config`, as we're not connecting to a 
 Additionally, there was no need to mount `/etc/localtime`, as cron doesn't
 define absolute time, but simply an interval.
 
-##### Back up directory /app3 once to remote borg repo (ie local is excluded)
+##### Same as above, but report errors via mail
 
-    docker run -it --rm \
-        -e HOST_HOSTNAME=hostname-to-use-in-archive-prefix \
-        -e REMOTE=remoteuser@server.com:repo/location \
+    docker run -d \
+        -e HOST_NAME=hostname-to-use-in-archive-prefix \
         -e BORG_PASSPHRASE=borgrepopassword \
         -e BORG_PRUNE_OPTS='--keep-daily=7 --keep-weekly=4' \
         -v /backup:/backup \
         -v /borg-mysql-backup/config:/config:ro \
-        -v /app3/on/host:/app3:ro \
-           layr/borg-mysql-backup backup.sh -r -n /app3 -p my_prefix
+        -v /app1:/app1:ro \
+        -v /app2:/app2:ro \
+        -e ERR_NOTIF=mail \
+        -e MAIL_TO=receiver@example.com \
+        -e NOTIF_SUBJECT='{i} backup error' \
+        -e SMTP_HOST='smtp.gmail.com' \
+        -e SMTP_USER='your.google.username' \
+        -e SMTP_PASS='your-google-app-password' \
+           layr/borg-mysql-backup
+
+Same as the example before, but we've also opted to get notified of any backup
+errors via email.
+
+##### Back up directory /emby once to remote borg repo (ie local is excluded)
+
+    docker run -it --rm \
+        -e HOST_NAME=hostname-to-use-in-archive-prefix \
+        -e REMOTE=remoteuser@server.com:repo/location \
+        -e BORG_PASSPHRASE=borgrepopassword \
+        -e BORG_PRUNE_OPTS='--keep-daily=7 --keep-weekly=4' \
+        -v /borg-mysql-backup/config:/config:ro \
+        -v /emby/dir/on/host:/emby:ro \
+           layr/borg-mysql-backup backup.sh -r -n /emby -p emby
 
 Note there's no need to have a crontab file in `/config`, as we're executing this
 command just once, after which container exits and is removed (ie we're not using
-scheduled backups).
+scheduled backups). Also note there's no `/backup` mount as we're operating only
+against the remote borg repo.
 
-### restore
+### restore.sh
 
 `restore` script should be executed directly with docker in interactive mode.
 Script will restore db from the restored dump, if respective param is provided. All data
@@ -188,7 +250,7 @@ will be extracted into `/backup/restored-{archive_name}`
       -r                      restore from remote borg repo
       -l                      restore from local borg repo
       -N BORG_LOCAL_REPO_NAME overrides container env variable BORG_LOCAL_REPO_NAME; optional;
-      -a ARCHIVE_NAME         name of the borg archive to restore data from
+      -a ARCHIVE_NAME         name of the borg archive to restore/extract data from
 
 #### Usage examples
 
@@ -225,7 +287,7 @@ db won't be automatically restored with the included .sql dumpfile (if there was
 Data will be restored from non-default local borg repo `otherrepo`. Also note missing
 env variable `BORG_PASSPHRASE`, which will be required to be typed in manually.
 
-### list
+### list.sh
 
 `list` script is for listing archives in a borg repo.
 

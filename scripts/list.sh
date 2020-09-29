@@ -4,6 +4,7 @@
 
 readonly SELF="${0##*/}"
 readonly LOG="/var/log/${SELF}.log"
+JOB_ID="list-$$"
 
 readonly usage="
     usage: $SELF [-h] [-r] [-l] [-N BORG_LOCAL_REPO_NAME]
@@ -24,12 +25,12 @@ list_repos() {
         borg list \
             $BORG_EXTRA_OPTS \
             $BORG_LOCAL_EXTRA_OPTS \
-            "$BORG_LOCAL_REPO" || fail "listing [$BORG_LOCAL_REPO] failed"
+            "$BORG_LOCAL_REPO" || fail "listing local repo [$BORG_LOCAL_REPO] failed w/ [$?]"
     elif [[ "$REMOTE_REPO" -eq 1 ]]; then
         borg list \
             $BORG_EXTRA_OPTS \
             $BORG_REMOTE_EXTRA_OPTS \
-            "$REMOTE" || fail "listing [$REMOTE] failed"
+            "$REMOTE" || fail "listing [$REMOTE] failed w/ [$?]"
     else
         fail "need to select local or remote repo"
     fi
@@ -44,7 +45,7 @@ validate_config() {
     [[ "$REMOTE_REPO" -eq 1 ]] && vars+=(REMOTE)
 
     for i in "${vars[@]}"; do
-        val="$(eval echo "\$$i")" || fail "evaling [echo $i] failed with code [$?]"
+        val="$(eval echo "\$$i")" || fail "evaling [echo \"\$$i\"] failed w/ [$?]"
         [[ -z "$val" ]] && fail "[$i] is not defined"
     done
 
@@ -55,6 +56,7 @@ validate_config() {
 # ================
 # Entry
 # ================
+NO_NOTIF=true  # do not notify errors
 source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_common.sh" | tee -a "$LOG"; exit 1; }
 REMOTE_OR_LOCAL_OPT_COUNTER=0
 
