@@ -8,7 +8,7 @@ readonly LOG="/var/log/${SELF}.log"
 readonly usage="
     usage: $SELF [-h] [-d MYSQL_DBS] [-n NODES_TO_BACKUP] [-c CONTAINERS] [-rl]
                   [-P BORG_PRUNE_OPTS] [-B|-Z BORG_EXTRA_OPTS] [-N BORG_LOCAL_REPO_NAME]
-                  [-e ERR_NOTIF] [-A SMTP_ACCOUNT] -p PREFIX
+                  [-e ERR_NOTIF] [-A SMTP_ACCOUNT] [-D MYSQL_FAIL_FATAL] -p PREFIX
 
     Create new archive
 
@@ -35,6 +35,8 @@ readonly usage="
                               env var of same name;
       -A SMTP_ACCOUNT         msmtp account to use; defaults to 'default'; overrides
                               env var of same name;
+      -D MYSQL_FAIL_FATAL     whether unsuccessful db dump should abort backup; overrides
+                              env var of same name; true|false
       -p PREFIX               borg archive name prefix. note that the full archive name already
                               contains HOST_NAME and timestamp, so omit those.
 "
@@ -53,7 +55,7 @@ expand_nodes_to_back_up() {
 
 # dumps selected db(s) to $TMP
 dump_db() {
-    local output_filename mysql_db_orig
+    local output_filename mysql_db_orig err_code
 
     MYSQL_DB="$(sed 's/^[[:space:]]*//;s/[[:space:]]*$//' <<< "$MYSQL_DB")"  # strip leading&trailing whitespace
 
@@ -81,8 +83,14 @@ dump_db() {
             --user="${MYSQL_USER}" \
             --password="${MYSQL_PASS}" \
             ${MYSQL_EXTRA_OPTS} \
-            ${MYSQL_DB} > "$TMP/${output_filename}.sql" || fail "db dump for [$mysql_db_orig] failed w/ [$?]"
-     # TODO: should mysqldump fail or just err?
+            ${MYSQL_DB} > "$TMP/${output_filename}.sql"
+
+    err_code="$?"
+    if [[ "$err_code" -ne 0 ]]; then
+        local msg
+        msg="db dump for [$mysql_db_orig] failed w/ [$err_code]"
+        [[ "${MYSQL_FAIL_FATAL:-true}" == true ]] && fail "$msg" || err "$msg"
+    fi
 }
 
 
@@ -240,7 +248,7 @@ source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_com
 REMOTE_OR_LOCAL_OPT_COUNTER=0
 BORG_OTPS_COUNTER=0
 
-while getopts "d:n:p:c:rlP:B:Z:N:e:A:h" opt; do
+while getopts "d:n:p:c:rlP:B:Z:N:e:A:D:h" opt; do
     case "$opt" in
         d) MYSQL_DB="$OPTARG"
             ;;
@@ -270,6 +278,8 @@ while getopts "d:n:p:c:rlP:B:Z:N:e:A:h" opt; do
         e) ERR_NOTIF="$OPTARG"  # overrides env var of same name
             ;;
         A) SMTP_ACCOUNT="$OPTARG"
+            ;;
+        D) MYSQL_FAIL_FATAL="$OPTARG"
             ;;
         h) echo -e "$usage"
            exit 0

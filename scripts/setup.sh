@@ -80,7 +80,7 @@ defaults
 auth ${SMTP_AUTH:-on}
 tls ${SMTP_TLS:-on}
 tls_starttls ${SMTP_STARTTLS:-on}
-#tls_certcheck ${SMTP_TLSCERTCHECK}
+#tls_certcheck ${SMTP_TLSCERTCHECK:-on}
 tls_trust_file /etc/ssl/certs/ca-certificates.crt
 logfile /var/log/msmtp.log
 protocol smtp

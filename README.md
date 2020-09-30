@@ -43,6 +43,8 @@ Every time any config is changed in `/config`, container needs to be restarted.
     MYSQL_PORT              the port number of your mysql database
     MYSQL_USER              the username of your mysql database
     MYSQL_PASS              the password of your mysql database
+    MYSQL_FAIL_FATAL        whether unsuccessful db dump should abort backup,
+                            defaults to 'true';
     MYSQL_EXTRA_OPTS        the extra options to pass to 'mysqldump' command; optional
       mysql env variables are only required if you intend to back up databases
 
@@ -96,7 +98,7 @@ directly via docker for one off backup.
 
     usage: backup [-h] [-d MYSQL_DBS] [-n NODES_TO_BACKUP] [-c CONTAINERS] [-rl]
                   [-P BORG_PRUNE_OPTS] [-B|-Z BORG_EXTRA_OPTS] [-N BORG_LOCAL_REPO_NAME]
-                  [-e ERR_NOTIF] [-A SMTP_ACCOUNT] -p PREFIX
+                  [-e ERR_NOTIF] [-A SMTP_ACCOUNT] [-D MYSQL_FAIL_FATAL] -p PREFIX
     
     Create new archive
     
@@ -123,6 +125,8 @@ directly via docker for one off backup.
                               env var of same name;
       -A SMTP_ACCOUNT         msmtp account to use; defaults to 'default'; overrides
                               env var of same name;
+      -D MYSQL_FAIL_FATAL     whether unsuccessful db dump should abort backup; overrides
+                              env var of same name; true|false
       -p PREFIX               borg archive name prefix. note that the full archive name already
                               contains HOST_NAME and timestamp, so omit those.
 

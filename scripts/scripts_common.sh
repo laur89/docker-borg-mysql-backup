@@ -226,7 +226,7 @@ validate_config_common() {
     declare -a vars
     if [[ -n "$ERR_NOTIF" ]]; then
         for i in $ERR_NOTIF; do
-            [[ "$i" == mail || "$i" == pushover ]] || fail "unsupported [ERR_NOTIF] value: [$i]"
+            [[ "$i" =~ ^(mail|pushover)$ ]] || fail "unsupported [ERR_NOTIF] value: [$i]"
         done
 
         if [[ "$ERR_NOTIF" == *mail* ]]; then
@@ -249,6 +249,8 @@ validate_config_common() {
         val="$(eval echo "\$$i")" || fail "evaling [echo \"\$$i\"] failed w/ [$?]"
         [[ -z "$val" ]] && fail "[$i] is not defined"
     done
+
+    [[ -n "$MYSQL_FAIL_FATAL" ]] && ! [[ "$MYSQL_FAIL_FATAL" =~ ^(true|false)$ ]] && fail "MYSQL_FAIL_FATAL value, when given, can be either [true] or [false]"
 }
 
 
