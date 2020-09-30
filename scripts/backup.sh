@@ -95,30 +95,58 @@ dump_db() {
 
 
 backup_local() {
+    local start_timestamp err_code err_
+
+    log "=> starting local backup..."
+    start_timestamp="$(date +%s)"
+
     borg create -v --stats \
         $BORG_EXTRA_OPTS \
         $BORG_LOCAL_EXTRA_OPTS \
         "${BORG_LOCAL_REPO}::${ARCHIVE_NAME}" \
-        "${NODES_TO_BACK_UP[@]}" || err "local borg create failed w/ [$?]"
+        "${NODES_TO_BACK_UP[@]}" || { err "local borg create failed w/ [$?]"; err_code=1; err_=failed; }
+    log "=> local backup ${err_:-succeeded} in $(( $(date +%s) - start_timestamp )) seconds"
+
+    unset err_
+
+    log "=> starting local prune..."
+    start_timestamp="$(date +%s)"
 
     borg prune -v --list \
         "$BORG_LOCAL_REPO" \
         --prefix "$PREFIX_WITH_HOSTNAME" \
-        $BORG_PRUNE_OPTS || err "local borg prune failed w/ [$?]"
+        $BORG_PRUNE_OPTS || { err "local borg prune failed w/ [$?]"; err_code=1; err_=failed; }
+    log "=> local prune ${err_:-succeeded} in $(( $(date +%s) - start_timestamp )) seconds"
+
+    return "${err_code:-0}"
 }
 
 
 backup_remote() {
+    local start_timestamp err_code err_
+
+    log "=> starting remote backup..."
+    start_timestamp="$(date +%s)"
+
     borg create -v --stats \
         $BORG_EXTRA_OPTS \
         $BORG_REMOTE_EXTRA_OPTS \
         "${REMOTE}::${ARCHIVE_NAME}" \
-        "${NODES_TO_BACK_UP[@]}" || err "remote borg create failed w/ [$?]"
+        "${NODES_TO_BACK_UP[@]}" || { err "remote borg create failed w/ [$?]"; err_code=1; err_=failed; }
+    log "=> remote backup ${err_:-succeeded} in $(( $(date +%s) - start_timestamp )) seconds"
+
+    unset err_
+
+    log "=> starting remote prune..."
+    start_timestamp="$(date +%s)"
 
     borg prune -v --list \
         "$REMOTE" \
         --prefix "$PREFIX_WITH_HOSTNAME" \
-        $BORG_PRUNE_OPTS || err "remote borg prune failed w/ [$?]"
+        $BORG_PRUNE_OPTS || { err "remote borg prune failed w/ [$?]"; err_code=1; err_=failed; }
+    log "=> remote prune ${err_:-succeeded} in $(( $(date +%s) - start_timestamp )) seconds"
+
+    return "${err_code:-0}"
 }
 
 
@@ -126,7 +154,7 @@ backup_remote() {
 # note the borg processes are executed in a sub-shell, so local & remote backup could be
 # run in parallel
 do_backup() {
-    local started_pids start_timestamp
+    local started_pids start_timestamp pid err_
 
     declare -a started_pids=()
 
@@ -149,10 +177,12 @@ do_backup() {
         started_pids+=("$!")
     fi
 
-    wait "${started_pids[@]}"
+    for pid in "${started_pids[@]}"; do
+        wait "$pid" || err_='with error'
+    done
 
     popd &> /dev/null
-    log "=> Backup finished, duration $(( $(date +%s) - start_timestamp )) seconds"
+    log "=> Backup finished ${err_:-successfully}, duration $(( $(date +%s) - start_timestamp )) seconds"
 
     return 0
 }
