@@ -267,6 +267,5 @@ expand_placeholders() {
 }
 
 
-source /env_vars.sh || fail "failed to import /env_vars.sh"
 [[ -f "$PUSHOVER_CONF" ]] && source "$PUSHOVER_CONF"
 
