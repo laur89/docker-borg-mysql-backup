@@ -173,9 +173,9 @@ EOF
 
 
 pushover() {
-    local opt is_fail subj body OPTIND
+    local opt is_fail subj body prio retry expire hdrs OPTIND
 
-    while getopts "Fs:b:" opt; do
+    while getopts "Fs:b:p:r:e:" opt; do
         case "$opt" in
             F) is_fail=true
                 ;;
@@ -183,18 +183,38 @@ pushover() {
                 ;;
             b) body="$OPTARG"
                 ;;
+            p) prio="$OPTARG"
+                ;;
+            r) retry="$OPTARG"
+                ;;
+            e) expire="$OPTARG"
+                ;;
             *) fail -N "$FUNCNAME called with unsupported flag(s)"
                 ;;
         esac
     done
     shift "$((OPTIND-1))"
 
+    [[ -z "$prio" ]] && prio="${PUSHOVER_PRIORITY:-1}"
+
+    declare -a hdrs
+    if [[ "$prio" -eq 2 ]]; then
+        [[ -z "$retry" ]] && retry="${PUSHOVER_RETRY:-60}"
+        [[ -z "$expire" ]] && expire="${PUSHOVER_EXPIRE:-3600}"
+        hdrs+=(
+            --form-string "retry=$retry"
+            --form-string "expire=$expire"
+        )
+    fi
+
     curl -sSLf \
+        --retry 2 \
         --form-string "token=$PUSHOVER_APP_TOKEN" \
         --form-string "user=$PUSHOVER_USER_KEY" \
         --form-string "title=$(expand_placeholders "${subj:-$DEFAULT_NOTIF_SUBJECT}" "$is_fail")" \
         --form-string "message=$(expand_placeholders "${body:-NO MESSAGE BODY PROVIDED}" "$is_fail")" \
-        --form-string "priority=${PUSHOVER_PRIORITY:-1}" \
+        --form-string "priority=$prio" \
+        "${hdrs[@]}" \
         --form-string "timestamp=$(date +%s)" \
         "https://api.pushover.net/1/messages.json" || err -N "sending pushover notification failed w/ [$?]"
 }

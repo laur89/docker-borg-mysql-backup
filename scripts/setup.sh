@@ -69,11 +69,7 @@ setup_msmtp() {
     else
         cat > "$target_conf" <<EOF
 ### Auto-generated at container startup ###
-account default
-host ${SMTP_HOST}
-port ${SMTP_PORT:-587}
-user ${SMTP_USER}
-password ${SMTP_PASS}
+defaults
 auth ${SMTP_AUTH:-on}
 tls ${SMTP_TLS:-on}
 tls_starttls ${SMTP_STARTTLS:-on}
@@ -81,6 +77,12 @@ tls_starttls ${SMTP_STARTTLS:-on}
 tls_trust_file /etc/ssl/certs/ca-certificates.crt
 logfile /var/log/msmtp.log
 protocol smtp
+port ${SMTP_PORT:-587}
+
+account default
+host ${SMTP_HOST}
+user ${SMTP_USER}
+password ${SMTP_PASS}
 EOF
     fi
 }

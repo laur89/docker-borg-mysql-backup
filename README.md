@@ -322,9 +322,16 @@ env variable `BORG_PASSPHRASE`, which will be required to be typed in manually.
 Note the `BORG_EXTRA_OPTS`, `BORG_LOCAL_EXTRA_OPTS`, `BORG_REMOTE_EXTRA_OPTS` env
 variables are still usable with `list`.
 
-## TODO
-- see also [restic](https://github.com/restic/restic) and
-  [duplicacy](https://github.com/gilbertchen/duplicacy) - alternatives to borg.
-- see also [docker-db-backup](https://github.com/tiredofit/docker-db-backup)
-- see [this blog](https://ifnull.org/articles/borgbackup_rsyncnet/) for borg setup
-- main hosings: rsync.net & BorgBase
+## See also
+- [restic](https://github.com/restic/restic) - note: no compression
+- [duplicacy](https://github.com/gilbertchen/duplicacy) - alternatives to borg. lock-free!
+- [docker-db-backup](https://github.com/tiredofit/docker-db-backup)
+- [this blog](https://ifnull.org/articles/borgbackup_rsyncnet/) for borg setup
+- [borgmatic](https://github.com/witten/borgmatic) - declarative borg config
+- [this dockerised borgmatic](https://hub.docker.com/r/b3vis/borgmatic/)
+- main hostings: [rsync.net](https://www.rsync.net) & [BorgBase](https://www.borgbase.com/)
+- for backups from k8s:
+  - [velero](https://github.com/vmware-tanzu/velero)
+  - [k8up](https://github.com/vshn/k8up)
+  - [stash](https://github.com/stashed/stash)
+
