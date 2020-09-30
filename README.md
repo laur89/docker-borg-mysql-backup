@@ -10,7 +10,7 @@ For cron and/or remote borg usage, you also need to mount container configuratio
 at `/config`, containing ssh key (named `id_rsa`) and/or crontab file (named `crontab`).
 
 Local borg repo will be located under the dir you mount container `/backup` at.
-Remote borg repo needs to be initialised manually beforehand.
+**Remote borg repo needs to be initialised manually beforehand.**
 
 In case some containers need to be stopped for the backup (eg to ensure there won't be any
 mismatch between data and database), you can specify those container names to
@@ -22,7 +22,7 @@ To synchronize container tz with that of host's, then also add following mount:
 `-v /etc/localtime:/etc/localtime:ro`. You'll likely want to do this for cron times
 to match your local time.
 
-It's possible to get notified of any errors that occur during backups.
+It's possible to get notified of _any_ errors that occur during backups.
 Currently supported notification methods are
 
 - sending mail via SMTP
@@ -49,22 +49,23 @@ Every time any config is changed in `/config`, container needs to be restarted.
       mysql env variables are only required if you intend to back up databases
 
 
-    HOST_NAME               hostname to include in the borg archive name; mandatory;
-    REMOTE                  remote connection, including repository, eg remoteuser@remoteserver.com:/backup/location
+    HOST_NAME               hostname to include in the borg archive name
+    REMOTE                  remote connection, including repository, eg
+                            'remoteuser@remoteserver.com:/backup/location'
                             optional - can be omitted when only backing up to local borg repo.
-    BORG_LOCAL_REPO_NAME    local borg repo name; optional, defaults to 'repo'
+    BORG_LOCAL_REPO_NAME    local borg repo name; defaults to 'repo'
     BORG_EXTRA_OPTS         additional borg params (for both local & remote borg commands); optional
     BORG_LOCAL_EXTRA_OPTS   additional borg params for local borg command; optional
     BORG_REMOTE_EXTRA_OPTS  additional borg params for remote borg command; optional
     BORG_REMOTE_PATH        remote borg executable path; eg with rsync.net
-                            you'll likely want to use value 'borg1'
+                            you'll likely want to use value 'borg1'; optional
     BORG_PASSPHRASE         borg repo password
     BORG_PRUNE_OPTS         options for borg prune (both local and remote); not required when
                             restoring or if it's defined by backup script -P param
                             (which overrides this container env var)
 
     ERR_NOTIF               space separated error notification methods; supported values
-                            are {mail,pushover}
+                            are {mail,pushover}; optional
     NOTIF_SUBJECT           notifications' subject/title; defaults to '[{p}] backup error on {h}'
 
       following params {MAIL,SMTP}_* are only used if ERR_NOTIF value contains 'mail';
@@ -81,11 +82,14 @@ Every time any config is changed in `/config`, container needs to be restarted.
     SMTP_STARTTLS           defaults to 'on'
     SMTP_ACCOUNT            smtp account to use for sending mail, defaults to 'default';
                             makes sense only if you've provided your own MSMTPRC
-                            config at /config/msmtprc
+                            config at /config/msmtprc that defines multiple accounts
 
       following params are only used/required if ERR_NOTIF value contains 'pushover':
     PUSHOVER_USER_KEY       your pushover account key
     PUSHOVER_APP_TOKEN      token of a registered app to send notifications from
+    PUSHOVER_PRIORITY       defaults to 1
+    PUSHOVER_RETRY          only in use if priority=2; defaults to 60
+    PUSHOVER_EXPIRE         only in use if priority=2; defaults to 3600
 
 ## Script usage
 
@@ -235,9 +239,12 @@ against the remote borg repo.
 
 ### restore.sh
 
-`restore` script should be executed directly with docker in interactive mode.
-Script will restore db from the restored dump, if respective param is provided. All data
-will be extracted into `/backup/restored-{archive_name}`
+`restore` script should be executed directly with docker in interactive mode. All data
+will be extracted into `/backup/restored-{archive_name}`.
+
+Note none of the data is
+copied/moved automatically - user is expected to carry this operation out on their own.
+Only db will be restored from a dump, given the option is provided to the script.
 
     usage: restore [-h] [-d] [-c CONTAINERS] [-r] [-l]
                    [-N BORG_LOCAL_REPO_NAME] -a ARCHIVE_NAME
@@ -246,7 +253,9 @@ will be extracted into `/backup/restored-{archive_name}`
     
     arguments:
       -h                      show help and exit
-      -d                      restore mysql database from dumped file
+      -d                      automatically restore mysql database from dumped file; if this
+                              option is given and archive contains no sql dumps, it's an error;
+                              be careful, this is destructive operation!
       -c CONTAINERS           space separated container names to stop before the restore begins;
                               note they won't be started afterwards, as there might be need
                               to restore other data (only sql dumps are restored automatically);
@@ -291,6 +300,9 @@ db won't be automatically restored with the included .sql dumpfile (if there was
 Data will be restored from non-default local borg repo `otherrepo`. Also note missing
 env variable `BORG_PASSPHRASE`, which will be required to be typed in manually.
 
+Note the `BORG_EXTRA_OPTS`, `BORG_LOCAL_EXTRA_OPTS`, `BORG_REMOTE_EXTRA_OPTS` env
+variables are still usable with `restore`.
+
 ### list.sh
 
 `list` script is for listing archives in a borg repo.
@@ -326,14 +338,30 @@ env variable `BORG_PASSPHRASE`, which will be required to be typed in manually.
 Note the `BORG_EXTRA_OPTS`, `BORG_LOCAL_EXTRA_OPTS`, `BORG_REMOTE_EXTRA_OPTS` env
 variables are still usable with `list`.
 
-## See also
+### notif-test.sh
+
+Test your configured notifications. See the script for usage.
+
+    docker run -it --rm \
+        -e PUSHOVER_USER_KEY='key' \
+        -e PUSHOVER_APP_TOKEN='token' \
+        -e MAIL_TO='your@mail.com' \
+        -e SMTP_HOST='smtp.gmail.com' \
+        -e SMTP_USER='your.google.username' \
+        -e SMTP_PASS='your-google-app-password' \
+        -e ERR_NOTIF='mail pushover' \
+        -e HOST_NAME='our-hostname' \
+           layr/borg-mysql-backup notif-test.sh -p 'my-prefix' [-f]
+
+
+## See also/recommended
 - [restic](https://github.com/restic/restic) - note: no compression
 - [duplicacy](https://github.com/gilbertchen/duplicacy) - alternatives to borg. lock-free!
-- [docker-db-backup](https://github.com/tiredofit/docker-db-backup)
+- [docker-db-backup](https://github.com/tiredofit/docker-db-backup) - similar service; supports multiple dbs
 - [this blog](https://ifnull.org/articles/borgbackup_rsyncnet/) for borg setup
 - [borgmatic](https://github.com/witten/borgmatic) - declarative borg config
-- [this dockerised borgmatic](https://hub.docker.com/r/b3vis/borgmatic/)
-- main hostings: [rsync.net](https://www.rsync.net) & [BorgBase](https://www.borgbase.com/)
+- [this dockerised borgmatic](https://hub.docker.com/r/b3vis/borgmatic/) - provides same as this service, and more
+- main offsite hostings: [rsync.net](https://www.rsync.net) & [BorgBase](https://www.borgbase.com/)
 - for backups from k8s:
   - [velero](https://github.com/vmware-tanzu/velero)
   - [k8up](https://github.com/vshn/k8up)

@@ -137,7 +137,7 @@ do_backup() {
     expand_nodes_to_back_up
 
     [[ "${#NODES_TO_BACK_UP[@]}" -eq 0 ]] && fail "no items selected for backup"
-    pushd -- "$TMP" || fail "unable to pushd into [$TMP]"  # cd there because files in $TMP are added without full path (to avoid "$TMP_ROOT" prefix in borg repo)
+    pushd -- "$TMP" &> /dev/null || fail "unable to pushd into [$TMP]"  # cd there because files in $TMP are added without full path (to avoid "$TMP_ROOT" prefix in borg repo)
 
     if [[ "$REMOTE_ONLY" -ne 1 ]]; then
         backup_local &
@@ -162,11 +162,11 @@ do_backup() {
 # it really is a borg repo;
 # remote repo existence is simply verified; we won't try to init those automatically.
 init_or_verify_borg() {
-    local i val local_verif_fail
+    local local_verif_fail
 
     if [[ "$REMOTE_ONLY" -ne 1 ]]; then
         if [[ ! -d "$BORG_LOCAL_REPO" ]] || is_dir_empty "$BORG_LOCAL_REPO"; then
-            borg init "$BORG_LOCAL_REPO" || { err "borg repo init @ [$BORG_LOCAL_REPO] failed w/ [$?]"; local_verif_fail=1; }
+            borg init "$BORG_LOCAL_REPO" || { err "local borg repo init @ [$BORG_LOCAL_REPO] failed w/ [$?]"; local_verif_fail=1; }
         else
             borg list "$BORG_LOCAL_REPO" > /dev/null || { err "[borg list $BORG_LOCAL_REPO] failed w/ [$?]; is it a borg repo?"; local_verif_fail=1; }
         fi

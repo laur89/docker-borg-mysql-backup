@@ -15,6 +15,12 @@ readonly LOG_TIMESTAMP_FORMAT='+%F %T'
 readonly DEFAULT_LOCAL_REPO_NAME=repo
 readonly DEFAULT_MAIL_FROM='{h} backup reporter'
 readonly DEFAULT_NOTIF_SUBJECT='[{p}] backup error on {h}'
+CURL_FLAGS=(
+    -w '\n'
+    --max-time 4
+    --connect-timeout 2
+    -s -S --fail -L
+)
 
 
 start_or_stop_containers() {
@@ -58,19 +64,19 @@ confirm() {
     readonly msg="$1"
 
     while : ; do
-        [[ -n "$msg" ]] && echo -e "$msg"
+        [[ -n "$msg" ]] && log "$msg"
         read -r yno
         case "${yno^^}" in
             Y | YES )
-                echo "Ok, continuing...";
+                log "Ok, continuing...";
                 return 0
                 ;;
             N | NO )
-                echo "Abort.";
+                log "Abort.";
                 return 1
                 ;;
             *)
-                echo "incorrect answer; try again. (y/n accepted)"
+                err -N "incorrect answer; try again. (y/n accepted)"
                 ;;
         esac
     done
@@ -99,7 +105,7 @@ err() {
 
     while getopts "FNM" opt; do
         case "$opt" in
-            F) f='-F'
+            F) f='-F'  # only to be provided by fail() !
                 ;;
             N) no_notif=1
                 ;;
@@ -138,7 +144,7 @@ notif() {
 
 
 mail() {
-    local opt to from subj acc body is_fail OPTIND
+    local opt to from subj acc body is_fail err_code OPTIND
 
     while getopts "Ft:f:s:b:a:" opt; do
         case "$opt" in
@@ -154,7 +160,7 @@ mail() {
                 ;;
             a) acc="$OPTARG"
                 ;;
-            *) fail -N "$FUNCNAME called with unsupported flag(s)"
+            *) fail -M "$FUNCNAME called with unsupported flag(s)"
                 ;;
         esac
     done
@@ -168,7 +174,8 @@ Subject: $(expand_placeholders "${subj:-$DEFAULT_NOTIF_SUBJECT}" "$is_fail")
 $(expand_placeholders "${body:-NO MESSAGE BODY PROVIDED}" "$is_fail")
 EOF
 
-    [[ $? -ne 0 ]] && err -N "sending mail failed w/ [$?]"
+    err_code="$?"
+    [[ "$err_code" -ne 0 ]] && err -M "sending mail failed w/ [$err_code]"
 }
 
 
@@ -198,16 +205,20 @@ pushover() {
     [[ -z "$prio" ]] && prio="${PUSHOVER_PRIORITY:-1}"
 
     declare -a hdrs
-    if [[ "$prio" -eq 2 ]]; then
+    if [[ "$prio" -eq 2 ]]; then  # emergency priority
         [[ -z "$retry" ]] && retry="${PUSHOVER_RETRY:-60}"
+        [[ "$retry" -lt 30 ]] && retry=30  # as per pushover docs
+
         [[ -z "$expire" ]] && expire="${PUSHOVER_EXPIRE:-3600}"
+        [[ "$expire" -gt 10800 ]] && expire=10800  # as per pushover docs
+
         hdrs+=(
             --form-string "retry=$retry"
             --form-string "expire=$expire"
         )
     fi
 
-    curl -sSLf \
+    curl "${CURL_FLAGS[@]}" \
         --retry 2 \
         --form-string "token=$PUSHOVER_APP_TOKEN" \
         --form-string "user=$PUSHOVER_USER_KEY" \
@@ -258,7 +269,7 @@ expand_placeholders() {
     local m is_fail
 
     m="$1"
-    is_fail="${2:-false}"
+    is_fail="${2:-false}"  # true|false; indicates whether given error caused job to abort/exit
 
     m="$(sed "s/{h}/$HOST_NAME/g" <<< "$m")"
     m="$(sed "s/{p}/$ARCHIVE_PREFIX/g" <<< "$m")"

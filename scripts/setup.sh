@@ -2,7 +2,7 @@
 #
 # this is service bootstrap logic to be called from container entrypoint.
 #
-# - writes down env vars so they can be sourced by the scripts;
+# - writes down env vars so they can be sourced by cron;
 # - initialises crontab;
 # - sets ssh key, if available & adds our remote borg to know_hosts;
 # - configures msmtprc for mail notifications;
@@ -50,7 +50,7 @@ install_ssh_key() {
         [[ $? -ne 0 || -z "$remote_host" ]] && fail "could not extract remote host from REMOTE [$REMOTE]"
 
         if [[ -z "$(ssh-keygen -F "$remote_host")" ]]; then
-            ssh-keyscan -H "$remote_host" >> ~/.ssh/known_hosts || fail "adding host [$remote_host] to ~/.ssh/known_hosts failed"
+            ssh-keyscan -H "$remote_host" >> ~/.ssh/known_hosts || fail "adding host [$remote_host] to ~/.ssh/known_hosts failed w/ [$?]"
         fi
     }
 
@@ -95,7 +95,7 @@ EOF
 }
 
 
-NO_SEND_MAIL=true  # stop sending mails during startup/setup
+NO_SEND_MAIL=true  # stop sending mails during startup/setup; allow other notifications
 #printenv | sed 's/^\(\w\+\)=\(.*\)$/export \1="\2"/g' > /env_vars.sh || { echo -e "    ERROR: printenv failed" | tee -a "$LOG"; exit 1; }
 #env | sed -r "s/'/\\\'/gm" | sed -r "s/^([^=]+=)(.*)\$/\1'\2'/gm" \ > /etc/environment
 declare -p | grep -Ev '\b(BASHOPTS|BASH_VERSINFO|EUID|PPID|SHELLOPTS|UID)=' > /container.env || { echo -e "    ERROR: printenv failed" | tee -a "$LOG"; exit 1; }

@@ -14,7 +14,9 @@ readonly usage="
 
     arguments:
       -h                      show help and exit
-      -d                      restore mysql database from dumped file
+      -d                      automatically restore mysql database from dumped file; if this
+                              option is given and archive contains no sql dumps, it's an error;
+                              be careful, this is destructive operation!
       -c CONTAINERS           space separated container names to stop before the restore begins;
                               note they won't be started afterwards, as there might be need
                               to restore other data (only sql dumps are restored automatically);
@@ -47,22 +49,20 @@ restore_db() {
         sql_files+=("$i")
     done < <(find "$RESTORE_DIR" -mindepth 1 -maxdepth 1 -type f -name '*.sql' -print0)
     [[ "${#sql_files[@]}" -ne 1 ]] && fail "expected to find exactly 1 .sql file in the root of [$RESTORE_DIR], but found ${#sql_files[@]}"
-    confirm "restore db from mysql dump [${sql_files[*]}]?" || return
+    confirm "restore db from mysql dump [${sql_files[*]}]?" || { log "won't try to restore db"; return 0; }
 
     mysql \
-            "-h${MYSQL_HOST}" \
-            "-P${MYSQL_PORT}" \
-            "-u${MYSQL_USER}" \
-            "-p${MYSQL_PASS}" < "${sql_files[@]}"
-
-    return $?
+            --host="${MYSQL_HOST}" \
+            --port="${MYSQL_PORT}" \
+            --user="${MYSQL_USER}" \
+            --password="${MYSQL_PASS}" < "${sql_files[@]}" || fail "restoring db from [${sql_files[*]}] failed w/ [$?]"
 }
 
 
 do_restore() {
 
     log "=> Restore started"
-    pushd -- "$RESTORE_DIR" || fail "unable to pushd into [$RESTORE_DIR]"
+    pushd -- "$RESTORE_DIR" &> /dev/null || fail "unable to pushd into [$RESTORE_DIR]"
 
     if [[ "$LOCAL_REPO" -eq 1 ]]; then
         borg extract -v --list \
@@ -78,8 +78,8 @@ do_restore() {
 
     popd &> /dev/null
     KEEP_DIR=1  # from this point onward, we should not delete $RESTORE_DIR on failure
-    restore_db || fail "db restore failed"
-    log "=> Restore finished"
+    restore_db
+    log "=> Restore finished OK"
 }
 
 
