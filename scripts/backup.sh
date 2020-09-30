@@ -55,7 +55,7 @@ expand_nodes_to_back_up() {
 
 # dumps selected db(s) to $TMP
 dump_db() {
-    local output_filename mysql_db_orig err_code
+    local output_filename mysql_db_orig err_code start_timestamp err_
 
     MYSQL_DB="$(sed 's/^[[:space:]]*//;s/[[:space:]]*$//' <<< "$MYSQL_DB")"  # strip leading&trailing whitespace
 
@@ -72,6 +72,9 @@ dump_db() {
         output_filename="${MYSQL_DB// /+}"  # let the filename reflect which dbs it contains
         MYSQL_DB="--databases $MYSQL_DB"
     fi
+
+    log "=> starting db dump..."
+    start_timestamp="$(date +%s)"
 
     # TODO: add following column-stats option back once mysqldump from alpine accepts it:
             #--column-statistics=0 \
@@ -90,7 +93,10 @@ dump_db() {
         local msg
         msg="db dump for [$mysql_db_orig] failed w/ [$err_code]"
         [[ "${MYSQL_FAIL_FATAL:-true}" == true ]] && fail "$msg" || err "$msg"
+        err_=failed
     fi
+
+    log "=> db dump ${err_:-succeeded} in $(( $(date +%s) - start_timestamp )) seconds"
 }
 
 

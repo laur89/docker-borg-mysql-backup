@@ -85,6 +85,7 @@ confirm() {
 
 fail() {
     err -F "$@"
+    err -N " - ABORTING -"
     exit 1
 }
 
