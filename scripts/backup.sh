@@ -184,38 +184,25 @@ do_backup() {
     fi
 
     for pid in "${started_pids[@]}"; do
-        wait "$pid" || err_='with error'
+        wait "$pid" || err_=TRUE
     done
 
     popd &> /dev/null
-    log "=> Backup finished ${err_:-successfully}, duration $(( $(date +%s) - start_timestamp )) seconds"
+    log "=> Backup finished, duration $(( $(date +%s) - start_timestamp )) seconds${err_:+; at least one step failed}"
 
     return 0
 }
 
 
-# if $BORG_LOCAL_REPO is empty, initialises repo there; if it's not empty, checks if
-# it really is a borg repo;
-# remote repo existence is simply verified; we won't try to init those automatically.
-init_or_verify_borg() {
-    local local_verif_fail
+init_local_borg_repo() {
+    local msg
 
     if [[ "$REMOTE_ONLY" -ne 1 ]]; then
         if [[ ! -d "$BORG_LOCAL_REPO" ]] || is_dir_empty "$BORG_LOCAL_REPO"; then
-            borg init "$BORG_LOCAL_REPO" || { err "local borg repo init @ [$BORG_LOCAL_REPO] failed w/ [$?]"; local_verif_fail=1; }
-        else
-            borg list "$BORG_LOCAL_REPO" > /dev/null || { err "[borg list $BORG_LOCAL_REPO] failed w/ [$?]; is it a borg repo?"; local_verif_fail=1; }
-        fi
-
-        if [[ "$local_verif_fail" -eq 1 ]]; then
-            [[ "$LOCAL_ONLY" -eq 1 ]] && fail || { LOCAL_ONLY=0; REMOTE_ONLY=1; }  # local would fail for sure; force remote_only
-        fi
-    fi
-
-    if [[ "$LOCAL_ONLY" -ne 1 ]]; then
-        if ! borg list "$REMOTE" > /dev/null; then
-            err "[borg list $REMOTE] failed w/ [$?]; please create remote repos manually beforehand"
-            [[ "$REMOTE_ONLY" -eq 1 ]] && fail || { REMOTE_ONLY=0; LOCAL_ONLY=1; }  # remote would fail for sure; force local_only
+            if ! borg init "$BORG_LOCAL_REPO"; then
+                msg="local borg repo init @ [$BORG_LOCAL_REPO] failed w/ [$?]"
+                [[ "$LOCAL_ONLY" -eq 1 ]] && fail "$msg" || { err "$msg"; LOCAL_ONLY=0; REMOTE_ONLY=1; }  # local would fail for sure; force remote_only
+            fi
         fi
     fi
 }
@@ -334,7 +321,7 @@ readonly BORG_LOCAL_REPO="$BACKUP_ROOT/${BORG_LOCAL_REPO_NAME:-$DEFAULT_LOCAL_RE
 
 validate_config
 create_dirs
-init_or_verify_borg
+init_local_borg_repo
 
 start_or_stop_containers stop
 do_backup
