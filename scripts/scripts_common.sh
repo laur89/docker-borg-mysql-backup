@@ -134,11 +134,11 @@ notif() {
     readonly msg="$1"
 
     if [[ "$ERR_NOTIF" == *mail* && "$NO_SEND_MAIL" != true ]]; then
-        mail $f -t "$MAIL_TO" -f "$MAIL_FROM" -s "$NOTIF_SUBJECT" -a "$SMTP_ACCOUNT" -b "$msg"
+        mail $f -t "$MAIL_TO" -f "$MAIL_FROM" -s "$NOTIF_SUBJECT" -a "$SMTP_ACCOUNT" -b "$msg" &
     fi
 
     if [[ "$ERR_NOTIF" == *pushover* ]]; then
-        pushover $f -s "$NOTIF_SUBJECT" -b "$msg"
+        pushover $f -s "$NOTIF_SUBJECT" -b "$msg" &
     fi
 }
 
