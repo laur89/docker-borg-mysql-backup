@@ -22,12 +22,15 @@ check_dependencies() {
 
 
 setup_crontab() {
-    local cron_target
+    #local cron_target
 
-    readonly cron_target='/var/spool/cron/crontabs/root'
+    #readonly cron_target='/var/spool/cron/crontabs/root'
 
-    [[ -f "$cron_target" ]] || fail "[$cron_target] does not exist; is cron installed?"
-    [[ -f "$CRON_FILE" ]] && cp -- "$CRON_FILE" "$cron_target"
+    #[[ -f "$cron_target" ]] || fail "[$cron_target] does not exist; is cron installed?"
+    #[[ -f "$CRON_FILE" ]] && cp -- "$CRON_FILE" "$cron_target"
+
+    # or, alterntaively, install via $crontab:
+    [[ -f "$CRON_FILE" ]] && /usr/bin/crontab "$CRON_FILE"
 }
 
 
@@ -90,6 +93,7 @@ EOF
 
 NO_SEND_MAIL=true  # stop sending mails during startup/setup
 printenv | sed 's/^\(\w\+\)=\(.*\)$/export \1="\2"/g' > /env_vars.sh || { echo -e "    ERROR: printenv failed" | tee -a "$LOG"; exit 1; }
+#env | sed -r "s/'/\\\'/gm" | sed -r "s/^([^=]+=)(.*)\$/\1'\2'/gm" \ > /etc/environment
 source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_common.sh" | tee -a "$LOG"; exit 1; }
 chmod 600 /env_vars.sh || fail "chmod-ing /env_vars.sh failed w/ $?"
 
