@@ -110,3 +110,4 @@ setup_msmtp
 unset NO_SEND_MAIL
 
 exit 0
+

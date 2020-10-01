@@ -2,19 +2,19 @@
 #
 # common vars & functions
 
-readonly BACKUP_ROOT='/backup'
-readonly CONF_ROOT='/config'
-readonly SCRIPTS_ROOT="$CONF_ROOT/scripts"
+BACKUP_ROOT='/backup'
+CONF_ROOT='/config'
+SCRIPTS_ROOT="$CONF_ROOT/scripts"
 
-readonly CRON_FILE="$CONF_ROOT/crontab"
-readonly MSMTPRC="$CONF_ROOT/msmtprc"
-readonly PUSHOVER_CONF="$CONF_ROOT/pushover.conf"
-readonly SSH_KEY="$CONF_ROOT/id_rsa"
-readonly LOG_TIMESTAMP_FORMAT='+%F %T'
+CRON_FILE="$CONF_ROOT/crontab"
+MSMTPRC="$CONF_ROOT/msmtprc"
+ENV_CONF="$CONF_ROOT/env.conf"
+SSH_KEY="$CONF_ROOT/id_rsa"
+LOG_TIMESTAMP_FORMAT='+%F %T'
 
-readonly DEFAULT_LOCAL_REPO_NAME=repo
-readonly DEFAULT_MAIL_FROM='{h} backup reporter'
-readonly DEFAULT_NOTIF_SUBJECT='[{p}] backup error on {h}'
+DEFAULT_LOCAL_REPO_NAME=repo
+DEFAULT_MAIL_FROM='{h} backup reporter'
+DEFAULT_NOTIF_SUBJECT='[{p}] backup error on {h}'
 CURL_FLAGS=(
     -w '\n'
     --max-time 4
@@ -281,5 +281,5 @@ expand_placeholders() {
 }
 
 
-[[ -f "$PUSHOVER_CONF" ]] && source "$PUSHOVER_CONF"
+[[ -f "$ENV_CONF" ]] && source "$ENV_CONF"
 

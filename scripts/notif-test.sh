@@ -4,6 +4,7 @@
 
 readonly SELF="${0##*/}"
 readonly LOG=/dev/null
+JOB_ID="notif-test-$$"  # just for logging; will be overwritten before notification(s) are triggered
 
 # ================
 # Entry
