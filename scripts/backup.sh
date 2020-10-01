@@ -7,7 +7,7 @@ readonly LOG="/var/log/${SELF}.log"
 
 readonly usage="
     usage: $SELF [-h] [-d MYSQL_DBS] [-n NODES_TO_BACKUP] [-c CONTAINERS] [-rl]
-                  [-P BORG_PRUNE_OPTS] [-B|-Z BORG_EXTRA_OPTS] [-N BORG_LOCAL_REPO_NAME]
+                  [-P BORG_PRUNE_OPTS] [-B|-Z BORG_EXTRA_OPTS] [-N BORG_LOCAL_REPO]
                   [-e ERR_NOTIF] [-A SMTP_ACCOUNT] [-D MYSQL_FAIL_FATAL] -p PREFIX
 
     Create new archive
@@ -30,7 +30,7 @@ readonly usage="
                               the BORG_EXTRA_OPTS env var, but extends it;
       -Z BORG_EXTRA_OPTS      additional borg params; note it _overrides_
                               the BORG_EXTRA_OPTS env var;
-      -N BORG_LOCAL_REPO_NAME overrides container env variable BORG_LOCAL_REPO_NAME;
+      -N BORG_LOCAL_REPO      overrides container env variable of same name;
       -e ERR_NOTIF            space separated error notification methods; overrides
                               env var of same name;
       -A SMTP_ACCOUNT         msmtp account to use; defaults to 'default'; overrides
@@ -102,32 +102,32 @@ dump_db() {
 
 # TODO: should we skip prune if create exits w/ code >=2?
 _backup_common() {
-    local local_or_remote repo extra_opts start_timestamp err_code err_
+    local l_or_r repo extra_opts start_timestamp err_code err_
 
-    local_or_remote="$1"
+    l_or_r="$1"
     repo="$2"
     extra_opts="$3"
 
-    log "=> starting $local_or_remote backup..."
+    log "=> starting $l_or_r backup..."
     start_timestamp="$(date +%s)"
 
     borg create --stats --show-rc \
         $BORG_EXTRA_OPTS \
         $extra_opts \
         "${repo}::${ARCHIVE_NAME}" \
-        "${NODES_TO_BACK_UP[@]}" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || { err "$local_or_remote borg create exited w/ [$?]"; err_code=1; err_=failed; }
-    log "=> $local_or_remote backup ${err_:-succeeded} in $(( $(date +%s) - start_timestamp )) seconds"
+        "${NODES_TO_BACK_UP[@]}" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || { err "$l_or_r borg create exited w/ [$?]"; err_code=1; err_=failed; }
+    log "=> $l_or_r backup ${err_:-succeeded} in $(( $(date +%s) - start_timestamp )) seconds"
 
     unset err_  # reset
 
-    log "=> starting $local_or_remote prune..."
+    log "=> starting $l_or_r prune..."
     start_timestamp="$(date +%s)"
 
     borg prune --show-rc \
         "$repo" \
         --prefix "$PREFIX_WITH_HOSTNAME" \
-        $BORG_PRUNE_OPTS > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || { err "$local_or_remote borg prune exited w/ [$?]"; err_code=1; err_=failed; }
-    log "=> $local_or_remote prune ${err_:-succeeded} in $(( $(date +%s) - start_timestamp )) seconds"
+        $BORG_PRUNE_OPTS > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || { err "$l_or_r borg prune exited w/ [$?]"; err_code=1; err_=failed; }
+    log "=> $l_or_r prune ${err_:-succeeded} in $(( $(date +%s) - start_timestamp )) seconds"
 
     return "${err_code:-0}"
 }
@@ -219,6 +219,7 @@ validate_config() {
         MYSQL_PASS
     )
     [[ "$LOCAL_ONLY" -ne 1 ]] && vars+=(REMOTE REMOTE_REPO)
+    [[ "$REMOTE_ONLY" -ne 1 ]] && vars+=(BORG_LOCAL_REPO)
 
     vars_defined "${vars[@]}"
 
@@ -230,8 +231,7 @@ validate_config() {
 
     [[ "$REMOTE_OR_LOCAL_OPT_COUNTER" -gt 1 ]] && fail "-r & -l options are exclusive"
     [[ "$BORG_OTPS_COUNTER" -gt 1 ]] && fail "-B & -Z options are exclusive"
-    [[ "$REMOTE_ONLY" -ne 1 && ! -d "$BACKUP_ROOT" ]] && fail "[$BACKUP_ROOT] is not mounted"
-    [[ "$BORG_LOCAL_REPO_NAME" == /* ]] && fail "BORG_LOCAL_REPO_NAME should not start with a slash"
+    [[ "$REMOTE_ONLY" -ne 1 ]] && [[ ! -d "$BORG_LOCAL_REPO" || ! -w "$BORG_LOCAL_REPO" ]] && fail "[$BORG_LOCAL_REPO] does not exist or is not writable; missing mount?"
 
     if [[ "$LOCAL_ONLY" -ne 1 && "$-" != *i* ]]; then
         [[ -f "$SSH_KEY" ]] || fail "[$SSH_KEY] is not a file; is /config mounted?"
@@ -288,7 +288,7 @@ while getopts "d:n:p:c:rlP:B:Z:N:e:A:D:R:T:h" opt; do
         Z) BORG_EXTRA_OPTS="$OPTARG"  # overrides env var of same name
            let BORG_OTPS_COUNTER+=1
             ;;
-        N) BORG_LOCAL_REPO_NAME="$OPTARG"  # overrides env var of same name
+        N) BORG_LOCAL_REPO="$OPTARG"  # overrides env var of same name
             ;;
         e) ERR_NOTIF="$OPTARG"  # overrides env var of same name
             ;;
@@ -313,7 +313,6 @@ readonly TMP="$TMP_ROOT/${ARCHIVE_PREFIX}-$RANDOM"
 
 readonly PREFIX_WITH_HOSTNAME="${ARCHIVE_PREFIX}-${HOST_NAME}-"  # used for pruning
 readonly ARCHIVE_NAME="$PREFIX_WITH_HOSTNAME"'{now:%Y-%m-%d-%H%M%S}'
-readonly BORG_LOCAL_REPO="$BACKUP_ROOT/${BORG_LOCAL_REPO_NAME:-$DEFAULT_LOCAL_REPO_NAME}"
 
 validate_config
 [[ -n "$REMOTE" ]] && add_remote_to_known_hosts_if_missing

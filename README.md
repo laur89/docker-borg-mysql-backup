@@ -57,7 +57,9 @@ Every time any config is changed in `/config`, container needs to be restarted.
     REMOTE_REPO             path to repo on remote host, eg '/backup/repo'
                             optional - can be omitted when only backing up to local
                             borg repo, or if providing value via script
-    BORG_LOCAL_REPO_NAME    local borg repo name; defaults to 'repo'
+    BORG_LOCAL_REPO         path to local borg repo; optional - can be omitted
+                            when only backing up to remote borg repo, or if
+                            providing value via script
     BORG_EXTRA_OPTS         additional borg params (for both local & remote borg commands); optional
     BORG_LOCAL_EXTRA_OPTS   additional borg params for local borg command; optional
     BORG_REMOTE_EXTRA_OPTS  additional borg params for remote borg command; optional
@@ -105,7 +107,7 @@ Container incorporates `backup`, `restore` and `list` scripts.
 directly via docker for one off backup.
 
     usage: backup [-h] [-d MYSQL_DBS] [-n NODES_TO_BACKUP] [-c CONTAINERS] [-rl]
-                  [-P BORG_PRUNE_OPTS] [-B|-Z BORG_EXTRA_OPTS] [-N BORG_LOCAL_REPO_NAME]
+                  [-P BORG_PRUNE_OPTS] [-B|-Z BORG_EXTRA_OPTS] [-N BORG_LOCAL_REPO]
                   [-e ERR_NOTIF] [-A SMTP_ACCOUNT] [-D MYSQL_FAIL_FATAL] -p PREFIX
     
     Create new archive
@@ -128,7 +130,7 @@ directly via docker for one off backup.
                               the BORG_EXTRA_OPTS env var, but extends it;
       -Z BORG_EXTRA_OPTS      additional borg params; note it _overrides_
                               the BORG_EXTRA_OPTS env var;
-      -N BORG_LOCAL_REPO_NAME overrides container env variable BORG_LOCAL_REPO_NAME;
+      -N BORG_LOCAL_REPO      overrides container env variable of same name;
       -e ERR_NOTIF            space separated error notification methods; overrides
                               env var of same name;
       -A SMTP_ACCOUNT         msmtp account to use; defaults to 'default'; overrides
@@ -247,14 +249,14 @@ against the remote borg repo.
 ### restore.sh
 
 `restore` script should be executed directly with docker in interactive mode. All data
-will be extracted into `/backup/restored-{archive_name}`.
+will be extracted into `/$RESTORE_DIR/restored-{archive_name}`.
 
 Note none of the data is
 copied/moved automatically - user is expected to carry this operation out on their own.
 Only db will be restored from a dump, given the option is provided to the script.
 
     usage: restore [-h] [-d] [-c CONTAINERS] [-r] [-l]
-                   [-N BORG_LOCAL_REPO_NAME] -a ARCHIVE_NAME
+                   [-N BORG_LOCAL_REPO] -a ARCHIVE_NAME
     
     Restore data from borg archive
     
@@ -269,7 +271,7 @@ Only db will be restored from a dump, given the option is provided to the script
                               requires mounting the docker socket (-v /var/run/docker.sock:/var/run/docker.sock)
       -r                      restore from remote borg repo
       -l                      restore from local borg repo
-      -N BORG_LOCAL_REPO_NAME overrides container env variable BORG_LOCAL_REPO_NAME; optional;
+      -N BORG_LOCAL_REPO      overrides container env variable of same name; optional;
       -a ARCHIVE_NAME         name of the borg archive to restore/extract data from
 
 #### Usage examples
@@ -315,7 +317,7 @@ variables are still usable with `restore`.
 
 `list` script is for listing archives in a borg repo.
 
-    usage: list [-h] [-r] [-l] [-N BORG_LOCAL_REPO_NAME]
+    usage: list [-h] [-r] [-l] [-N BORG_LOCAL_REPO]
     
     List archives in a borg repository
     
@@ -323,7 +325,7 @@ variables are still usable with `restore`.
       -h                      show help and exit
       -r                      list remote borg repo
       -l                      list local borg repo
-      -N BORG_LOCAL_REPO_NAME overrides container env variable BORG_LOCAL_REPO_NAME; optional;
+      -N BORG_LOCAL_REPO      overrides container env variable of same name; optional;
 
 #### Usage examples
 

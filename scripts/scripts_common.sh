@@ -2,7 +2,6 @@
 #
 # common vars & functions
 
-readonly BACKUP_ROOT='/backup'
 readonly CONF_ROOT='/config'
 readonly SCRIPTS_ROOT="$CONF_ROOT/scripts"
 
@@ -13,7 +12,6 @@ readonly ENV_CONF="$CONF_ROOT/env.conf"
 readonly SSH_KEY="$CONF_ROOT/id_rsa"
 LOG_TIMESTAMP_FORMAT='+%F %T'
 
-DEFAULT_LOCAL_REPO_NAME=repo
 DEFAULT_MAIL_FROM='{h} backup reporter'
 DEFAULT_NOTIF_SUBJECT='{p}: backup error on {h}'
 CURL_FLAGS=(

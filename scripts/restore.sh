@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# restores selected borg archive from either local or remote repo to $BACKUP_ROOT
+# restores selected borg archive from either local or remote repo to $RESTORE_DIR
 
 readonly SELF="${0##*/}"
 readonly LOG="/var/log/${SELF}.log"
@@ -8,7 +8,7 @@ JOB_ID="restore-$$"
 
 readonly usage="
     usage: $SELF [-h] [-d] [-c CONTAINERS] [-r] [-l]
-                   [-N BORG_LOCAL_REPO_NAME] -a ARCHIVE_NAME
+                   [-N BORG_LOCAL_REPO] -a ARCHIVE_NAME
 
     Restore data from borg archive
 
@@ -23,7 +23,7 @@ readonly usage="
                               requires mounting the docker socket (-v /var/run/docker.sock:/var/run/docker.sock)
       -r                      restore from remote borg repo
       -l                      restore from local borg repo
-      -N BORG_LOCAL_REPO_NAME overrides container env variable BORG_LOCAL_REPO_NAME; optional;
+      -N BORG_LOCAL_REPO      overrides container env variable of same name; optional;
       -a ARCHIVE_NAME         name of the borg archive to restore/extract data from
 "
 
@@ -60,28 +60,40 @@ restore_db() {
 }
 
 
-# TODO: do not fail() if err code <=1?
-do_restore() {
+_restore_common() {
+    local l_or_r repo extra_opts start_timestamp
 
-    log "=> Restore started"
+    l_or_r="$1"
+    repo="$2"
+    extra_opts="$3"
+
     pushd -- "$RESTORE_DIR" &> /dev/null || fail "unable to pushd into [$RESTORE_DIR]"
 
-    if [[ "$LOC" -eq 1 ]]; then
-        borg extract -v --list --show-rc \
-            $BORG_EXTRA_OPTS \
-            $BORG_LOCAL_EXTRA_OPTS \
-            "${BORG_LOCAL_REPO}::${ARCHIVE_NAME}" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || fail "extracting local [$BORG_LOCAL_REPO::$ARCHIVE_NAME] failed w/ [$?]"
-    elif [[ "$REM" -eq 1 ]]; then
-        borg extract -v --list --show-rc \
-            $BORG_EXTRA_OPTS \
-            $BORG_REMOTE_EXTRA_OPTS \
-            "${REMOTE}::${ARCHIVE_NAME}" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || fail "extracting [$REMOTE::$ARCHIVE_NAME] failed w/ [$?]"
-    fi
+    log "=> Restore from $l_or_r repo [${repo}::${ARCHIVE_NAME}] started..."
+    start_timestamp="$(date +%s)"
+
+    borg extract -v --list --show-rc \
+        $BORG_EXTRA_OPTS \
+        $extra_opts \
+        "${repo}::${ARCHIVE_NAME}" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || fail "=> extracting $l_or_r repo failed w/ [$?] (duration $(( $(date +%s) - start_timestamp )) seconds)"
+
+    log "=> Extract from $l_or_r repo succeeded in $(( $(date +%s) - start_timestamp )) seconds"
 
     popd &> /dev/null
     KEEP_DIR=1  # from this point onward, we should not delete $RESTORE_DIR on failure
     restore_db
-    log "=> Restore finished OK, contents are in [$RESTORE_DIR]"
+    log "=> Restore finished OK in $(( $(date +%s) - start_timestamp )) seconds, contents are in [$RESTORE_DIR]"
+}
+
+
+# TODO: do not fail() if err code <=1?
+do_restore() {
+
+    if [[ "$LOC" -eq 1 ]]; then
+        _restore_common local "$BORG_LOCAL_REPO" "$BORG_LOCAL_EXTRA_OPTS"
+    elif [[ "$REM" -eq 1 ]]; then
+        _restore_common remote "$REMOTE" "$BORG_REMOTE_EXTRA_OPTS"
+    fi
 }
 
 
@@ -90,6 +102,7 @@ validate_config() {
 
     declare -a vars=(
         ARCHIVE_NAME
+        RESTORE_DIR
     )
     [[ "$RESTORE_DB" -eq 1 ]] && vars+=(
             MYSQL_HOST
@@ -98,12 +111,13 @@ validate_config() {
             MYSQL_PASS
         )
     [[ "$REM" -eq 1 ]] && vars+=(REMOTE REMOTE_REPO)
+    [[ "$LOC" -eq 1 ]] && vars+=(BORG_LOCAL_REPO)
 
     vars_defined "${vars[@]}"
 
     [[ "$REMOTE_OR_LOCAL_OPT_COUNTER" -ne 1 ]] && fail "need to select whether to restore from local or remote repo"
-    [[ -d "$BACKUP_ROOT" ]] || fail "[$BACKUP_ROOT] is not mounted"
-    [[ "$BORG_LOCAL_REPO_NAME" == /* ]] && fail "BORG_LOCAL_REPO_NAME should not start with a slash"
+    [[ -d "$RESTORE_DIR" && -w "$RESTORE_DIR"  ]] || fail "[$RESTORE_DIR] is not mounted or not writable; missing mount?"
+    [[ "$LOC" -eq 1 ]] && [[ ! -d "$BORG_LOCAL_REPO" || ! -w "$BORG_LOCAL_REPO" ]] && fail "[$BORG_LOCAL_REPO] does not exist or is not writable; missing mount?"
 }
 
 
@@ -128,7 +142,7 @@ NO_NOTIF=true  # do not notify errors
 source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_common.sh" | tee -a "$LOG"; exit 1; }
 REMOTE_OR_LOCAL_OPT_COUNTER=0
 
-while getopts "dc:rlN:R:T:a:h" opt; do
+while getopts "dc:rlN:R:T:D:a:h" opt; do
     case "$opt" in
         d) RESTORE_DB=1
             ;;
@@ -140,11 +154,13 @@ while getopts "dc:rlN:R:T:a:h" opt; do
         l) LOC=1
            let REMOTE_OR_LOCAL_OPT_COUNTER+=1
             ;;
-        N) BORG_LOCAL_REPO_NAME="$OPTARG"  # overrides env var of same name
+        N) BORG_LOCAL_REPO="$OPTARG"  # overrides env var of same name
             ;;
         R) REMOTE="$OPTARG"  # overrides env var of same name
             ;;
         T) REMOTE_REPO="$OPTARG"  # overrides env var of same name
+            ;;
+        D) RESTORE_DIR="$OPTARG"  # dir where selected borg archive will be restored into
             ;;
         a) ARCHIVE_NAME="$OPTARG"
             ;;
@@ -156,14 +172,12 @@ while getopts "dc:rlN:R:T:a:h" opt; do
     esac
 done
 
-readonly RESTORE_DIR="$BACKUP_ROOT/restored-${ARCHIVE_NAME}"  # dir where selected borg archive will be restored into
-readonly BORG_LOCAL_REPO="$BACKUP_ROOT/${BORG_LOCAL_REPO_NAME:-$DEFAULT_LOCAL_REPO_NAME}"
-
-[[ -e "$RESTORE_DIR" ]] && fail "[$RESTORE_DIR] already exists, abort"
 
 validate_config
 [[ -n "$REMOTE" ]] && add_remote_to_known_hosts_if_missing
 readonly REMOTE+=":$REMOTE_REPO"  # define after validation
+readonly RESTORE_DIR="$RESTORE_DIR/restored-${ARCHIVE_NAME}"  # define & test after validation
+[[ -e "$RESTORE_DIR" ]] && fail "[$RESTORE_DIR] already exists, abort"
 create_dirs
 verify_borg
 

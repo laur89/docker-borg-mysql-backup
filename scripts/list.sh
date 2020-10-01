@@ -7,7 +7,7 @@ readonly LOG="/var/log/${SELF}.log"
 JOB_ID="list-$$"
 
 readonly usage="
-    usage: $SELF [-h] [-r] [-l] [-N BORG_LOCAL_REPO_NAME]
+    usage: $SELF [-h] [-r] [-l] [-N BORG_LOCAL_REPO]
 
     List archives in a borg repository
 
@@ -15,23 +15,31 @@ readonly usage="
       -h                      show help and exit
       -r                      list remote borg repo
       -l                      list local borg repo
-      -N BORG_LOCAL_REPO_NAME overrides container env variable BORG_LOCAL_REPO_NAME; optional;
+      -N BORG_LOCAL_REPO      overrides container env variable of same name; optional;
 "
+
+
+_list_common() {
+    local l_or_r repo extra_opts
+
+    l_or_r="$1"
+    repo="$2"
+    extra_opts="$3"
+
+    borg list --show-rc \
+        $BORG_EXTRA_OPTS \
+        $extra_opts \
+        "$repo" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || fail "listing $l_or_r repo [$repo] failed w/ [$?]"
+}
 
 
 # TODO: do not fail() if err code <=1?
 list_repos() {
 
     if [[ "$LOC" -eq 1 ]]; then
-        borg list --show-rc \
-            $BORG_EXTRA_OPTS \
-            $BORG_LOCAL_EXTRA_OPTS \
-            "$BORG_LOCAL_REPO" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || fail "listing local repo [$BORG_LOCAL_REPO] failed w/ [$?]"
+        _list_common local "$BORG_LOCAL_REPO" "$BORG_LOCAL_EXTRA_OPTS"
     elif [[ "$REM" -eq 1 ]]; then
-        borg list --show-rc \
-            $BORG_EXTRA_OPTS \
-            $BORG_REMOTE_EXTRA_OPTS \
-            "$REMOTE" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || fail "listing [$REMOTE] failed w/ [$?]"
+        _list_common remote "$REMOTE" "$BORG_REMOTE_EXTRA_OPTS"
     else
         fail "need to select local or remote repo"
     fi
@@ -44,11 +52,12 @@ validate_config() {
     declare -a vars
 
     [[ "$REM" -eq 1 ]] && vars+=(REMOTE REMOTE_REPO)
+    [[ "$LOC" -eq 1 ]] && vars+=(BORG_LOCAL_REPO)
 
     vars_defined "${vars[@]}"
 
     [[ "$REMOTE_OR_LOCAL_OPT_COUNTER" -ne 1 ]] && fail "need to select whether to list local or remote repo"
-    [[ "$BORG_LOCAL_REPO_NAME" == /* ]] && fail "BORG_LOCAL_REPO_NAME should not start with a slash"
+    [[ "$LOC" -eq 1 ]] && [[ ! -d "$BORG_LOCAL_REPO" || ! -w "$BORG_LOCAL_REPO" ]] && fail "[$BORG_LOCAL_REPO] does not exist or is not writable; missing mount?"
 }
 
 # ================
@@ -66,7 +75,7 @@ while getopts "rlN:R:T:h" opt; do
         l) LOC=1
            let REMOTE_OR_LOCAL_OPT_COUNTER+=1
             ;;
-        N) BORG_LOCAL_REPO_NAME="$OPTARG"  # overrides env var of same name
+        N) BORG_LOCAL_REPO="$OPTARG"  # overrides env var of same name
             ;;
         R) REMOTE="$OPTARG"  # overrides env var of same name
             ;;
@@ -79,8 +88,6 @@ while getopts "rlN:R:T:h" opt; do
             ;;
     esac
 done
-
-readonly BORG_LOCAL_REPO="$BACKUP_ROOT/${BORG_LOCAL_REPO_NAME:-$DEFAULT_LOCAL_REPO_NAME}"
 
 validate_config
 [[ -n "$REMOTE" ]] && add_remote_to_known_hosts_if_missing
