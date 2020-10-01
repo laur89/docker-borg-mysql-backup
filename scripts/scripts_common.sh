@@ -8,6 +8,7 @@ readonly SCRIPTS_ROOT="$CONF_ROOT/scripts"
 
 readonly CRON_FILE="$CONF_ROOT/crontab"
 readonly MSMTPRC="$CONF_ROOT/msmtprc"
+readonly LOGROTATE_CONF="$CONF_ROOT/logrotate.conf"
 readonly ENV_CONF="$CONF_ROOT/env.conf"
 readonly SSH_KEY="$CONF_ROOT/id_rsa"
 LOG_TIMESTAMP_FORMAT='+%F %T'

@@ -10,7 +10,7 @@ ADD scripts/* /usr/local/sbin/
 RUN echo "@community http://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories && \
     apk update && \
     apk add --no-cache \
-        grep curl bash mysql-client ca-certificates tzdata msmtp \
+        grep curl bash mysql-client ca-certificates tzdata msmtp logrotate \
         openssh-client \
         openssh-keygen \
         borgbackup@community=$BORG_VERSION \

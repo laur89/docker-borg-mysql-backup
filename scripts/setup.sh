@@ -95,6 +95,32 @@ EOF
 }
 
 
+setup_logrotate() {
+    local rotate_confdir target_conf
+
+    rotate_confdir='/etc/logrotate.d'
+    target_conf="$rotate_confdir/common-config"
+
+    [[ -d "$rotate_confdir" ]] || fail "[$rotate_confdir] is not a dir - is logrotate installed?"
+
+    if [[ -f "$LOGROTATE_CONF" && -s "$LOGROTATE_CONF" ]]; then
+        cat -- "$LOGROTATE_CONF" > "$target_conf"
+    else
+        cat > "$target_conf" <<EOF
+/var/log/*.log {
+                   rotate 20
+                   weekly
+                   size 1000k
+                   copytruncate
+                   compress
+                   missingok
+                   notifempty
+}
+EOF
+    fi
+}
+
+
 NO_SEND_MAIL=true  # stop sending mails during startup/setup; allow other notifications
 #printenv | sed 's/^\(\w\+\)=\(.*\)$/export \1="\2"/g' > /env_vars.sh || { echo -e "    ERROR: printenv failed" | tee -a "$LOG"; exit 1; }
 #env | sed -r "s/'/\\\'/gm" | sed -r "s/^([^=]+=)(.*)\$/\1'\2'/gm" \ > /etc/environment
@@ -107,6 +133,7 @@ validate_config_common
 setup_crontab
 install_ssh_key
 setup_msmtp
+setup_logrotate
 unset NO_SEND_MAIL
 
 exit 0
