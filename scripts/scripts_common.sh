@@ -232,10 +232,15 @@ pushover() {
 
 
 add_remote_to_known_hosts_if_missing() {
-    [[ -z "$REMOTE" ]] && return 0
+    local remote
 
-    if [[ -z "$(ssh-keygen -F "$REMOTE")" ]]; then
-        ssh-keyscan -H "$REMOTE" >> ~/.ssh/known_hosts || fail "adding host [$REMOTE] to ~/.ssh/known_hosts failed w/ [$?]"
+    remote="${REMOTE#*@}"  # everything after '@'
+    remote="${remote%%:*}"  # everything before ':'
+
+    [[ -z "$remote" ]] && return 0
+
+    if [[ -z "$(ssh-keygen -F "$remote")" ]]; then
+        ssh-keyscan -H "$remote" >> ~/.ssh/known_hosts || fail "adding host [$remote] to ~/.ssh/known_hosts failed w/ [$?]"
     fi
 }
 
