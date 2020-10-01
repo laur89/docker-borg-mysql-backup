@@ -86,7 +86,7 @@ do_restore() {
 
 
 validate_config() {
-    local i val vars
+    local vars
 
     declare -a vars=(
         ARCHIVE_NAME
@@ -99,10 +99,7 @@ validate_config() {
         )
     [[ "$REM" -eq 1 ]] && vars+=(REMOTE REMOTE_REPO)
 
-    for i in "${vars[@]}"; do
-        val="$(eval echo "\$$i")" || fail "evaling [echo \"\$$i\"] failed w/ [$?]"
-        [[ -z "$val" ]] && fail "[$i] is not defined"
-    done
+    vars_defined "${vars[@]}"
 
     [[ "$REMOTE_OR_LOCAL_OPT_COUNTER" -ne 1 ]] && fail "need to select whether to restore from local or remote repo"
     [[ -d "$BACKUP_ROOT" ]] || fail "[$BACKUP_ROOT] is not mounted"
@@ -165,6 +162,7 @@ readonly BORG_LOCAL_REPO="$BACKUP_ROOT/${BORG_LOCAL_REPO_NAME:-$DEFAULT_LOCAL_RE
 [[ -e "$RESTORE_DIR" ]] && fail "[$RESTORE_DIR] already exists, abort"
 
 validate_config
+[[ -n "$REMOTE" ]] && add_remote_to_known_hosts_if_missing
 readonly REMOTE+=":$REMOTE_REPO"  # define after validation
 create_dirs
 verify_borg

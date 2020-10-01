@@ -202,7 +202,7 @@ init_local_borg_repo() {
 
 
 validate_config() {
-    local i val vars
+    local i vars
 
     validate_config_common
 
@@ -220,10 +220,7 @@ validate_config() {
     )
     [[ "$LOCAL_ONLY" -ne 1 ]] && vars+=(REMOTE REMOTE_REPO)
 
-    for i in "${vars[@]}"; do
-        val="$(eval echo "\$$i")" || fail "evaling [echo \"\$$i\"] failed w/ [$?]"
-        [[ -z "$val" ]] && fail "[$i] is not defined"
-    done
+    vars_defined "${vars[@]}"
 
     if [[ "${#NODES_TO_BACK_UP[@]}" -gt 0 ]]; then
         for i in "${NODES_TO_BACK_UP[@]}"; do
@@ -319,6 +316,7 @@ readonly ARCHIVE_NAME="$PREFIX_WITH_HOSTNAME"'{now:%Y-%m-%d-%H%M%S}'
 readonly BORG_LOCAL_REPO="$BACKUP_ROOT/${BORG_LOCAL_REPO_NAME:-$DEFAULT_LOCAL_REPO_NAME}"
 
 validate_config
+[[ -n "$REMOTE" ]] && add_remote_to_known_hosts_if_missing
 readonly REMOTE+=":$REMOTE_REPO"  # define after validation
 create_dirs
 init_local_borg_repo

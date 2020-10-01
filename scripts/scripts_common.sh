@@ -233,8 +233,17 @@ pushover() {
 }
 
 
+add_remote_to_known_hosts_if_missing() {
+    [[ -z "$REMOTE" ]] && return 0
+
+    if [[ -z "$(ssh-keygen -F "$REMOTE")" ]]; then
+        ssh-keyscan -H "$REMOTE" >> ~/.ssh/known_hosts || fail "adding host [$REMOTE] to ~/.ssh/known_hosts failed w/ [$?]"
+    fi
+}
+
+
 validate_config_common() {
-    local i vars val
+    local i vars
 
     declare -a vars
     if [[ -n "$ERR_NOTIF" ]]; then
@@ -253,30 +262,37 @@ validate_config_common() {
         fi
 
         [[ "$ERR_NOTIF" == *pushover* ]] && vars+=(
-                PUSHOVER_APP_TOKEN
-                PUSHOVER_USER_KEY
+            PUSHOVER_APP_TOKEN
+            PUSHOVER_USER_KEY
         )
     fi
 
-    for i in "${vars[@]}"; do
-        val="$(eval echo "\$$i")" || fail "evaling [echo \"\$$i\"] failed w/ [$?]"
-        [[ -z "$val" ]] && fail "[$i] is not defined"
-    done
+    vars_defined "${vars[@]}"
 
     [[ -n "$MYSQL_FAIL_FATAL" ]] && ! [[ "$MYSQL_FAIL_FATAL" =~ ^(true|false)$ ]] && fail "MYSQL_FAIL_FATAL value, when given, can be either [true] or [false]"
 }
 
 
+vars_defined() {
+    local i val
+
+    for i in "$@"; do
+        val="$(eval echo "\$$i")" || fail "evaling [echo \"\$$i\"] failed w/ [$?]"
+        [[ -z "$val" ]] && fail "[$i] is not defined"
+    done
+}
+
+
 expand_placeholders() {
-    local m is_fail
+    local m is_fatal
 
     m="$1"
-    is_fail="${2:-false}"  # true|false; indicates whether given error caused job to abort/exit
+    is_fatal="${2:-false}"  # true|false; indicates whether given error caused job to abort/exit
 
     m="$(sed "s/{h}/$HOST_NAME/g" <<< "$m")"
     m="$(sed "s/{p}/$ARCHIVE_PREFIX/g" <<< "$m")"
     m="$(sed "s/{i}/$JOB_ID/g" <<< "$m")"
-    m="$(sed "s/{f}/$is_fail/g" <<< "$m")"
+    m="$(sed "s/{f}/$is_fatal/g" <<< "$m")"
 
     echo "$m"
 }

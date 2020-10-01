@@ -43,23 +43,13 @@ install_ssh_key() {
 
     readonly ssh_key_target=~/.ssh/id_rsa
 
-    _add_remote_to_known_hosts_if_missing() {
-        local remote_host
-
-        remote_host="$(grep -Po '^.*@\K.*(?=:.*$)' <<< "$REMOTE")"
-        [[ $? -ne 0 || -z "$remote_host" ]] && fail "could not extract remote host from REMOTE [$REMOTE]"
-
-        if [[ -z "$(ssh-keygen -F "$remote_host")" ]]; then
-            ssh-keyscan -H "$remote_host" >> ~/.ssh/known_hosts || fail "adding host [$remote_host] to ~/.ssh/known_hosts failed w/ [$?]"
-        fi
-    }
-
     [[ -d ~/.ssh ]] || fail "[~/.ssh] is not a dir; is ssh client installed?"
     [[ -f "$SSH_KEY" ]] && cp -- "$SSH_KEY" "$ssh_key_target"
-    [[ -n "$REMOTE" ]] && _add_remote_to_known_hosts_if_missing
 
     # sanitize .ssh perms:
     chmod -R u=rwX,g=,o= -- ~/.ssh
+
+    [[ -n "$REMOTE" ]] && add_remote_to_known_hosts_if_missing
 }
 
 

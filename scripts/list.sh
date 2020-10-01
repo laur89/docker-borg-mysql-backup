@@ -39,16 +39,13 @@ list_repos() {
 
 
 validate_config() {
-    local i val vars
+    local vars
 
     declare -a vars
 
     [[ "$REM" -eq 1 ]] && vars+=(REMOTE REMOTE_REPO)
 
-    for i in "${vars[@]}"; do
-        val="$(eval echo "\$$i")" || fail "evaling [echo \"\$$i\"] failed w/ [$?]"
-        [[ -z "$val" ]] && fail "[$i] is not defined"
-    done
+    vars_defined "${vars[@]}"
 
     [[ "$REMOTE_OR_LOCAL_OPT_COUNTER" -ne 1 ]] && fail "need to select whether to list local or remote repo"
     [[ "$BORG_LOCAL_REPO_NAME" == /* ]] && fail "BORG_LOCAL_REPO_NAME should not start with a slash"
@@ -86,6 +83,7 @@ done
 readonly BORG_LOCAL_REPO="$BACKUP_ROOT/${BORG_LOCAL_REPO_NAME:-$DEFAULT_LOCAL_REPO_NAME}"
 
 validate_config
+[[ -n "$REMOTE" ]] && add_remote_to_known_hosts_if_missing
 readonly REMOTE+=":$REMOTE_REPO"  # define after validation
 list_repos
 
