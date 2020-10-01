@@ -15,7 +15,7 @@ LOG_TIMESTAMP_FORMAT='+%F %T'
 
 DEFAULT_LOCAL_REPO_NAME=repo
 DEFAULT_MAIL_FROM='{h} backup reporter'
-DEFAULT_NOTIF_SUBJECT='[{p}] backup error on {h}'
+DEFAULT_NOTIF_SUBJECT='{p}: backup error on {h}'
 CURL_FLAGS=(
     -w '\n'
     --max-time 4

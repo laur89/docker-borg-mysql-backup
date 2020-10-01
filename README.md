@@ -66,7 +66,7 @@ Every time any config is changed in `/config`, container needs to be restarted.
 
     ERR_NOTIF               space separated error notification methods; supported values
                             are {mail,pushover}; optional
-    NOTIF_SUBJECT           notifications' subject/title; defaults to '[{p}] backup error on {h}'
+    NOTIF_SUBJECT           notifications' subject/title; defaults to '{p}: backup error on {h}'
 
       following params {MAIL,SMTP}_* are only used if ERR_NOTIF value contains 'mail';
       also note all SMTP_* env vars besides SMTP_ACCOUNT are ignored if you've
