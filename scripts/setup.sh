@@ -2,7 +2,6 @@
 #
 # this is service bootstrap logic to be called from container entrypoint.
 #
-# - writes down env vars so they can be sourced by cron;
 # - initialises crontab;
 # - sets ssh key, if available & adds our remote borg to know_hosts;
 # - configures msmtprc for mail notifications;
@@ -26,8 +25,9 @@ setup_crontab() {
     #readonly cron_target='/var/spool/cron/crontabs/root'
 
     if [[ -f "$CRON_FILE" ]]; then
-        grep -q '^BASH_ENV=' "$CRON_FILE" || sed -i '1s+^+BASH_ENV=/container.env\n+' "$CRON_FILE"
-        grep -q '^SHELL=' "$CRON_FILE" || sed -i '1s+^+SHELL=/bin/bash\n+' "$CRON_FILE"
+        ## TODO: this won't work, as /config is mounted read-only:
+        #grep -q '^BASH_ENV=' "$CRON_FILE" || sed -i '1s+^+BASH_ENV=/container.env\n+' "$CRON_FILE"
+        #grep -q '^SHELL=' "$CRON_FILE" || sed -i '1s+^+SHELL=/bin/bash\n+' "$CRON_FILE"
 
         #[[ -f "$cron_target" ]] || fail "[$cron_target] does not exist; is cron installed?"
         #cp -- "$CRON_FILE" "$cron_target"
@@ -98,9 +98,9 @@ EOF
 NO_SEND_MAIL=true  # stop sending mails during startup/setup; allow other notifications
 #printenv | sed 's/^\(\w\+\)=\(.*\)$/export \1="\2"/g' > /env_vars.sh || { echo -e "    ERROR: printenv failed" | tee -a "$LOG"; exit 1; }
 #env | sed -r "s/'/\\\'/gm" | sed -r "s/^([^=]+=)(.*)\$/\1'\2'/gm" \ > /etc/environment
-declare -p | grep -Ev '\b(BASHOPTS|BASH_VERSINFO|EUID|PPID|SHELLOPTS|UID)=' > /container.env || { echo -e "    ERROR: printenv failed" | tee -a "$LOG"; exit 1; }
+#declare -p | grep -Ev '\b(BASHOPTS|BASH_VERSINFO|EUID|PPID|SHELLOPTS|UID)=' > /container.env || { echo -e "    ERROR: printenv failed" | tee -a "$LOG"; exit 1; }
 source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_common.sh" | tee -a "$LOG"; exit 1; }
-chmod 600 /container.env || fail "chmod-ing /container.env failed w/ [$?]"
+#chmod 600 /container.env || fail "chmod-ing /container.env failed w/ [$?]"
 
 check_dependencies
 validate_config_common
