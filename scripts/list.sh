@@ -22,12 +22,12 @@ readonly usage="
 list_repos() {
 
     if [[ "$LOCAL_REPO" -eq 1 ]]; then
-        borg list \
+        borg list --show-rc \
             $BORG_EXTRA_OPTS \
             $BORG_LOCAL_EXTRA_OPTS \
             "$BORG_LOCAL_REPO" || fail "listing local repo [$BORG_LOCAL_REPO] failed w/ [$?]"
     elif [[ "$REMOTE_REPO" -eq 1 ]]; then
-        borg list \
+        borg list --show-rc \
             $BORG_EXTRA_OPTS \
             $BORG_REMOTE_EXTRA_OPTS \
             "$REMOTE" || fail "listing [$REMOTE] failed w/ [$?]"

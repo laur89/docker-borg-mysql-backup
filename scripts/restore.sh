@@ -28,6 +28,7 @@ readonly usage="
 "
 
 # checks whether chosen borg repo really is a valid repo
+# TODO: deprecate, as we did in backup?
 verify_borg() {
 
     if [[ "$LOCAL_REPO" -eq 1 ]]; then
@@ -65,12 +66,12 @@ do_restore() {
     pushd -- "$RESTORE_DIR" &> /dev/null || fail "unable to pushd into [$RESTORE_DIR]"
 
     if [[ "$LOCAL_REPO" -eq 1 ]]; then
-        borg extract -v --list \
+        borg extract -v --list --show-rc \
             $BORG_EXTRA_OPTS \
             $BORG_LOCAL_EXTRA_OPTS \
             "${BORG_LOCAL_REPO}::${ARCHIVE_NAME}" || fail "extracting local [$BORG_LOCAL_REPO::$ARCHIVE_NAME] failed w/ [$?]"
     elif [[ "$REMOTE_REPO" -eq 1 ]]; then
-        borg extract -v --list \
+        borg extract -v --list --show-rc \
             $BORG_EXTRA_OPTS \
             $BORG_REMOTE_EXTRA_OPTS \
             "${REMOTE}::${ARCHIVE_NAME}" || fail "extracting [$REMOTE::$ARCHIVE_NAME] failed w/ [$?]"
@@ -79,7 +80,7 @@ do_restore() {
     popd &> /dev/null
     KEEP_DIR=1  # from this point onward, we should not delete $RESTORE_DIR on failure
     restore_db
-    log "=> Restore finished OK"
+    log "=> Restore finished OK, contents are in [$RESTORE_DIR]"
 }
 
 
@@ -116,6 +117,8 @@ create_dirs() {
 cleanup() {
     [[ "$KEEP_DIR" -ne 1 && -d "$RESTORE_DIR" ]] && rm -r -- "$RESTORE_DIR"
     [[ -d "$RESTORE_DIR" ]] && log "\n\n    -> restored files are in [$RESTORE_DIR]"
+
+    log "==> restore script end"
 }
 
 

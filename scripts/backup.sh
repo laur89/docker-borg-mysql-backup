@@ -100,17 +100,18 @@ dump_db() {
 }
 
 
+# TODO: should we skip prune if create exits w/ code >=2?
 backup_local() {
     local start_timestamp err_code err_
 
     log "=> starting local backup..."
     start_timestamp="$(date +%s)"
 
-    borg create -v --stats \
+    borg create --stats --show-rc \
         $BORG_EXTRA_OPTS \
         $BORG_LOCAL_EXTRA_OPTS \
         "${BORG_LOCAL_REPO}::${ARCHIVE_NAME}" \
-        "${NODES_TO_BACK_UP[@]}" || { err "local borg create failed w/ [$?]"; err_code=1; err_=failed; }
+        "${NODES_TO_BACK_UP[@]}" || { err "local borg create exited w/ [$?]"; err_code=1; err_=failed; }
     log "=> local backup ${err_:-succeeded} in $(( $(date +%s) - start_timestamp )) seconds"
 
     unset err_
@@ -118,10 +119,10 @@ backup_local() {
     log "=> starting local prune..."
     start_timestamp="$(date +%s)"
 
-    borg prune -v --list \
+    borg prune --show-rc \
         "$BORG_LOCAL_REPO" \
         --prefix "$PREFIX_WITH_HOSTNAME" \
-        $BORG_PRUNE_OPTS || { err "local borg prune failed w/ [$?]"; err_code=1; err_=failed; }
+        $BORG_PRUNE_OPTS || { err "local borg prune exited w/ [$?]"; err_code=1; err_=failed; }
     log "=> local prune ${err_:-succeeded} in $(( $(date +%s) - start_timestamp )) seconds"
 
     return "${err_code:-0}"
@@ -134,11 +135,11 @@ backup_remote() {
     log "=> starting remote backup..."
     start_timestamp="$(date +%s)"
 
-    borg create -v --stats \
+    borg create --stats --show-rc \
         $BORG_EXTRA_OPTS \
         $BORG_REMOTE_EXTRA_OPTS \
         "${REMOTE}::${ARCHIVE_NAME}" \
-        "${NODES_TO_BACK_UP[@]}" || { err "remote borg create failed w/ [$?]"; err_code=1; err_=failed; }
+        "${NODES_TO_BACK_UP[@]}" || { err "remote borg create exited w/ [$?]"; err_code=1; err_=failed; }
     log "=> remote backup ${err_:-succeeded} in $(( $(date +%s) - start_timestamp )) seconds"
 
     unset err_
@@ -146,10 +147,10 @@ backup_remote() {
     log "=> starting remote prune..."
     start_timestamp="$(date +%s)"
 
-    borg prune -v --list \
+    borg prune --show-rc \
         "$REMOTE" \
         --prefix "$PREFIX_WITH_HOSTNAME" \
-        $BORG_PRUNE_OPTS || { err "remote borg prune failed w/ [$?]"; err_code=1; err_=failed; }
+        $BORG_PRUNE_OPTS || { err "remote borg prune exited w/ [$?]"; err_code=1; err_=failed; }
     log "=> remote prune ${err_:-succeeded} in $(( $(date +%s) - start_timestamp )) seconds"
 
     return "${err_code:-0}"
@@ -199,7 +200,7 @@ init_local_borg_repo() {
 
     if [[ "$REMOTE_ONLY" -ne 1 ]]; then
         if [[ ! -d "$BORG_LOCAL_REPO" ]] || is_dir_empty "$BORG_LOCAL_REPO"; then
-            if ! borg init "$BORG_LOCAL_REPO"; then
+            if ! borg init --show-rc "$BORG_LOCAL_REPO"; then
                 msg="local borg repo init @ [$BORG_LOCAL_REPO] failed w/ [$?]"
                 [[ "$LOCAL_ONLY" -eq 1 ]] && fail "$msg" || { err "$msg"; LOCAL_ONLY=0; REMOTE_ONLY=1; }  # local would fail for sure; force remote_only
             fi
