@@ -101,59 +101,45 @@ dump_db() {
 
 
 # TODO: should we skip prune if create exits w/ code >=2?
-backup_local() {
-    local start_timestamp err_code err_
+_backup_common() {
+    local local_or_remote repo extra_opts start_timestamp err_code err_
 
-    log "=> starting local backup..."
+    local_or_remote="$1"
+    repo="$2"
+    extra_opts="$3"
+
+    log "=> starting $local_or_remote backup..."
     start_timestamp="$(date +%s)"
 
     borg create --stats --show-rc \
         $BORG_EXTRA_OPTS \
-        $BORG_LOCAL_EXTRA_OPTS \
-        "${BORG_LOCAL_REPO}::${ARCHIVE_NAME}" \
-        "${NODES_TO_BACK_UP[@]}" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || { err "local borg create exited w/ [$?]"; err_code=1; err_=failed; }
-    log "=> local backup ${err_:-succeeded} in $(( $(date +%s) - start_timestamp )) seconds"
+        $extra_opts \
+        "${repo}::${ARCHIVE_NAME}" \
+        "${NODES_TO_BACK_UP[@]}" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || { err "$local_or_remote borg create exited w/ [$?]"; err_code=1; err_=failed; }
+    log "=> $local_or_remote backup ${err_:-succeeded} in $(( $(date +%s) - start_timestamp )) seconds"
 
     unset err_
 
-    log "=> starting local prune..."
+    log "=> starting $local_or_remote prune..."
     start_timestamp="$(date +%s)"
 
     borg prune --show-rc \
-        "$BORG_LOCAL_REPO" \
+        "$repo" \
         --prefix "$PREFIX_WITH_HOSTNAME" \
-        $BORG_PRUNE_OPTS > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || { err "local borg prune exited w/ [$?]"; err_code=1; err_=failed; }
-    log "=> local prune ${err_:-succeeded} in $(( $(date +%s) - start_timestamp )) seconds"
+        $BORG_PRUNE_OPTS > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || { err "$local_or_remote borg prune exited w/ [$?]"; err_code=1; err_=failed; }
+    log "=> $local_or_remote prune ${err_:-succeeded} in $(( $(date +%s) - start_timestamp )) seconds"
 
     return "${err_code:-0}"
 }
 
 
+backup_local() {
+    _backup_common local "${BORG_LOCAL_REPO}" "$BORG_LOCAL_EXTRA_OPTS"
+}
+
+
 backup_remote() {
-    local start_timestamp err_code err_
-
-    log "=> starting remote backup..."
-    start_timestamp="$(date +%s)"
-
-    borg create --stats --show-rc \
-        $BORG_EXTRA_OPTS \
-        $BORG_REMOTE_EXTRA_OPTS \
-        "${REMOTE}::${ARCHIVE_NAME}" \
-        "${NODES_TO_BACK_UP[@]}" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || { err "remote borg create exited w/ [$?]"; err_code=1; err_=failed; }
-    log "=> remote backup ${err_:-succeeded} in $(( $(date +%s) - start_timestamp )) seconds"
-
-    unset err_
-
-    log "=> starting remote prune..."
-    start_timestamp="$(date +%s)"
-
-    borg prune --show-rc \
-        "$REMOTE" \
-        --prefix "$PREFIX_WITH_HOSTNAME" \
-        $BORG_PRUNE_OPTS > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || { err "remote borg prune exited w/ [$?]"; err_code=1; err_=failed; }
-    log "=> remote prune ${err_:-succeeded} in $(( $(date +%s) - start_timestamp )) seconds"
-
-    return "${err_code:-0}"
+    _backup_common remote "${REMOTE}" "$BORG_REMOTE_EXTRA_OPTS"
 }
 
 
