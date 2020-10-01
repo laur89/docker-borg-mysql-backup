@@ -60,6 +60,7 @@ restore_db() {
 }
 
 
+# TODO: do not fail() if err code <=1?
 do_restore() {
 
     log "=> Restore started"
@@ -69,12 +70,12 @@ do_restore() {
         borg extract -v --list --show-rc \
             $BORG_EXTRA_OPTS \
             $BORG_LOCAL_EXTRA_OPTS \
-            "${BORG_LOCAL_REPO}::${ARCHIVE_NAME}" || fail "extracting local [$BORG_LOCAL_REPO::$ARCHIVE_NAME] failed w/ [$?]"
+            "${BORG_LOCAL_REPO}::${ARCHIVE_NAME}" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || fail "extracting local [$BORG_LOCAL_REPO::$ARCHIVE_NAME] failed w/ [$?]"
     elif [[ "$REMOTE_REPO" -eq 1 ]]; then
         borg extract -v --list --show-rc \
             $BORG_EXTRA_OPTS \
             $BORG_REMOTE_EXTRA_OPTS \
-            "${REMOTE}::${ARCHIVE_NAME}" || fail "extracting [$REMOTE::$ARCHIVE_NAME] failed w/ [$?]"
+            "${REMOTE}::${ARCHIVE_NAME}" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || fail "extracting [$REMOTE::$ARCHIVE_NAME] failed w/ [$?]"
     fi
 
     popd &> /dev/null

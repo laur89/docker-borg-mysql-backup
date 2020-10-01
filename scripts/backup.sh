@@ -111,7 +111,7 @@ backup_local() {
         $BORG_EXTRA_OPTS \
         $BORG_LOCAL_EXTRA_OPTS \
         "${BORG_LOCAL_REPO}::${ARCHIVE_NAME}" \
-        "${NODES_TO_BACK_UP[@]}" || { err "local borg create exited w/ [$?]"; err_code=1; err_=failed; }
+        "${NODES_TO_BACK_UP[@]}" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || { err "local borg create exited w/ [$?]"; err_code=1; err_=failed; }
     log "=> local backup ${err_:-succeeded} in $(( $(date +%s) - start_timestamp )) seconds"
 
     unset err_
@@ -122,7 +122,7 @@ backup_local() {
     borg prune --show-rc \
         "$BORG_LOCAL_REPO" \
         --prefix "$PREFIX_WITH_HOSTNAME" \
-        $BORG_PRUNE_OPTS || { err "local borg prune exited w/ [$?]"; err_code=1; err_=failed; }
+        $BORG_PRUNE_OPTS > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || { err "local borg prune exited w/ [$?]"; err_code=1; err_=failed; }
     log "=> local prune ${err_:-succeeded} in $(( $(date +%s) - start_timestamp )) seconds"
 
     return "${err_code:-0}"
@@ -139,7 +139,7 @@ backup_remote() {
         $BORG_EXTRA_OPTS \
         $BORG_REMOTE_EXTRA_OPTS \
         "${REMOTE}::${ARCHIVE_NAME}" \
-        "${NODES_TO_BACK_UP[@]}" || { err "remote borg create exited w/ [$?]"; err_code=1; err_=failed; }
+        "${NODES_TO_BACK_UP[@]}" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || { err "remote borg create exited w/ [$?]"; err_code=1; err_=failed; }
     log "=> remote backup ${err_:-succeeded} in $(( $(date +%s) - start_timestamp )) seconds"
 
     unset err_
@@ -150,7 +150,7 @@ backup_remote() {
     borg prune --show-rc \
         "$REMOTE" \
         --prefix "$PREFIX_WITH_HOSTNAME" \
-        $BORG_PRUNE_OPTS || { err "remote borg prune exited w/ [$?]"; err_code=1; err_=failed; }
+        $BORG_PRUNE_OPTS > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || { err "remote borg prune exited w/ [$?]"; err_code=1; err_=failed; }
     log "=> remote prune ${err_:-succeeded} in $(( $(date +%s) - start_timestamp )) seconds"
 
     return "${err_code:-0}"
@@ -200,7 +200,8 @@ init_local_borg_repo() {
 
     if [[ "$REMOTE_ONLY" -ne 1 ]]; then
         if [[ ! -d "$BORG_LOCAL_REPO" ]] || is_dir_empty "$BORG_LOCAL_REPO"; then
-            if ! borg init --show-rc "$BORG_LOCAL_REPO"; then
+            log "=> initialising local repo [$BORG_LOCAL_REPO]..."
+            if ! borg init --show-rc "$BORG_LOCAL_REPO" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2); then
                 msg="local borg repo init @ [$BORG_LOCAL_REPO] failed w/ [$?]"
                 [[ "$LOCAL_ONLY" -eq 1 ]] && fail "$msg" || { err "$msg"; LOCAL_ONLY=0; REMOTE_ONLY=1; }  # local would fail for sure; force remote_only
             fi

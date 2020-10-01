@@ -25,12 +25,12 @@ list_repos() {
         borg list --show-rc \
             $BORG_EXTRA_OPTS \
             $BORG_LOCAL_EXTRA_OPTS \
-            "$BORG_LOCAL_REPO" || fail "listing local repo [$BORG_LOCAL_REPO] failed w/ [$?]"
+            "$BORG_LOCAL_REPO" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || fail "listing local repo [$BORG_LOCAL_REPO] failed w/ [$?]"
     elif [[ "$REMOTE_REPO" -eq 1 ]]; then
         borg list --show-rc \
             $BORG_EXTRA_OPTS \
             $BORG_REMOTE_EXTRA_OPTS \
-            "$REMOTE" || fail "listing [$REMOTE] failed w/ [$?]"
+            "$REMOTE" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || fail "listing [$REMOTE] failed w/ [$?]"
     else
         fail "need to select local or remote repo"
     fi
