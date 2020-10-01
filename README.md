@@ -50,9 +50,13 @@ Every time any config is changed in `/config`, container needs to be restarted.
 
 
     HOST_NAME               hostname to include in the borg archive name
-    REMOTE                  remote connection, including repository, eg
-                            'remoteuser@remoteserver.com:/backup/location'
-                            optional - can be omitted when only backing up to local borg repo.
+    REMOTE                  remote connection - user & host; eg for rsync.net
+                            it'd be something like '12345@ch-s010.rsync.net'
+                            optional - can be omitted when only backing up to local
+                            borg repo, or if providing value via script
+    REMOTE_REPO             path to repo on remote host, eg '/backup/repo'
+                            optional - can be omitted when only backing up to local
+                            borg repo, or if providing value via script
     BORG_LOCAL_REPO_NAME    local borg repo name; defaults to 'repo'
     BORG_EXTRA_OPTS         additional borg params (for both local & remote borg commands); optional
     BORG_LOCAL_EXTRA_OPTS   additional borg params for local borg command; optional
@@ -144,7 +148,8 @@ directly via docker for one off backup.
         -e MYSQL_USER=admin \
         -e MYSQL_PASS=password \
         -e HOST_NAME=hostname-to-use-in-archive-prefix \
-        -e REMOTE=remoteuser@server.com:repo/location \
+        -e REMOTE=remoteuser@server.com \
+        -e REMOTE_REPO=repo/location \
         -e BORG_EXTRA_OPTS='--compression zlib,5 --lock-wait 60' \
         -e BORG_PASSPHRASE=borgrepopassword \
         -e BORG_PRUNE_OPTS='--keep-daily=7 --keep-weekly=4' \
@@ -166,7 +171,8 @@ directly via docker for one off backup.
         -e MYSQL_USER=admin \
         -e MYSQL_PASS=password \
         -e HOST_NAME=hostname-to-use-in-archive-prefix \
-        -e REMOTE=remoteuser@server.com:repo/location \
+        -e REMOTE=remoteuser@server.com \
+        -e REMOTE_REPO=repo/location \
         -e BORG_PASSPHRASE=borgrepopassword \
         -e BORG_PRUNE_OPTS='--keep-daily=7 --keep-weekly=4' \
         -v /var/run/docker.sock:/var/run/docker.sock \
@@ -225,7 +231,8 @@ errors via email.
 
     docker run -it --rm \
         -e HOST_NAME=hostname-to-use-in-archive-prefix \
-        -e REMOTE=remoteuser@server.com:repo/location \
+        -e REMOTE=remoteuser@server.com \
+        -e REMOTE_REPO=repo/location \
         -e BORG_PASSPHRASE=borgrepopassword \
         -e BORG_PRUNE_OPTS='--keep-daily=7 --keep-weekly=4' \
         -v /borg-mysql-backup/config:/config:ro \
@@ -274,7 +281,8 @@ Only db will be restored from a dump, given the option is provided to the script
         -e MYSQL_PORT=27017 \
         -e MYSQL_USER=admin \
         -e MYSQL_PASS=password \
-        -e REMOTE=remoteuser@server.com:repo/location \
+        -e REMOTE=remoteuser@server.com \
+        -e REMOTE_REPO=repo/location \
         -e BORG_PASSPHRASE=borgrepopassword \
         -v /tmp:/backup \
         -v /borg-mysql-backup/config:/config:ro \
@@ -330,7 +338,8 @@ variables are still usable with `restore`.
 
     docker run -it --rm \
         -e BORG_EXTRA_OPTS="-P my-prefix" \
-        -e REMOTE=remoteuser@server.com:repo/location \
+        -e REMOTE=remoteuser@server.com \
+        -e REMOTE_REPO=repo/location \
         -e BORG_PASSPHRASE=borgrepopassword \
         -v /borg-mysql-backup/config:/config:ro \
            layr/borg-mysql-backup list.sh -r

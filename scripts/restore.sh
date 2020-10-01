@@ -31,9 +31,9 @@ readonly usage="
 # TODO: deprecate, as we did in backup?
 verify_borg() {
 
-    if [[ "$LOCAL_REPO" -eq 1 ]]; then
+    if [[ "$LOC" -eq 1 ]]; then
         borg list "$BORG_LOCAL_REPO" > /dev/null || fail "[borg list $BORG_LOCAL_REPO] failed w/ [$?]; is it a borg repo?"
-    elif [[ "$REMOTE_REPO" -eq 1 ]]; then
+    elif [[ "$REM" -eq 1 ]]; then
         borg list "$REMOTE" > /dev/null || fail "[borg list $REMOTE] failed w/ [$?]; please create remote repos manually beforehand"
     fi
 }
@@ -66,12 +66,12 @@ do_restore() {
     log "=> Restore started"
     pushd -- "$RESTORE_DIR" &> /dev/null || fail "unable to pushd into [$RESTORE_DIR]"
 
-    if [[ "$LOCAL_REPO" -eq 1 ]]; then
+    if [[ "$LOC" -eq 1 ]]; then
         borg extract -v --list --show-rc \
             $BORG_EXTRA_OPTS \
             $BORG_LOCAL_EXTRA_OPTS \
             "${BORG_LOCAL_REPO}::${ARCHIVE_NAME}" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || fail "extracting local [$BORG_LOCAL_REPO::$ARCHIVE_NAME] failed w/ [$?]"
-    elif [[ "$REMOTE_REPO" -eq 1 ]]; then
+    elif [[ "$REM" -eq 1 ]]; then
         borg extract -v --list --show-rc \
             $BORG_EXTRA_OPTS \
             $BORG_REMOTE_EXTRA_OPTS \
@@ -97,7 +97,7 @@ validate_config() {
             MYSQL_USER
             MYSQL_PASS
         )
-    [[ "$REMOTE_REPO" -eq 1 ]] && vars+=(REMOTE)
+    [[ "$REM" -eq 1 ]] && vars+=(REMOTE REMOTE_REPO)
 
     for i in "${vars[@]}"; do
         val="$(eval echo "\$$i")" || fail "evaling [echo \"\$$i\"] failed w/ [$?]"
@@ -131,19 +131,23 @@ NO_NOTIF=true  # do not notify errors
 source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_common.sh" | tee -a "$LOG"; exit 1; }
 REMOTE_OR_LOCAL_OPT_COUNTER=0
 
-while getopts "dc:rlN:a:h" opt; do
+while getopts "dc:rlN:R:T:a:h" opt; do
     case "$opt" in
         d) RESTORE_DB=1
             ;;
         c) declare -ar CONTAINERS=($OPTARG)
             ;;
-        r) REMOTE_REPO=1
+        r) REM=1
            let REMOTE_OR_LOCAL_OPT_COUNTER+=1
             ;;
-        l) LOCAL_REPO=1
+        l) LOC=1
            let REMOTE_OR_LOCAL_OPT_COUNTER+=1
             ;;
         N) BORG_LOCAL_REPO_NAME="$OPTARG"  # overrides env var of same name
+            ;;
+        R) REMOTE="$OPTARG"  # overrides env var of same name
+            ;;
+        T) REMOTE_REPO="$OPTARG"  # overrides env var of same name
             ;;
         a) ARCHIVE_NAME="$OPTARG"
             ;;
@@ -161,6 +165,7 @@ readonly BORG_LOCAL_REPO="$BACKUP_ROOT/${BORG_LOCAL_REPO_NAME:-$DEFAULT_LOCAL_RE
 [[ -e "$RESTORE_DIR" ]] && fail "[$RESTORE_DIR] already exists, abort"
 
 validate_config
+readonly REMOTE+=":$REMOTE_REPO"  # define after validation
 create_dirs
 verify_borg
 

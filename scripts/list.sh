@@ -19,14 +19,15 @@ readonly usage="
 "
 
 
+# TODO: do not fail() if err code <=1?
 list_repos() {
 
-    if [[ "$LOCAL_REPO" -eq 1 ]]; then
+    if [[ "$LOC" -eq 1 ]]; then
         borg list --show-rc \
             $BORG_EXTRA_OPTS \
             $BORG_LOCAL_EXTRA_OPTS \
             "$BORG_LOCAL_REPO" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || fail "listing local repo [$BORG_LOCAL_REPO] failed w/ [$?]"
-    elif [[ "$REMOTE_REPO" -eq 1 ]]; then
+    elif [[ "$REM" -eq 1 ]]; then
         borg list --show-rc \
             $BORG_EXTRA_OPTS \
             $BORG_REMOTE_EXTRA_OPTS \
@@ -42,7 +43,7 @@ validate_config() {
 
     declare -a vars
 
-    [[ "$REMOTE_REPO" -eq 1 ]] && vars+=(REMOTE)
+    [[ "$REM" -eq 1 ]] && vars+=(REMOTE REMOTE_REPO)
 
     for i in "${vars[@]}"; do
         val="$(eval echo "\$$i")" || fail "evaling [echo \"\$$i\"] failed w/ [$?]"
@@ -60,15 +61,19 @@ NO_NOTIF=true  # do not notify errors
 source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_common.sh" | tee -a "$LOG"; exit 1; }
 REMOTE_OR_LOCAL_OPT_COUNTER=0
 
-while getopts "rlNh" opt; do
+while getopts "rlN:R:T:h" opt; do
     case "$opt" in
-        r) REMOTE_REPO=1
+        r) REM=1
            let REMOTE_OR_LOCAL_OPT_COUNTER+=1
             ;;
-        l) LOCAL_REPO=1
+        l) LOC=1
            let REMOTE_OR_LOCAL_OPT_COUNTER+=1
             ;;
         N) BORG_LOCAL_REPO_NAME="$OPTARG"  # overrides env var of same name
+            ;;
+        R) REMOTE="$OPTARG"  # overrides env var of same name
+            ;;
+        T) REMOTE_REPO="$OPTARG"  # overrides env var of same name
             ;;
         h) echo -e "$usage"
            exit 0
@@ -81,6 +86,7 @@ done
 readonly BORG_LOCAL_REPO="$BACKUP_ROOT/${BORG_LOCAL_REPO_NAME:-$DEFAULT_LOCAL_REPO_NAME}"
 
 validate_config
+readonly REMOTE+=":$REMOTE_REPO"  # define after validation
 list_repos
 
 exit 0

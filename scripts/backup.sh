@@ -86,7 +86,7 @@ dump_db() {
             --user="${MYSQL_USER}" \
             --password="${MYSQL_PASS}" \
             ${MYSQL_EXTRA_OPTS} \
-            ${MYSQL_DB} > "$TMP/${output_filename}.sql"
+            ${MYSQL_DB} > "$TMP/${output_filename}.sql" 2> >(tee -a "$LOG" >&2)
 
     err_code="$?"
     if [[ "$err_code" -ne 0 ]]; then
@@ -118,7 +118,7 @@ _backup_common() {
         "${NODES_TO_BACK_UP[@]}" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || { err "$local_or_remote borg create exited w/ [$?]"; err_code=1; err_=failed; }
     log "=> $local_or_remote backup ${err_:-succeeded} in $(( $(date +%s) - start_timestamp )) seconds"
 
-    unset err_
+    unset err_  # reset
 
     log "=> starting $local_or_remote prune..."
     start_timestamp="$(date +%s)"
@@ -175,21 +175,26 @@ do_backup() {
     done
 
     popd &> /dev/null
-    log "=> Backup finished, duration $(( $(date +%s) - start_timestamp )) seconds${err_:+; at least one step failed}"
+    log "=> Backup finished, duration $(( $(date +%s) - start_timestamp )) seconds${err_:+; at least one step failed or produced warning}"
 
     return 0
 }
 
 
 init_local_borg_repo() {
-    local msg
+    local msg err_code
 
     if [[ "$REMOTE_ONLY" -ne 1 ]]; then
         if [[ ! -d "$BORG_LOCAL_REPO" ]] || is_dir_empty "$BORG_LOCAL_REPO"; then
             log "=> initialising local repo [$BORG_LOCAL_REPO]..."
-            if ! borg init --show-rc "$BORG_LOCAL_REPO" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2); then
-                msg="local borg repo init @ [$BORG_LOCAL_REPO] failed w/ [$?]"
+            borg init --make-parent-dirs --show-rc "$BORG_LOCAL_REPO" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2)
+            err_code="$?"
+
+            if [[ "$err_code" -ne 0 ]]; then
+                msg="=> local borg repo init @ [$BORG_LOCAL_REPO] failed w/ [$?]"
                 [[ "$LOCAL_ONLY" -eq 1 ]] && fail "$msg" || { err "$msg"; LOCAL_ONLY=0; REMOTE_ONLY=1; }  # local would fail for sure; force remote_only
+            else
+                log "=> local repo [$BORG_LOCAL_REPO] initialised successfully"
             fi
         fi
     fi
@@ -213,7 +218,7 @@ validate_config() {
         MYSQL_USER
         MYSQL_PASS
     )
-    [[ "$LOCAL_ONLY" -ne 1 ]] && vars+=(REMOTE)
+    [[ "$LOCAL_ONLY" -ne 1 ]] && vars+=(REMOTE REMOTE_REPO)
 
     for i in "${vars[@]}"; do
         val="$(eval echo "\$$i")" || fail "evaling [echo \"\$$i\"] failed w/ [$?]"
@@ -261,7 +266,7 @@ source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_com
 REMOTE_OR_LOCAL_OPT_COUNTER=0
 BORG_OTPS_COUNTER=0
 
-while getopts "d:n:p:c:rlP:B:Z:N:e:A:D:h" opt; do
+while getopts "d:n:p:c:rlP:B:Z:N:e:A:D:R:T:h" opt; do
     case "$opt" in
         d) MYSQL_DB="$OPTARG"
             ;;
@@ -294,6 +299,10 @@ while getopts "d:n:p:c:rlP:B:Z:N:e:A:D:h" opt; do
             ;;
         D) MYSQL_FAIL_FATAL="$OPTARG"
             ;;
+        R) REMOTE="$OPTARG"  # overrides env var of same name
+            ;;
+        T) REMOTE_REPO="$OPTARG"  # overrides env var of same name
+            ;;
         h) echo -e "$usage"
            exit 0
             ;;
@@ -310,6 +319,7 @@ readonly ARCHIVE_NAME="$PREFIX_WITH_HOSTNAME"'{now:%Y-%m-%d-%H%M%S}'
 readonly BORG_LOCAL_REPO="$BACKUP_ROOT/${BORG_LOCAL_REPO_NAME:-$DEFAULT_LOCAL_REPO_NAME}"
 
 validate_config
+readonly REMOTE+=":$REMOTE_REPO"  # define after validation
 create_dirs
 init_local_borg_repo
 
