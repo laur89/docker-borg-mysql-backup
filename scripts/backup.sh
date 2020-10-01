@@ -7,8 +7,9 @@ readonly LOG="/var/log/${SELF}.log"
 
 readonly usage="
     usage: $SELF [-h] [-d MYSQL_DBS] [-n NODES_TO_BACKUP] [-c CONTAINERS] [-rl]
-                  [-P BORG_PRUNE_OPTS] [-B|-Z BORG_EXTRA_OPTS] [-N BORG_LOCAL_REPO]
-                  [-e ERR_NOTIF] [-A SMTP_ACCOUNT] [-D MYSQL_FAIL_FATAL] -p PREFIX
+                  [-P BORG_PRUNE_OPTS] [-B|-Z BORG_EXTRA_OPTS] [-L BORG_LOCAL_REPO]
+                  [-e ERR_NOTIF] [-A SMTP_ACCOUNT] [-D MYSQL_FAIL_FATAL]
+                  [-R REMOTE] [-T REMOTE_REPO] -p PREFIX
 
     Create new archive
 
@@ -30,13 +31,15 @@ readonly usage="
                               the BORG_EXTRA_OPTS env var, but extends it;
       -Z BORG_EXTRA_OPTS      additional borg params; note it _overrides_
                               the BORG_EXTRA_OPTS env var;
-      -N BORG_LOCAL_REPO      overrides container env variable of same name;
+      -L BORG_LOCAL_REPO      overrides container env variable of same name;
       -e ERR_NOTIF            space separated error notification methods; overrides
                               env var of same name;
       -A SMTP_ACCOUNT         msmtp account to use; defaults to 'default'; overrides
                               env var of same name;
       -D MYSQL_FAIL_FATAL     whether unsuccessful db dump should abort backup; overrides
                               env var of same name; true|false
+      -R REMOTE               remote connection; overrides env var of same name
+      -T REMOTE_REPO          path to repo on remote host; overrides env var of same name
       -p PREFIX               borg archive name prefix. note that the full archive name already
                               contains HOST_NAME and timestamp, so omit those.
 "
@@ -263,7 +266,7 @@ source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_com
 REMOTE_OR_LOCAL_OPT_COUNTER=0
 BORG_OTPS_COUNTER=0
 
-while getopts "d:n:p:c:rlP:B:Z:N:e:A:D:R:T:h" opt; do
+while getopts "d:n:p:c:rlP:B:Z:L:e:A:D:R:T:h" opt; do
     case "$opt" in
         d) MYSQL_DB="$OPTARG"
             ;;
@@ -288,7 +291,7 @@ while getopts "d:n:p:c:rlP:B:Z:N:e:A:D:R:T:h" opt; do
         Z) BORG_EXTRA_OPTS="$OPTARG"  # overrides env var of same name
            let BORG_OTPS_COUNTER+=1
             ;;
-        N) BORG_LOCAL_REPO="$OPTARG"  # overrides env var of same name
+        L) BORG_LOCAL_REPO="$OPTARG"  # overrides env var of same name
             ;;
         e) ERR_NOTIF="$OPTARG"  # overrides env var of same name
             ;;

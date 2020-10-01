@@ -7,8 +7,8 @@ readonly LOG="/var/log/${SELF}.log"
 JOB_ID="restore-$$"
 
 readonly usage="
-    usage: $SELF [-h] [-d] [-c CONTAINERS] [-r] [-l]
-                   [-N BORG_LOCAL_REPO] -a ARCHIVE_NAME
+    usage: $SELF [-h] [-d] [-c CONTAINERS] [-rl] [-L BORG_LOCAL_REPO]
+                   [-R REMOTE] [-T REMOTE_REPO] -O RESTORE_DIR -a ARCHIVE_NAME
 
     Restore data from borg archive
 
@@ -23,7 +23,10 @@ readonly usage="
                               requires mounting the docker socket (-v /var/run/docker.sock:/var/run/docker.sock)
       -r                      restore from remote borg repo
       -l                      restore from local borg repo
-      -N BORG_LOCAL_REPO      overrides container env variable of same name; optional;
+      -L BORG_LOCAL_REPO      overrides container env variable of same name
+      -R REMOTE               remote connection; overrides env var of same name
+      -T REMOTE_REPO          path to repo on remote host; overrides env var of same name
+      -O RESTORE_DIR          path to directory where archive will get extracted/restored to
       -a ARCHIVE_NAME         name of the borg archive to restore/extract data from
 "
 
@@ -142,7 +145,7 @@ NO_NOTIF=true  # do not notify errors
 source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_common.sh" | tee -a "$LOG"; exit 1; }
 REMOTE_OR_LOCAL_OPT_COUNTER=0
 
-while getopts "dc:rlN:R:T:D:a:h" opt; do
+while getopts "dc:rlL:R:T:O:a:h" opt; do
     case "$opt" in
         d) RESTORE_DB=1
             ;;
@@ -154,13 +157,13 @@ while getopts "dc:rlN:R:T:D:a:h" opt; do
         l) LOC=1
            let REMOTE_OR_LOCAL_OPT_COUNTER+=1
             ;;
-        N) BORG_LOCAL_REPO="$OPTARG"  # overrides env var of same name
+        L) BORG_LOCAL_REPO="$OPTARG"  # overrides env var of same name
             ;;
         R) REMOTE="$OPTARG"  # overrides env var of same name
             ;;
         T) REMOTE_REPO="$OPTARG"  # overrides env var of same name
             ;;
-        D) RESTORE_DIR="$OPTARG"  # dir where selected borg archive will be restored into
+        O) RESTORE_DIR="$OPTARG"  # dir where selected borg archive will be restored into
             ;;
         a) ARCHIVE_NAME="$OPTARG"
             ;;

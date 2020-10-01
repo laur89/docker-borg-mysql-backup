@@ -7,7 +7,7 @@ readonly LOG="/var/log/${SELF}.log"
 JOB_ID="list-$$"
 
 readonly usage="
-    usage: $SELF [-h] [-r] [-l] [-N BORG_LOCAL_REPO]
+    usage: $SELF [-h] [-rl] [-L BORG_LOCAL_REPO] [-R REMOTE] [-T REMOTE_REPO]
 
     List archives in a borg repository
 
@@ -15,7 +15,9 @@ readonly usage="
       -h                      show help and exit
       -r                      list remote borg repo
       -l                      list local borg repo
-      -N BORG_LOCAL_REPO      overrides container env variable of same name; optional;
+      -L BORG_LOCAL_REPO      overrides container env variable of same name
+      -R REMOTE               remote connection; overrides env var of same name
+      -T REMOTE_REPO          path to repo on remote host; overrides env var of same name
 "
 
 
@@ -67,7 +69,7 @@ NO_NOTIF=true  # do not notify errors
 source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_common.sh" | tee -a "$LOG"; exit 1; }
 REMOTE_OR_LOCAL_OPT_COUNTER=0
 
-while getopts "rlN:R:T:h" opt; do
+while getopts "rlL:R:T:h" opt; do
     case "$opt" in
         r) REM=1
            let REMOTE_OR_LOCAL_OPT_COUNTER+=1
@@ -75,7 +77,7 @@ while getopts "rlN:R:T:h" opt; do
         l) LOC=1
            let REMOTE_OR_LOCAL_OPT_COUNTER+=1
             ;;
-        N) BORG_LOCAL_REPO="$OPTARG"  # overrides env var of same name
+        L) BORG_LOCAL_REPO="$OPTARG"  # overrides env var of same name
             ;;
         R) REMOTE="$OPTARG"  # overrides env var of same name
             ;;
