@@ -260,6 +260,8 @@ cleanup() {
 
     [[ -d "$TMP" ]] && rm -rf -- "$TMP"
     [[ -d "$TMP_ROOT" ]] && is_dir_empty "$TMP_ROOT" && rm -rf -- "$TMP_ROOT"
+
+    log "==> backup script end"
 }
 
 
