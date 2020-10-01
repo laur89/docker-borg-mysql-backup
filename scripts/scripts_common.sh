@@ -2,14 +2,14 @@
 #
 # common vars & functions
 
-BACKUP_ROOT='/backup'
-CONF_ROOT='/config'
-SCRIPTS_ROOT="$CONF_ROOT/scripts"
+readonly BACKUP_ROOT='/backup'
+readonly CONF_ROOT='/config'
+readonly SCRIPTS_ROOT="$CONF_ROOT/scripts"
 
-CRON_FILE="$CONF_ROOT/crontab"
-MSMTPRC="$CONF_ROOT/msmtprc"
-ENV_CONF="$CONF_ROOT/env.conf"
-SSH_KEY="$CONF_ROOT/id_rsa"
+readonly CRON_FILE="$CONF_ROOT/crontab"
+readonly MSMTPRC="$CONF_ROOT/msmtprc"
+readonly ENV_CONF="$CONF_ROOT/env.conf"
+readonly SSH_KEY="$CONF_ROOT/id_rsa"
 LOG_TIMESTAMP_FORMAT='+%F %T'
 
 DEFAULT_LOCAL_REPO_NAME=repo
@@ -283,3 +283,4 @@ expand_placeholders() {
 
 [[ -f "$ENV_CONF" ]] && source "$ENV_CONF"
 
+true  # always exit w/ good code
