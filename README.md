@@ -62,7 +62,7 @@ Every time any config is changed in `/config`, container needs to be restarted.
     REMOTE_REPO             path to repo on remote host, eg '/backup/repo'
                             optional - can be omitted when only backing up to local
                             borg repo, or if providing value via script
-    BORG_LOCAL_REPO         path to local borg repo; optional - can be omitted
+    LOCAL_REPO              path to local borg repo; optional - can be omitted
                             when only backing up to remote borg repo, or if
                             providing value via script
     BORG_EXTRA_OPTS         additional borg params (for both local & remote borg commands); optional
@@ -112,7 +112,7 @@ Container incorporates `backup`, `restore` and `list` scripts.
 directly via docker for one off backup.
 
     usage: backup [-h] [-d MYSQL_DBS] [-n NODES_TO_BACKUP] [-c CONTAINERS] [-rl]
-                  [-P BORG_PRUNE_OPTS] [-B|-Z BORG_EXTRA_OPTS] [-L BORG_LOCAL_REPO]
+                  [-P BORG_PRUNE_OPTS] [-B|-Z BORG_EXTRA_OPTS] [-L LOCAL_REPO]
                   [-e ERR_NOTIF] [-A SMTP_ACCOUNT] [-D MYSQL_FAIL_FATAL]
                   [-R REMOTE] [-T REMOTE_REPO] -p PREFIX
     
@@ -136,7 +136,7 @@ directly via docker for one off backup.
                               the BORG_EXTRA_OPTS env var, but extends it;
       -Z BORG_EXTRA_OPTS      additional borg params; note it _overrides_
                               the BORG_EXTRA_OPTS env var;
-      -L BORG_LOCAL_REPO      overrides container env variable of same name;
+      -L LOCAL_REPO           overrides container env variable of same name;
       -e ERR_NOTIF            space separated error notification methods; overrides
                               env var of same name;
       -A SMTP_ACCOUNT         msmtp account to use; defaults to 'default'; overrides
@@ -160,7 +160,7 @@ directly via docker for one off backup.
         -e HOST_NAME=hostname-to-use-in-archive-prefix \
         -e REMOTE=remoteuser@server.com \
         -e REMOTE_REPO=repo/location \
-        -e BORG_LOCAL_REPO=/backup/repo \
+        -e LOCAL_REPO=/backup/repo \
         -e BORG_EXTRA_OPTS='--compression zlib,5 --lock-wait 60' \
         -e BORG_PASSPHRASE=borgrepopassword \
         -e BORG_PRUNE_OPTS='--keep-daily=7 --keep-weekly=4' \
@@ -187,7 +187,7 @@ directly via docker for one off backup.
         -e HOST_NAME=hostname-to-use-in-archive-prefix \
         -e REMOTE=remoteuser@server.com \
         -e REMOTE_REPO=repo/location \
-        -e BORG_LOCAL_REPO=/backup/repo \
+        -e LOCAL_REPO=/backup/repo \
         -e BORG_PASSPHRASE=borgrepopassword \
         -e BORG_PRUNE_OPTS='--keep-daily=7 --keep-weekly=4' \
         -v /var/run/docker.sock:/var/run/docker.sock \
@@ -207,7 +207,7 @@ directly via docker for one off backup.
 
     docker run -d \
         -e HOST_NAME=hostname-to-use-in-archive-prefix \
-        -e BORG_LOCAL_REPO=/backup/repo \
+        -e LOCAL_REPO=/backup/repo \
         -e BORG_PASSPHRASE=borgrepopassword \
         -e BORG_PRUNE_OPTS='--keep-daily=7 --keep-weekly=4' \
         -v /host/backup:/backup \
@@ -232,7 +232,7 @@ define absolute time, but simply an interval.
 
     docker run -d \
         -e HOST_NAME=hostname-to-use-in-archive-prefix \
-        -e BORG_LOCAL_REPO=/backup/repo \
+        -e LOCAL_REPO=/backup/repo \
         -e BORG_PASSPHRASE=borgrepopassword \
         -e BORG_PRUNE_OPTS='--keep-daily=7 --keep-weekly=4' \
         -v /host/backup:/backup \
@@ -282,7 +282,7 @@ Note none of the data is
 copied/moved automatically - user is expected to carry this operation out on their own.
 Only db will be restored from a dump, given the option is provided to the script.
 
-    usage: restore [-h] [-d] [-c CONTAINERS] [-rl] [-L BORG_LOCAL_REPO]
+    usage: restore [-h] [-d] [-c CONTAINERS] [-rl] [-L LOCAL_REPO]
                    [-R REMOTE] [-T REMOTE_REPO] -O RESTORE_DIR -a ARCHIVE_NAME
     
     Restore data from borg archive
@@ -298,7 +298,7 @@ Only db will be restored from a dump, given the option is provided to the script
                               requires mounting the docker socket (-v /var/run/docker.sock:/var/run/docker.sock)
       -r                      restore from remote borg repo
       -l                      restore from local borg repo
-      -L BORG_LOCAL_REPO      overrides container env variable of same name
+      -L LOCAL_REPO           overrides container env variable of same name
       -R REMOTE               remote connection; overrides env var of same name
       -T REMOTE_REPO          path to repo on remote host; overrides env var of same name
       -O RESTORE_DIR          path to directory where archive will get extracted/restored to
@@ -326,7 +326,7 @@ Only db will be restored from a dump, given the option is provided to the script
 ##### Restore archive from local borg repo & stop container app1 beforehand
 
     docker run -it --rm \
-        -e BORG_LOCAL_REPO=/backup/repo \
+        -e LOCAL_REPO=/backup/repo \
         -e BORG_PASSPHRASE=borgrepopassword \
         -v /var/run/docker.sock:/var/run/docker.sock \
         -v /host/backup:/backup \
@@ -342,7 +342,7 @@ db won't be automatically restored with the included .sql dumpfile (if there was
 ##### Restore archive from overridden local borg repo
 
     docker run -it --rm \
-        -e BORG_LOCAL_REPO=/backup/repo \
+        -e LOCAL_REPO=/backup/repo \
         -v /host/backup:/backup \
         -v /host/borg-conf/.borg/cache:/root/.cache/borg \
         -v /host/borg-conf/.borg/config:/root/.config/borg \
@@ -360,7 +360,7 @@ variables are still usable with `restore`.
 
 `list` script is for listing archives in a borg repo.
 
-    usage: list [-h] [-rl] [-L BORG_LOCAL_REPO] [-R REMOTE] [-T REMOTE_REPO]
+    usage: list [-h] [-rl] [-L LOCAL_REPO] [-R REMOTE] [-T REMOTE_REPO]
     
     List archives in a borg repository
     
@@ -368,7 +368,7 @@ variables are still usable with `restore`.
       -h                      show help and exit
       -r                      list remote borg repo
       -l                      list local borg repo
-      -L BORG_LOCAL_REPO      overrides container env variable of same name
+      -L LOCAL_REPO           overrides container env variable of same name
       -R REMOTE               remote connection; overrides env var of same name
       -T REMOTE_REPO          path to repo on remote host; overrides env var of same name
 

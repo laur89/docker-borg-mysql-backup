@@ -7,7 +7,7 @@ readonly LOG="/var/log/${SELF}.log"
 JOB_ID="restore-$$"
 
 readonly usage="
-    usage: $SELF [-h] [-d] [-c CONTAINERS] [-rl] [-L BORG_LOCAL_REPO]
+    usage: $SELF [-h] [-d] [-c CONTAINERS] [-rl] [-L LOCAL_REPO]
                    [-R REMOTE] [-T REMOTE_REPO] -O RESTORE_DIR -a ARCHIVE_NAME
 
     Restore data from borg archive
@@ -23,7 +23,7 @@ readonly usage="
                               requires mounting the docker socket (-v /var/run/docker.sock:/var/run/docker.sock)
       -r                      restore from remote borg repo
       -l                      restore from local borg repo
-      -L BORG_LOCAL_REPO      overrides container env variable of same name
+      -L LOCAL_REPO           overrides container env variable of same name
       -R REMOTE               remote connection; overrides env var of same name
       -T REMOTE_REPO          path to repo on remote host; overrides env var of same name
       -O RESTORE_DIR          path to directory where archive will get extracted/restored to
@@ -35,7 +35,7 @@ readonly usage="
 verify_borg() {
 
     if [[ "$LOC" -eq 1 ]]; then
-        borg list "$BORG_LOCAL_REPO" > /dev/null || fail "[borg list $BORG_LOCAL_REPO] failed w/ [$?]; is it a borg repo?"
+        borg list "$LOCAL_REPO" > /dev/null || fail "[borg list $LOCAL_REPO] failed w/ [$?]; is it a borg repo?"
     elif [[ "$REM" -eq 1 ]]; then
         borg list "$REMOTE" > /dev/null || fail "[borg list $REMOTE] failed w/ [$?]; please create remote repos manually beforehand"
     fi
@@ -93,7 +93,7 @@ _restore_common() {
 do_restore() {
 
     if [[ "$LOC" -eq 1 ]]; then
-        _restore_common local "$BORG_LOCAL_REPO" "$BORG_LOCAL_EXTRA_OPTS"
+        _restore_common local "$LOCAL_REPO" "$BORG_LOCAL_EXTRA_OPTS"
     elif [[ "$REM" -eq 1 ]]; then
         _restore_common remote "$REMOTE" "$BORG_REMOTE_EXTRA_OPTS"
     fi
@@ -114,13 +114,13 @@ validate_config() {
             MYSQL_PASS
         )
     [[ "$REM" -eq 1 ]] && vars+=(REMOTE REMOTE_REPO)
-    [[ "$LOC" -eq 1 ]] && vars+=(BORG_LOCAL_REPO)
+    [[ "$LOC" -eq 1 ]] && vars+=(LOCAL_REPO)
 
     vars_defined "${vars[@]}"
 
     [[ "$REMOTE_OR_LOCAL_OPT_COUNTER" -ne 1 ]] && fail "need to select whether to restore from local or remote repo"
     [[ -d "$RESTORE_DIR" && -w "$RESTORE_DIR"  ]] || fail "[$RESTORE_DIR] is not mounted or not writable; missing mount?"
-    [[ "$LOC" -eq 1 ]] && [[ ! -d "$BORG_LOCAL_REPO" || ! -w "$BORG_LOCAL_REPO" ]] && fail "[$BORG_LOCAL_REPO] does not exist or is not writable; missing mount?"
+    [[ "$LOC" -eq 1 ]] && [[ ! -d "$LOCAL_REPO" || ! -w "$LOCAL_REPO" ]] && fail "[$LOCAL_REPO] does not exist or is not writable; missing mount?"
 }
 
 
@@ -157,7 +157,7 @@ while getopts "dc:rlL:R:T:O:a:h" opt; do
         l) LOC=1
            let REMOTE_OR_LOCAL_OPT_COUNTER+=1
             ;;
-        L) BORG_LOCAL_REPO="$OPTARG"  # overrides env var of same name
+        L) LOCAL_REPO="$OPTARG"  # overrides env var of same name
             ;;
         R) REMOTE="$OPTARG"  # overrides env var of same name
             ;;

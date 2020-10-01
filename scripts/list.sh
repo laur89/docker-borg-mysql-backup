@@ -7,7 +7,7 @@ readonly LOG="/var/log/${SELF}.log"
 JOB_ID="list-$$"
 
 readonly usage="
-    usage: $SELF [-h] [-rl] [-L BORG_LOCAL_REPO] [-R REMOTE] [-T REMOTE_REPO]
+    usage: $SELF [-h] [-rl] [-L LOCAL_REPO] [-R REMOTE] [-T REMOTE_REPO]
 
     List archives in a borg repository
 
@@ -15,7 +15,7 @@ readonly usage="
       -h                      show help and exit
       -r                      list remote borg repo
       -l                      list local borg repo
-      -L BORG_LOCAL_REPO      overrides container env variable of same name
+      -L LOCAL_REPO           overrides container env variable of same name
       -R REMOTE               remote connection; overrides env var of same name
       -T REMOTE_REPO          path to repo on remote host; overrides env var of same name
 "
@@ -39,7 +39,7 @@ _list_common() {
 list_repos() {
 
     if [[ "$LOC" -eq 1 ]]; then
-        _list_common local "$BORG_LOCAL_REPO" "$BORG_LOCAL_EXTRA_OPTS"
+        _list_common local "$LOCAL_REPO" "$BORG_LOCAL_EXTRA_OPTS"
     elif [[ "$REM" -eq 1 ]]; then
         _list_common remote "$REMOTE" "$BORG_REMOTE_EXTRA_OPTS"
     else
@@ -54,12 +54,12 @@ validate_config() {
     declare -a vars
 
     [[ "$REM" -eq 1 ]] && vars+=(REMOTE REMOTE_REPO)
-    [[ "$LOC" -eq 1 ]] && vars+=(BORG_LOCAL_REPO)
+    [[ "$LOC" -eq 1 ]] && vars+=(LOCAL_REPO)
 
     vars_defined "${vars[@]}"
 
     [[ "$REMOTE_OR_LOCAL_OPT_COUNTER" -ne 1 ]] && fail "need to select whether to list local or remote repo"
-    [[ "$LOC" -eq 1 ]] && [[ ! -d "$BORG_LOCAL_REPO" || ! -w "$BORG_LOCAL_REPO" ]] && fail "[$BORG_LOCAL_REPO] does not exist or is not writable; missing mount?"
+    [[ "$LOC" -eq 1 ]] && [[ ! -d "$LOCAL_REPO" || ! -w "$LOCAL_REPO" ]] && fail "[$LOCAL_REPO] does not exist or is not writable; missing mount?"
 }
 
 # ================
@@ -77,7 +77,7 @@ while getopts "rlL:R:T:h" opt; do
         l) LOC=1
            let REMOTE_OR_LOCAL_OPT_COUNTER+=1
             ;;
-        L) BORG_LOCAL_REPO="$OPTARG"  # overrides env var of same name
+        L) LOCAL_REPO="$OPTARG"  # overrides env var of same name
             ;;
         R) REMOTE="$OPTARG"  # overrides env var of same name
             ;;

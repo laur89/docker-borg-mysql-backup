@@ -7,7 +7,7 @@ readonly LOG="/var/log/${SELF}.log"
 
 readonly usage="
     usage: $SELF [-h] [-d MYSQL_DBS] [-n NODES_TO_BACKUP] [-c CONTAINERS] [-rl]
-                  [-P BORG_PRUNE_OPTS] [-B|-Z BORG_EXTRA_OPTS] [-L BORG_LOCAL_REPO]
+                  [-P BORG_PRUNE_OPTS] [-B|-Z BORG_EXTRA_OPTS] [-L LOCAL_REPO]
                   [-e ERR_NOTIF] [-A SMTP_ACCOUNT] [-D MYSQL_FAIL_FATAL]
                   [-R REMOTE] [-T REMOTE_REPO] -p PREFIX
 
@@ -31,7 +31,7 @@ readonly usage="
                               the BORG_EXTRA_OPTS env var, but extends it;
       -Z BORG_EXTRA_OPTS      additional borg params; note it _overrides_
                               the BORG_EXTRA_OPTS env var;
-      -L BORG_LOCAL_REPO      overrides container env variable of same name;
+      -L LOCAL_REPO           overrides container env variable of same name;
       -e ERR_NOTIF            space separated error notification methods; overrides
                               env var of same name;
       -A SMTP_ACCOUNT         msmtp account to use; defaults to 'default'; overrides
@@ -137,7 +137,7 @@ _backup_common() {
 
 
 backup_local() {
-    _backup_common local "${BORG_LOCAL_REPO}" "$BORG_LOCAL_EXTRA_OPTS"
+    _backup_common local "${LOCAL_REPO}" "$BORG_LOCAL_EXTRA_OPTS"
 }
 
 
@@ -188,16 +188,16 @@ init_local_borg_repo() {
     local msg err_code
 
     if [[ "$REMOTE_ONLY" -ne 1 ]]; then
-        if [[ ! -d "$BORG_LOCAL_REPO" ]] || is_dir_empty "$BORG_LOCAL_REPO"; then
-            log "=> initialising local repo [$BORG_LOCAL_REPO]..."
-            borg init --make-parent-dirs --show-rc "$BORG_LOCAL_REPO" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2)
+        if [[ ! -d "$LOCAL_REPO" ]] || is_dir_empty "$LOCAL_REPO"; then
+            log "=> initialising local repo [$LOCAL_REPO]..."
+            borg init --make-parent-dirs --show-rc "$LOCAL_REPO" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2)
             err_code="$?"
 
             if [[ "$err_code" -ne 0 ]]; then
-                msg="=> local borg repo init @ [$BORG_LOCAL_REPO] failed w/ [$?]"
+                msg="=> local borg repo init @ [$LOCAL_REPO] failed w/ [$?]"
                 [[ "$LOCAL_ONLY" -eq 1 ]] && fail "$msg" || { err "$msg"; LOCAL_ONLY=0; REMOTE_ONLY=1; }  # local would fail for sure; force remote_only
             else
-                log "=> local repo [$BORG_LOCAL_REPO] initialised successfully"
+                log "=> local repo [$LOCAL_REPO] initialised successfully"
             fi
         fi
     fi
@@ -222,7 +222,7 @@ validate_config() {
         MYSQL_PASS
     )
     [[ "$LOCAL_ONLY" -ne 1 ]] && vars+=(REMOTE REMOTE_REPO)
-    [[ "$REMOTE_ONLY" -ne 1 ]] && vars+=(BORG_LOCAL_REPO)
+    [[ "$REMOTE_ONLY" -ne 1 ]] && vars+=(LOCAL_REPO)
 
     vars_defined "${vars[@]}"
 
@@ -234,7 +234,7 @@ validate_config() {
 
     [[ "$REMOTE_OR_LOCAL_OPT_COUNTER" -gt 1 ]] && fail "-r & -l options are exclusive"
     [[ "$BORG_OTPS_COUNTER" -gt 1 ]] && fail "-B & -Z options are exclusive"
-    [[ "$REMOTE_ONLY" -ne 1 ]] && [[ ! -d "$BORG_LOCAL_REPO" || ! -w "$BORG_LOCAL_REPO" ]] && fail "[$BORG_LOCAL_REPO] does not exist or is not writable; missing mount?"
+    [[ "$REMOTE_ONLY" -ne 1 ]] && [[ ! -d "$LOCAL_REPO" || ! -w "$LOCAL_REPO" ]] && fail "[$LOCAL_REPO] does not exist or is not writable; missing mount?"
 
     if [[ "$LOCAL_ONLY" -ne 1 && "$-" != *i* ]]; then
         [[ -f "$SSH_KEY" ]] || fail "[$SSH_KEY] is not a file; is /config mounted?"
@@ -291,7 +291,7 @@ while getopts "d:n:p:c:rlP:B:Z:L:e:A:D:R:T:h" opt; do
         Z) BORG_EXTRA_OPTS="$OPTARG"  # overrides env var of same name
            let BORG_OTPS_COUNTER+=1
             ;;
-        L) BORG_LOCAL_REPO="$OPTARG"  # overrides env var of same name
+        L) LOCAL_REPO="$OPTARG"  # overrides env var of same name
             ;;
         e) ERR_NOTIF="$OPTARG"  # overrides env var of same name
             ;;
