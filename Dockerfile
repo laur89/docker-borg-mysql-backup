@@ -23,5 +23,6 @@ RUN echo "@community http://dl-cdn.alpinelinux.org/alpine/edge/community" >> /et
     ln -s /usr/local/sbin/scripts_common.sh /scripts_common.sh && \
     rm -rf /var/cache/apk/* /tmp/*
 
+VOLUME ["/root/.cache/borg", "/root/.config/borg"]
 ENTRYPOINT ["/usr/local/sbin/entry.sh"]
 
