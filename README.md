@@ -401,7 +401,26 @@ variables are still usable with `list`.
 
 ### notif-test.sh
 
-Test your configured notifications. See the script for usage.
+`notif-test` script is for testing your configured notifications.
+
+    usage: notif-test.sh [-hpHsTFAmef]
+
+    Test configured notifications
+
+    arguments:
+      -p ARCHIVE_PREFIX
+      -H HOST_NAME
+      -s NOTIF_SUBJECT
+      -T MAIL_TO
+      -F MAIL_FROM
+      -A SMTP_ACCOUNT
+      -m MSG
+      -e ERR_NOTIF
+      -f                      marks the error as fatal (ie halting the script)
+
+#### Usage examples
+
+##### Test all the notifications at once
 
     docker run -it --rm \
         -e PUSHOVER_USER_KEY='key' \

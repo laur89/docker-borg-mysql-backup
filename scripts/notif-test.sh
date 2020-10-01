@@ -6,13 +6,30 @@ readonly SELF="${0##*/}"
 readonly LOG=/dev/null
 JOB_ID="notif-test-$$"  # just for logging; will be overwritten before notification(s) are triggered
 
+readonly usage="
+    usage: $SELF [-hpHsTFAmef]
+
+    Test configured notifications
+
+    arguments:
+      -p ARCHIVE_PREFIX
+      -H HOST_NAME
+      -s NOTIF_SUBJECT
+      -T MAIL_TO
+      -F MAIL_FROM
+      -A SMTP_ACCOUNT
+      -m MSG
+      -e ERR_NOTIF
+      -f                      marks the error as fatal (ie halting the script)
+"
+
 # ================
 # Entry
 # ================
 NO_NOTIF=true
 source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_common.sh"; exit 1; }
 
-while getopts "p:H:s:T:F:A:m:e:f" opt; do
+while getopts "p:H:s:T:F:A:m:e:fh" opt; do
     case "$opt" in
         p) ARCHIVE_PREFIX="$OPTARG"
             ;;
@@ -30,7 +47,10 @@ while getopts "p:H:s:T:F:A:m:e:f" opt; do
             ;;
         e) ERR_NOTIF="$OPTARG"  # overrides env var of same name
             ;;
-        f) FAIL=1
+        f) FATAL=1
+            ;;
+        h) echo -e "$usage"
+           exit 0
             ;;
         *) fail "$SELF called with unsupported flag(s)"
             ;;
@@ -52,6 +72,6 @@ job id: {i}
 fatal?: {f}"
 
 unset NO_NOTIF
-[[ "$FAIL" -eq 1 ]] && fail "$MSG" || err "$MSG"
+[[ "$FATAL" -eq 1 ]] && fail "$MSG" || err "$MSG"
 
 exit 0
