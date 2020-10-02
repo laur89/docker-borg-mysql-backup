@@ -50,9 +50,9 @@ expand_nodes_to_back_up() {
 
     is_dir_empty "$TMP" && return 0
 
-    for i in "$TMP/"*; do
+    while IFS= read -r -d $'\0' i; do
         NODES_TO_BACK_UP+=("$(basename -- "$i")")  # note relative path; we don't want borg archive to contain "$TMP_ROOT" path
-    done
+    done < <(find "$TMP" -mindepth 1 -maxdepth 1 -print0)
 }
 
 
@@ -152,7 +152,7 @@ backup_remote() {
 # note the borg processes are executed in a sub-shell, so local & remote backup could be
 # run in parallel
 do_backup() {
-    local started_pids start_timestamp pid err_
+    local started_pids start_timestamp i err_
 
     declare -a started_pids=()
 
@@ -163,6 +163,12 @@ do_backup() {
     expand_nodes_to_back_up
 
     [[ "${#NODES_TO_BACK_UP[@]}" -eq 0 ]] && fail "no items selected for backup"
+
+    log "following files&directories will be backed up:"
+    for i in "${NODES_TO_BACK_UP[@]}"; do
+        log "\t$i"
+    done
+
     pushd -- "$TMP" &> /dev/null || fail "unable to pushd into [$TMP]"  # cd there because files in $TMP are added without full path (to avoid "$TMP_ROOT" prefix in borg repo)
 
     if [[ "$REMOTE_ONLY" -ne 1 ]]; then
@@ -175,8 +181,8 @@ do_backup() {
         started_pids+=("$!")
     fi
 
-    for pid in "${started_pids[@]}"; do
-        wait "$pid" || err_=TRUE
+    for i in "${started_pids[@]}"; do
+        wait "$i" || err_=TRUE
     done
 
     popd &> /dev/null

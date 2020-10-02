@@ -9,7 +9,8 @@ JOB_ID="notif-test-$$"  # just for logging; will be overwritten before notificat
 readonly usage="
     usage: $SELF [-hpHsTFAmef]
 
-    Test configured notifications
+    Test configured notifications. Running it will fire notification via each of
+    the configured channels.
 
     arguments:
       -p ARCHIVE_PREFIX

@@ -1,23 +1,26 @@
 # borg-mysql-backup
 
-This image is mainly intended for backing up mysql dumps to local and/or remote [borg](https://github.com/borgbackup/borg) repos.
-Other files may be included in the backup, and database dumps can be excluded altogether.
+This image is mainly intended for backing up mysql dumps to local and/or remote
+[borg](https://github.com/borgbackup/borg) repos.
+Other files/dirs may be included in the backup, and database dumps can be excluded
+altogether.
 
 The container features `backup`, `restore`, `list` and `notif-test` scripts that can
-either be ran directly with docker, or by cron, latter being the preferred method for `backup`.
+either be ran as one-off jobs or by cron - latter being the preferred method for `backup`.
 
 For cron and/or remote borg usage, you also need to mount container configuration
 at `/config`, containing ssh key (named `id_rsa`) and/or crontab file (named `crontab`).
 
 Both remote & local repositories need to be
-[initialised](https://borgbackup.readthedocs.io/en/stable/usage/init.html) manually beforehand.
-You still may use this image to do so.
+[initialised](https://borgbackup.readthedocs.io/en/stable/usage/init.html) manually
+beforehand. You still may use this image to do so - just start a container in an
+interactive mode and use the shell.
 
-In case some containers need to be stopped for the backup (eg to ensure there won't be any
-mismatch between data and database), you can specify those container names to
-the `backup` script (see below). Note that this requires mounting docker socket with `-v /var/run/docker.sock:/var/run/docker.sock`,
-but keep in mind it has security implications - borg-mysql-backup will have essentially
-root permissions on the host.
+In case some containers need to be stopped for the backup (eg to ensure there won't
+be any mismatch between data and database), you can specify those container names to
+the `backup` script (see below). Note that this requires mounting docker socket with
+`-v /var/run/docker.sock:/var/run/docker.sock`, but keep in mind it has security
+implications - borg-mysql-backup will have essentially root permissions on the host.
 
 To synchronize container tz with that of host's, then also add following mount:
 `-v /etc/localtime:/etc/localtime:ro`. You'll likely want to do this for cron times
@@ -39,7 +42,25 @@ Additionally, following bindings are _strongly_ recommended:
 You might also wish to expose the logs:
 `-v /host/borg-conf/logs:/var/log`
 
-Every time any config is changed in `/config`, container needs to be restarted.
+Every time any config is changed in `/config`, container needs to be restarted for
+the changes to get picked up.
+
+
+## Limitations/pitfalls
+
+The `-c` (containers) & `-d` (db names) options of `backup.sh` accept space
+separated list of names; make sure none of those parameters contain any whitespace
+nor shell-expandable characters (eg `*`). We could change the api to accept multiple
+instances of -c & -d flags, but the author finds current implementation easier to
+read & use, and is willing to accept these limitations.
+
+**Please make sure you _verify_ you're able to access your offsite (ie remote)
+backups without your local repo/config! You don't want to find yourself unable
+to access remote backups in case local configuration/repository gets nuked.**
+This is especially the case for `keyfile-`initialized repositories, where the key
+will be stored locally and you'll need to manage it separately.
+
+You should be able to access your offsite backups from _any_ system.
 
 
 ## Container Parameters
@@ -69,7 +90,7 @@ Every time any config is changed in `/config`, container needs to be restarted.
     BORG_LOCAL_EXTRA_OPTS   additional borg params for local borg command; optional
     BORG_REMOTE_EXTRA_OPTS  additional borg params for remote borg command; optional
     BORG_REMOTE_PATH        remote borg executable path; eg with rsync.net
-                            you'll likely want to use value 'borg1'; optional
+                            you'd  want to use value 'borg1'; optional
     BORG_PASSPHRASE         borg repo password
     BORG_PRUNE_OPTS         options for borg prune (both local and remote); not required when
                             restoring or if it's defined by backup script -P param
@@ -81,7 +102,7 @@ Every time any config is changed in `/config`, container needs to be restarted.
 
       following params {MAIL,SMTP}_* are only used if ERR_NOTIF value contains 'mail';
       also note all SMTP_* env vars besides SMTP_ACCOUNT are ignored if you've
-      provided smtp config at /config/msmtprc
+      provided smtp config file at /config/msmtprc
     MAIL_TO                 address to send notifications to
     MAIL_FROM               name of the notification sender; defaults to '{h} backup reporter'
     SMTP_HOST               smtp server host; only required if MSMTPRC file not provided
@@ -104,12 +125,12 @@ Every time any config is changed in `/config`, container needs to be restarted.
 
 ## Script usage
 
-Container incorporates `backup`, `restore` and `list` scripts.
+Container incorporates `backup`, `restore`, `list` and `notif-test` scripts.
 
 ### backup.sh
 
-`backup` script is mostly intended to be ran by the cron, but can also be executed
-directly via docker for one off backup.
+`backup` script is mostly intended to be ran by cron, but can also be executed
+as a one-off command for a single backup.
 
     usage: backup [-h] [-d MYSQL_DBS] [-c CONTAINERS] [-rl]
                   [-P BORG_PRUNE_OPTS] [-B|-Z BORG_EXTRA_OPTS] [-L LOCAL_REPO]
@@ -203,7 +224,7 @@ directly via docker for one off backup.
 
     10 04,16 * * *   /backup.sh -p myapp-prefix -d __all__ -c "myapp1 myapp2"
 
-##### Back up directores /app1 & /app2 every 6 hours to local borg repo (ie remote is excluded)
+##### Back up directories /app1 & /app2 every 6 hours to local borg repo (ie remote is excluded)
 
     docker run -d \
         -e HOST_NAME=hostname-to-use-in-archive-prefix \
@@ -230,25 +251,14 @@ define absolute time, but simply an interval.
 
 ##### Same as above, but report errors via mail
 
-    docker run -d \
-        -e HOST_NAME=hostname-to-use-in-archive-prefix \
-        -e LOCAL_REPO=/backup/repo \
-        -e BORG_PASSPHRASE=borgrepopassword \
-        -e BORG_PRUNE_OPTS='--keep-daily=7 --keep-weekly=4' \
-        -v /host/backup:/backup \
-        -v /host/borg-conf:/config:ro \
-        -v /host/borg-conf/.borg/cache:/root/.cache/borg \
-        -v /host/borg-conf/.borg/config:/root/.config/borg \
-        -v /host/borg-conf/logs:/var/log \
-        -v /app1:/app1:ro \
-        -v /app2:/app2:ro \
+    Use same docker command as above, with following env vars included:
+
         -e ERR_NOTIF=mail \
         -e MAIL_TO=receiver@example.com \
         -e NOTIF_SUBJECT='{i} backup error' \
         -e SMTP_HOST='smtp.gmail.com' \
         -e SMTP_USER='your.google.username' \
         -e SMTP_PASS='your-google-app-password' \
-           layr/borg-mysql-backup
 
 Same as the example before, but we've also opted to get notified of any backup
 errors via email.
@@ -270,8 +280,8 @@ errors via email.
 
 Note there's no need to have a crontab file in `/config`, as we're executing this
 command just once, after which container exits and is removed (ie we're not using
-scheduled backups). Also note there's no `/backup` mount as we're operating only
-against the remote borg repo.
+scheduled backups). Also note there's no `/backup` mount for local borg repo as
+we're operating only against the remote borg repo.
 
 ### restore.sh
 
@@ -405,7 +415,8 @@ variables are still usable with `list`.
 
     usage: notif-test.sh [-hpHsTFAmef]
 
-    Test configured notifications
+    Test configured notifications. Running it will fire notification via each of
+    the configured channels.
 
     arguments:
       -p ARCHIVE_PREFIX
@@ -442,6 +453,7 @@ variables are still usable with `list`.
 - [borgmatic](https://github.com/witten/borgmatic) - declarative borg config
 - [this dockerised borgmatic](https://hub.docker.com/r/b3vis/borgmatic/) - provides same as this service, and more
 - main offsite hostings: [rsync.net](https://www.rsync.net) & [BorgBase](https://www.borgbase.com/)
+- [vorta](https://github.com/borgbase/vorta) - mac & linux desktop client; by borgbase
 - for backups from k8s:
   - [velero](https://github.com/vmware-tanzu/velero)
   - [k8up](https://github.com/vshn/k8up)

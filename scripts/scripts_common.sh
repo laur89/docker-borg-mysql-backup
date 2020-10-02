@@ -21,6 +21,13 @@ CURL_FLAGS=(
     -s -S --fail -L
 )
 
+export BORG_RSH='ssh -oBatchMode=yes'  # https://borgbackup.readthedocs.io/en/stable/usage/notes.html#ssh-batch-mode
+
+# No one can answer if Borg asks these questions, it is better to just fail quickly
+# instead of hanging: (from https://borgbackup.readthedocs.io/en/stable/deployment/automated-local.html#configuring-the-system)
+export BORG_RELOCATED_REPO_ACCESS_IS_OK=no
+export BORG_UNKNOWN_UNENCRYPTED_REPO_ACCESS_IS_OK=no
+
 
 start_or_stop_containers() {
     local start_or_stop c idx
