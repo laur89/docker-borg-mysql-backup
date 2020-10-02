@@ -125,6 +125,7 @@ err() {
 }
 
 
+# note no notifications are generated if shell is in interactive mode
 notif() {
     local msg f
 

@@ -111,19 +111,17 @@ Container incorporates `backup`, `restore` and `list` scripts.
 `backup` script is mostly intended to be ran by the cron, but can also be executed
 directly via docker for one off backup.
 
-    usage: backup [-h] [-d MYSQL_DBS] [-n NODES_TO_BACKUP] [-c CONTAINERS] [-rl]
+    usage: backup [-h] [-d MYSQL_DBS] [-c CONTAINERS] [-rl]
                   [-P BORG_PRUNE_OPTS] [-B|-Z BORG_EXTRA_OPTS] [-L LOCAL_REPO]
                   [-e ERR_NOTIF] [-A SMTP_ACCOUNT] [-D MYSQL_FAIL_FATAL]
-                  [-R REMOTE] [-T REMOTE_REPO] -p PREFIX
+                  [-R REMOTE] [-T REMOTE_REPO] -p PREFIX  [NODES_TO_BACK_UP...]
     
     Create new archive
     
     arguments:
       -h                      show help and exit
-      -d MYSQL_DBS            space separated database names to back up; use __all__ to back up
-                              all dbs on the server
-      -n NODES_TO_BACKUP      space separated files/directories to back up (in addition to db dumps);
-                              path may not contain spaces, as space is the separator
+      -d MYSQL_DBS            space separated database names to back up; use value of
+                              __all__ to back up all dbs on the server
       -c CONTAINERS           space separated container names to stop for the backup process;
                               requires mounting the docker socket (-v /var/run/docker.sock:/var/run/docker.sock);
                               note containers will be stopped in given order; after backup
@@ -147,6 +145,8 @@ directly via docker for one off backup.
       -T REMOTE_REPO          path to repo on remote host; overrides env var of same name
       -p PREFIX               borg archive name prefix. note that the full archive name already
                               contains HOST_NAME and timestamp, so omit those.
+      NODES_TO_BACK_UP...     last arguments to backup.sh are files&directories to be
+                              included in the backup
 
 #### Usage examples
 
@@ -175,7 +175,7 @@ directly via docker for one off backup.
 
 `/config/crontab` contents:
 
-    15 05 * * *   /backup.sh -d "App1 App2" -n /app1-data -p app1-app2
+    15 05 * * *   /backup.sh -p app1-app2 -d "App1 App2" /app1-data 
 
 ##### Back up all databases daily at 04:10 and 16:10 to local&remote borg repos, stopping containers myapp1 & myapp2 for the process
 
@@ -201,7 +201,7 @@ directly via docker for one off backup.
 
 `/config/crontab` contents:
 
-    10 04,16 * * *   /backup.sh -d __all__ -p myapp-prefix -c "myapp1 myapp2"
+    10 04,16 * * *   /backup.sh -p myapp-prefix -d __all__ -c "myapp1 myapp2"
 
 ##### Back up directores /app1 & /app2 every 6 hours to local borg repo (ie remote is excluded)
 
@@ -221,7 +221,7 @@ directly via docker for one off backup.
 
 `/config/crontab` contents:
 
-    0 */6 * * *   /backup.sh -l -n "/app1 /app2" -p my_app_prefix
+    0 */6 * * *   /backup.sh -l -p my_app_prefix /app1 /app2
 
 Note we didn't need to define mysql- or remote borg repo related docker env vars.
 Also there's no need to have ssh key in `/config`, as we're not connecting to a remote server.
@@ -266,7 +266,7 @@ errors via email.
         -v /host/borg-conf/.borg/config:/root/.config/borg \
         -v /host/borg-conf/logs:/var/log \
         -v /host/emby/dir:/emby:ro \
-           layr/borg-mysql-backup backup.sh -r -n /emby -p emby
+           layr/borg-mysql-backup backup.sh -r -p emby /emby 
 
 Note there's no need to have a crontab file in `/config`, as we're executing this
 command just once, after which container exits and is removed (ie we're not using

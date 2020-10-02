@@ -6,19 +6,17 @@ readonly SELF="${0##*/}"
 readonly LOG="/var/log/${SELF}.log"
 
 readonly usage="
-    usage: $SELF [-h] [-d MYSQL_DBS] [-n NODES_TO_BACKUP] [-c CONTAINERS] [-rl]
+    usage: $SELF [-h] [-d MYSQL_DBS] [-c CONTAINERS] [-rl]
                   [-P BORG_PRUNE_OPTS] [-B|-Z BORG_EXTRA_OPTS] [-L LOCAL_REPO]
                   [-e ERR_NOTIF] [-A SMTP_ACCOUNT] [-D MYSQL_FAIL_FATAL]
-                  [-R REMOTE] [-T REMOTE_REPO] -p PREFIX
+                  [-R REMOTE] [-T REMOTE_REPO] -p PREFIX  [NODES_TO_BACK_UP...]
 
     Create new archive
 
     arguments:
       -h                      show help and exit
-      -d MYSQL_DBS            space separated database names to back up; use __all__ to back up
-                              all dbs on the server
-      -n NODES_TO_BACKUP      space separated files/directories to back up (in addition to db dumps);
-                              path may not contain spaces, as space is the separator
+      -d MYSQL_DBS            space separated database names to back up; use value of
+                              __all__ to back up all dbs on the server
       -c CONTAINERS           space separated container names to stop for the backup process;
                               requires mounting the docker socket (-v /var/run/docker.sock:/var/run/docker.sock);
                               note containers will be stopped in given order; after backup
@@ -42,6 +40,8 @@ readonly usage="
       -T REMOTE_REPO          path to repo on remote host; overrides env var of same name
       -p PREFIX               borg archive name prefix. note that the full archive name already
                               contains HOST_NAME and timestamp, so omit those.
+      NODES_TO_BACK_UP...     last arguments to $SELF are files&directories to be
+                              included in the backup
 "
 
 # expands the $NODES_TO_BACK_UP with files in $TMP/, if there are any
@@ -58,9 +58,7 @@ expand_nodes_to_back_up() {
 
 # dumps selected db(s) to $TMP
 dump_db() {
-    local output_filename mysql_db_orig err_code start_timestamp err_
-
-    MYSQL_DB="$(sed 's/^[[:space:]]*//;s/[[:space:]]*$//' <<< "$MYSQL_DB")"  # strip leading&trailing whitespace
+    local mysql_db_orig output_filename dbs_log err_code start_timestamp err_
 
     [[ -z "$MYSQL_DB" ]] && return 0  # no db specified, meaning db dump not required
 
@@ -69,14 +67,16 @@ dump_db() {
 
     # alternatively this, to squash multiple spaces & replace w/ '+' in one go:   MYSQL_DB="${MYSQL_DB//+( )/+}"
     if [[ "$MYSQL_DB" == __all__ ]]; then
+        dbs_log='all databases'
         output_filename='all-dbs'
         MYSQL_DB='--all-databases'
     else
+        dbs_log="databases [$MYSQL_DB]"
         output_filename="${MYSQL_DB// /+}"  # let the filename reflect which dbs it contains
         MYSQL_DB="--databases $MYSQL_DB"
     fi
 
-    log "=> starting db dump..."
+    log "=> starting db dump for ${dbs_log}..."
     start_timestamp="$(date +%s)"
 
     # TODO: add following column-stats option back once mysqldump from alpine accepts it:
@@ -230,6 +230,8 @@ validate_config() {
         for i in "${NODES_TO_BACK_UP[@]}"; do
             [[ -e "$i" ]] || err "node [$i] to back up does not exist; missing mount?"
         done
+    elif [[ -z "$MYSQL_DB" ]]; then
+        fail "no databases nor nodes selected for backup - nothing to do!"
     fi
 
     [[ "$REMOTE_OR_LOCAL_OPT_COUNTER" -gt 1 ]] && fail "-r & -l options are exclusive"
@@ -266,11 +268,9 @@ source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_com
 REMOTE_OR_LOCAL_OPT_COUNTER=0
 BORG_OTPS_COUNTER=0
 
-while getopts "d:n:p:c:rlP:B:Z:L:e:A:D:R:T:h" opt; do
+while getopts "d:p:c:rlP:B:Z:L:e:A:D:R:T:h" opt; do
     case "$opt" in
         d) MYSQL_DB="$OPTARG"
-            ;;
-        n) NODES_TO_BACK_UP+=($OPTARG)
             ;;
         p) ARCHIVE_PREFIX="$OPTARG"
            JOB_ID="${OPTARG}-$$"
@@ -310,6 +310,11 @@ while getopts "d:n:p:c:rlP:B:Z:L:e:A:D:R:T:h" opt; do
             ;;
     esac
 done
+shift "$((OPTIND-1))"
+
+NODES_TO_BACK_UP=("$@")
+
+MYSQL_DB="$(sed 's/^[[:space:]]*//;s/[[:space:]]*$//' <<< "$MYSQL_DB")"  # strip leading&trailing whitespace
 
 readonly TMP_ROOT="/tmp/${SELF}.tmp"
 readonly TMP="$TMP_ROOT/${ARCHIVE_PREFIX}-$RANDOM"
