@@ -59,6 +59,9 @@ expand_nodes_to_back_up() {
 # dumps selected db(s) to $TMP
 dump_db() {
     local output_filename dbs dbs_log err_code start_timestamp err_
+    local -
+
+    set -o noglob
 
     [[ "${#MYSQL_DB[@]}" -eq 0 ]] && return 0  # no db specified, meaning db dump not required
 
@@ -102,6 +105,9 @@ dump_db() {
 # TODO: should we skip prune if create exits w/ code >=2?
 _backup_common() {
     local l_or_r repo extra_opts start_timestamp err_code err_
+    local -
+
+    set -o noglob
 
     l_or_r="$1"
     repo="$2"
