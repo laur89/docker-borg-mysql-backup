@@ -164,9 +164,9 @@ do_backup() {
 
     [[ "${#NODES_TO_BACK_UP[@]}" -eq 0 ]] && fail "no items selected for backup"
 
-    log "following files&directories will be backed up:"
+    log "following files will be backed up:"
     for i in "${NODES_TO_BACK_UP[@]}"; do
-        log "\t$i"
+        log "\t$i   (type: $(file_type "$i"))"
     done
 
     pushd -- "$TMP" &> /dev/null || fail "unable to pushd into [$TMP]"  # cd there because files in $TMP are added without full path (to avoid "$TMP_ROOT" prefix in borg repo)

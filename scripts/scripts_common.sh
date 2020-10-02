@@ -309,6 +309,27 @@ expand_placeholders() {
 }
 
 
+file_type() {
+    if [[ -h "$*" ]]; then
+        echo symlink
+    elif [[ -f "$*" ]]; then
+        echo file
+    elif [[ -d "$*" ]]; then
+        echo dir
+    elif [[ -p "$*" ]]; then
+        echo 'named pipe'
+    elif [[ -c "$*" ]]; then
+        echo 'character special'
+    elif [[ -b "$*" ]]; then
+        echo 'block special'
+    elif [[ -S "$*" ]]; then
+        echo socket
+    else
+        echo UNKNOWN
+    fi
+}
+
+
 [[ -f "$ENV_CONF" ]] && source "$ENV_CONF"
 
 true  # always exit w/ good code
