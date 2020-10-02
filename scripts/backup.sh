@@ -58,22 +58,18 @@ expand_nodes_to_back_up() {
 
 # dumps selected db(s) to $TMP
 dump_db() {
-    local mysql_db_orig output_filename dbs_log err_code start_timestamp err_
+    local output_filename dbs dbs_log err_code start_timestamp err_
 
-    [[ -z "$MYSQL_DB" ]] && return 0  # no db specified, meaning db dump not required
+    [[ "${#MYSQL_DB[@]}" -eq 0 ]] && return 0  # no db specified, meaning db dump not required
 
-    MYSQL_DB="$(tr -s ' ' <<< "$MYSQL_DB")"  # squash multiple spaces
-    readonly mysql_db_orig="$MYSQL_DB"
-
-    # alternatively this, to squash multiple spaces & replace w/ '+' in one go:   MYSQL_DB="${MYSQL_DB//+( )/+}"
-    if [[ "$MYSQL_DB" == __all__ ]]; then
+    if [[ "${MYSQL_DB[*]}" == __all__ ]]; then
         dbs_log='all databases'
         output_filename='all-dbs'
-        MYSQL_DB='--all-databases'
+        dbs=('--all-databases')
     else
-        dbs_log="databases [$MYSQL_DB]"
-        output_filename="${MYSQL_DB// /+}"  # let the filename reflect which dbs it contains
-        MYSQL_DB="--databases $MYSQL_DB"
+        dbs_log="databases [${MYSQL_DB[*]}]"
+        output_filename="$(tr ' ' '+' <<< "${MYSQL_DB[*]}")"  # let the filename reflect which dbs it contains
+        dbs=('--databases' "${MYSQL_DB[@]}")
     fi
 
     log "=> starting db dump for ${dbs_log}..."
@@ -89,12 +85,12 @@ dump_db() {
             --user="${MYSQL_USER}" \
             --password="${MYSQL_PASS}" \
             ${MYSQL_EXTRA_OPTS} \
-            ${MYSQL_DB} > "$TMP/${output_filename}.sql" 2> >(tee -a "$LOG" >&2)
+            "${dbs[@]}" > "$TMP/${output_filename}.sql" 2> >(tee -a "$LOG" >&2)
 
     err_code="$?"
     if [[ "$err_code" -ne 0 ]]; then
         local msg
-        msg="db dump for [$mysql_db_orig] failed w/ [$err_code]"
+        msg="db dump for input args [${MYSQL_DB[*]}] failed w/ [$err_code]"
         [[ "${MYSQL_FAIL_FATAL:-true}" == true ]] && fail "$msg" || err "$msg"
         err_=failed
     fi
@@ -215,7 +211,7 @@ validate_config() {
         BORG_PRUNE_OPTS
         HOST_NAME
     )
-    [[ -n "$MYSQL_DB" ]] && vars+=(
+    [[ -n "${MYSQL_DB[*]}" ]] && vars+=(
         MYSQL_HOST
         MYSQL_PORT
         MYSQL_USER
@@ -230,7 +226,7 @@ validate_config() {
         for i in "${NODES_TO_BACK_UP[@]}"; do
             [[ -e "$i" ]] || err "node [$i] to back up does not exist; missing mount?"
         done
-    elif [[ -z "$MYSQL_DB" ]]; then
+    elif [[ "${#MYSQL_DB[@]}" -eq 0 || -z "${MYSQL_DB[*]}" ]]; then
         fail "no databases nor nodes selected for backup - nothing to do!"
     fi
 
@@ -270,7 +266,7 @@ BORG_OTPS_COUNTER=0
 
 while getopts "d:p:c:rlP:B:Z:L:e:A:D:R:T:h" opt; do
     case "$opt" in
-        d) MYSQL_DB="$OPTARG"
+        d) declare -ar MYSQL_DB=($OPTARG)
             ;;
         p) ARCHIVE_PREFIX="$OPTARG"
            JOB_ID="${OPTARG}-$$"
@@ -313,8 +309,6 @@ done
 shift "$((OPTIND-1))"
 
 NODES_TO_BACK_UP=("$@")
-
-MYSQL_DB="$(sed 's/^[[:space:]]*//;s/[[:space:]]*$//' <<< "$MYSQL_DB")"  # strip leading&trailing whitespace
 
 readonly TMP_ROOT="/tmp/${SELF}.tmp"
 readonly TMP="$TMP_ROOT/${ARCHIVE_PREFIX}-$RANDOM"
