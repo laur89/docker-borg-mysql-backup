@@ -100,7 +100,7 @@ You should be able to access your offsite backups from _any_ system.
                             {id} placeholder to provide general template and provide the
                             unique/id part via backup script option
     ERR_NOTIF               space separated error notification methods; supported values
-                            are {mail,pushover}; optional
+                            are {mail,pushover,healthchecksio}; optional
     NOTIF_SUBJECT           notifications' subject/title; defaults to '{p}: backup error on {h}'
 
       following params {MAIL,SMTP}_* are only used if ERR_NOTIF value contains 'mail';

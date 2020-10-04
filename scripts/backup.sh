@@ -267,6 +267,14 @@ validate_config() {
     elif [[ -n "$HC_URL" && "$HC_URL" =~ '{id}' ]]; then
         err "[HC_URL] with {id} placeholder defined, but no replacement value provided"
     fi
+
+    if [[ "$ERR_NOTIF" == *healthchecksio* ]]; then
+        if [[ -z "$HC_URL" ]]; then
+            err "healthchecksio selected for notifications, but HC_URL not defined"
+        elif ! grep -q '//hc-ping.com/' <<< "$HC_URL"; then
+            err "healthchecksio selected for notifications, but configured HC_URL [$HC_URL] does not belong to healthchecks.io"
+        fi
+    fi
 }
 
 

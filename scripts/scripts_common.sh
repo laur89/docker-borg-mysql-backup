@@ -148,6 +148,10 @@ notif() {
     if [[ "$ERR_NOTIF" == *pushover* ]]; then
         pushover $f -s "$NOTIF_SUBJECT" -b "$msg" &
     fi
+
+    if [[ "$ERR_NOTIF" == *healthchecksio* ]]; then
+        hcio $f -b "$msg" &
+    fi
 }
 
 
@@ -239,6 +243,33 @@ pushover() {
 }
 
 
+hcio() {
+    local opt is_fail body OPTIND url
+
+    while getopts "Fb:" opt; do
+        case "$opt" in
+            F) is_fail=true
+                ;;
+            b) body="$OPTARG"
+                ;;
+            *) fail -N "$FUNCNAME called with unsupported flag(s)"
+                ;;
+        esac
+    done
+    shift "$((OPTIND-1))"
+
+    url="$HC_URL"
+    [[ "$url" != */ ]] && url+='/'
+    url+='fail'
+
+    curl "${CURL_FLAGS[@]}" \
+        --retry 5 \
+        --user-agent "$HOST_NAME" \
+        --data-raw "$(expand_placeholders "${body:-NO MESSAGE BODY PROVIDED}" "$is_fail")" \
+        "$url" || err -N "pinging healthchecks.io service at [$url] failed w/ [$?]"
+}
+
+
 add_remote_to_known_hosts_if_missing() {
     local remote
 
@@ -259,7 +290,7 @@ validate_config_common() {
     declare -a vars
     if [[ -n "$ERR_NOTIF" ]]; then
         for i in $ERR_NOTIF; do
-            [[ "$i" =~ ^(mail|pushover)$ ]] || fail "unsupported [ERR_NOTIF] value: [$i]"
+            [[ "$i" =~ ^(mail|pushover|healthchecksio)$ ]] || fail "unsupported [ERR_NOTIF] value: [$i]"
         done
 
         if [[ "$ERR_NOTIF" == *mail* ]]; then
@@ -276,6 +307,8 @@ validate_config_common() {
             PUSHOVER_APP_TOKEN
             PUSHOVER_USER_KEY
         )
+
+        # note we cannot validate healthchecksio in here - url can/will be modified by backup.sh invocation
     fi
 
     vars_defined "${vars[@]}"
