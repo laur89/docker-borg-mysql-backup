@@ -257,6 +257,8 @@ validate_config() {
     if [[ -n "$HC_ID" ]]; then
         if is_valid_url "$HC_ID"; then
             HC_URL="$HC_ID"
+        elif [[ "$HC_ID" == disable* ]]; then
+            unset HC_URL
         elif [[ -z "$HC_URL" ]]; then
             err "[HC_ID] given, but no healthcheck url template provided"
         elif ! [[ "$HC_URL" =~ '{id}' ]]; then

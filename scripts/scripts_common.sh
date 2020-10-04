@@ -266,7 +266,7 @@ hcio() {
         --retry 5 \
         --user-agent "$HOST_NAME" \
         --data-raw "$(expand_placeholders "${body:-NO MESSAGE BODY PROVIDED}" "$is_fail")" \
-        "$url" || err -N "pinging healthchecks.io service at [$url] failed w/ [$?]"
+        "$url" || err -N "pinging healthchecks.io endpoint [$url] failed w/ [$?]"
 }
 
 
