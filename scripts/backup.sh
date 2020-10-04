@@ -9,7 +9,7 @@ readonly usage="
     usage: $SELF [-h] [-d MYSQL_DBS] [-c CONTAINERS] [-rl]
                   [-P BORG_PRUNE_OPTS] [-B|-Z BORG_EXTRA_OPTS] [-L LOCAL_REPO]
                   [-e ERR_NOTIF] [-A SMTP_ACCOUNT] [-D MYSQL_FAIL_FATAL]
-                  [-R REMOTE] [-T REMOTE_REPO] -p PREFIX  [NODES_TO_BACK_UP...]
+                  [-R REMOTE] [-T REMOTE_REPO] [-H HC_ID] -p PREFIX  [NODES_TO_BACK_UP...]
 
     Create new archive
 
@@ -38,6 +38,9 @@ readonly usage="
                               env var of same name; true|false
       -R REMOTE               remote connection; overrides env var of same name
       -T REMOTE_REPO          path to repo on remote host; overrides env var of same name
+      -H HC_ID                the unique/id part of healthcheck url, replacing the '{id}'
+                              placeholder in HC_URL; may also provide new full url to call
+                              instead
       -p PREFIX               borg archive name prefix. note that the full archive name already
                               contains HOST_NAME and timestamp, so omit those.
       NODES_TO_BACK_UP...     last arguments to $SELF are files&directories to be
@@ -249,6 +252,21 @@ validate_config() {
     if [[ "$LOCAL_ONLY" -ne 1 && "$-" != *i* ]]; then
         [[ -f "$SSH_KEY" ]] || fail "[$SSH_KEY] is not a file; is /config mounted?"
     fi
+
+
+    if [[ -n "$HC_ID" ]]; then
+        if is_valid_url "$HC_ID"; then
+            HC_URL="$HC_ID"
+        elif [[ -z "$HC_URL" ]]; then
+            err "[HC_ID] given, but no healthcheck url template provided"
+        elif ! [[ "$HC_URL" =~ '{id}' ]]; then
+            err "[HC_URL] template does not contain id placeholder [{id}]"
+        else
+            HC_URL="$(sed "s/{id}/$HC_ID/g" <<< "$HC_URL")"
+        fi
+    elif [[ -n "$HC_URL" && "$HC_URL" =~ '{id}' ]]; then
+        err "[HC_URL] with {id} placeholder defined, but no replacement value provided"
+    fi
 }
 
 
@@ -264,6 +282,7 @@ cleanup() {
     [[ -d "$TMP" ]] && rm -rf -- "$TMP"
     [[ -d "$TMP_ROOT" ]] && is_dir_empty "$TMP_ROOT" && rm -rf -- "$TMP_ROOT"
 
+    ping_healthcheck
     log "==> backup script end"
 }
 
@@ -276,7 +295,7 @@ source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_com
 REMOTE_OR_LOCAL_OPT_COUNTER=0
 BORG_OTPS_COUNTER=0
 
-while getopts "d:p:c:rlP:B:Z:L:e:A:D:R:T:h" opt; do
+while getopts "d:p:c:rlP:B:Z:L:e:A:D:R:T:hH:" opt; do
     case "$opt" in
         d) declare -ar MYSQL_DB=($OPTARG)
             ;;
@@ -310,6 +329,8 @@ while getopts "d:p:c:rlP:B:Z:L:e:A:D:R:T:h" opt; do
         R) REMOTE="$OPTARG"  # overrides env var of same name
             ;;
         T) REMOTE_REPO="$OPTARG"  # overrides env var of same name
+            ;;
+        H) HC_ID="$OPTARG"
             ;;
         h) echo -e "$usage"
            exit 0

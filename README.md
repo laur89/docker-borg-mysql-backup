@@ -96,6 +96,9 @@ You should be able to access your offsite backups from _any_ system.
                             restoring or if it's defined by backup script -P param
                             (which overrides this container env var)
 
+    HC_URL                  healthcheck url to ping upon backup completion; may contain
+                            {id} placeholder to provide general template and provide the
+                            unique/id part via backup script option
     ERR_NOTIF               space separated error notification methods; supported values
                             are {mail,pushover}; optional
     NOTIF_SUBJECT           notifications' subject/title; defaults to '{p}: backup error on {h}'
@@ -135,7 +138,7 @@ as a one-off command for a single backup.
     usage: backup [-h] [-d MYSQL_DBS] [-c CONTAINERS] [-rl]
                   [-P BORG_PRUNE_OPTS] [-B|-Z BORG_EXTRA_OPTS] [-L LOCAL_REPO]
                   [-e ERR_NOTIF] [-A SMTP_ACCOUNT] [-D MYSQL_FAIL_FATAL]
-                  [-R REMOTE] [-T REMOTE_REPO] -p PREFIX  [NODES_TO_BACK_UP...]
+                  [-R REMOTE] [-T REMOTE_REPO] [-H HC_ID] -p PREFIX  [NODES_TO_BACK_UP...]
     
     Create new archive
     
@@ -164,6 +167,9 @@ as a one-off command for a single backup.
                               env var of same name; true|false
       -R REMOTE               remote connection; overrides env var of same name
       -T REMOTE_REPO          path to repo on remote host; overrides env var of same name
+      -H HC_ID                the unique/id part of healthcheck url, replacing the '{id}'
+                              placeholder in HC_URL; may also provide new full url to call
+                              instead
       -p PREFIX               borg archive name prefix. note that the full archive name already
                               contains HOST_NAME and timestamp, so omit those.
       NODES_TO_BACK_UP...     last arguments to backup.sh are files&directories to be
@@ -231,6 +237,7 @@ as a one-off command for a single backup.
         -e LOCAL_REPO=/backup/repo \
         -e BORG_PASSPHRASE=borgrepopassword \
         -e BORG_PRUNE_OPTS='--keep-daily=7 --keep-weekly=4' \
+        -e HC_URL='https://hc-ping.com/{id}' \
         -v /host/backup:/backup \
         -v /host/borg-conf:/config:ro \
         -v /host/borg-conf/.borg/cache:/root/.cache/borg \
@@ -242,12 +249,14 @@ as a one-off command for a single backup.
 
 `/config/crontab` contents:
 
-    0 */6 * * *   /backup.sh -l -p my_app_prefix /app1 /app2
+    0 */6 * * *   /backup.sh -l -H eb095278-f28d-448d-87fb-7b75c171a6aa -p my_app_prefix /app1 /app2
 
 Note we didn't need to define mysql- or remote borg repo related docker env vars.
 Also there's no need to have ssh key in `/config`, as we're not connecting to a remote server.
 Additionally, there was no need to mount `/etc/localtime`, as cron doesn't
 define absolute time, but simply an interval.
+Note also how we define the healthcheck url HC_URL template, whose {id} placeholder
+is replaced by -H value provided by backup.sh
 
 ##### Same as above, but report errors via mail
 
@@ -271,6 +280,7 @@ errors via email.
         -e REMOTE_REPO=repo/location \
         -e BORG_PASSPHRASE=borgrepopassword \
         -e BORG_PRUNE_OPTS='--keep-daily=7 --keep-weekly=4' \
+        -e HC_URL='https://hc-ping.com/eb095278-f28d-448d-87fb-7b75c171a6aa' \
         -v /host/borg-conf:/config:ro \
         -v /host/borg-conf/.borg/cache:/root/.cache/borg \
         -v /host/borg-conf/.borg/config:/root/.config/borg \
@@ -282,6 +292,7 @@ Note there's no need to have a crontab file in `/config`, as we're executing thi
 command just once, after which container exits and is removed (ie we're not using
 scheduled backups). Also note there's no `/backup` mount for local borg repo as
 we're operating only against the remote borg repo.
+Note also the healtcheck url that will get pinged.
 
 ### restore.sh
 

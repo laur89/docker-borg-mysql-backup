@@ -16,8 +16,8 @@ DEFAULT_MAIL_FROM='{h} backup reporter'
 DEFAULT_NOTIF_SUBJECT='{p}: backup error on {h}'
 CURL_FLAGS=(
     -w '\n'
-    --max-time 4
-    --connect-timeout 2
+    --max-time 6
+    --connect-timeout 3
     -s -S --fail -L
 )
 
@@ -327,6 +327,29 @@ file_type() {
     else
         echo UNKNOWN
     fi
+}
+
+
+# Checks whether given url is a valid one.
+#
+# @param {string}  url   url which validity to test.
+#
+# @returns {bool}  true, if provided url was a valid url.
+is_valid_url() {
+    local regex
+
+    readonly regex='^(https?|ftp|file)://[-A-Za-z0-9\+&@#/%?=~_|!:,.;]*[-A-Za-z0-9\+&@#/%=~_|]'
+
+    [[ "$1" =~ $regex ]]
+}
+
+
+ping_healthcheck() {
+    [[ -z "$HC_URL" ]] && return 0
+
+    curl "${CURL_FLAGS[@]}" \
+        --retry 5 \
+        "$HC_URL" || err "pinging healthcheck service at [$HC_URL] failed w/ [$?]"
 }
 
 
