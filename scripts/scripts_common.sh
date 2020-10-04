@@ -349,6 +349,7 @@ ping_healthcheck() {
 
     curl "${CURL_FLAGS[@]}" \
         --retry 5 \
+        --user-agent "$HOST_NAME" \
         "$HC_URL" || err "pinging healthcheck service at [$HC_URL] failed w/ [$?]"
 }
 
