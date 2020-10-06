@@ -89,10 +89,35 @@ EOF
 
 
 setup_logrotate() {
-    local rotate_confdir target_conf
+    local opt rotate interval size name pattern rotate_confdir target_conf OPTIND
+
+    while getopts "r:i:s:n:p:" opt; do
+        case "$opt" in
+            r) rotate="$OPTARG"
+                ;;
+            i) interval="$OPTARG"
+                ;;
+            s) size="$OPTARG"
+                ;;
+            n) name="$OPTARG"
+                ;;
+            p) pattern="$OPTARG"
+                ;;
+            *) fail "$FUNCNAME called with unsupported flag(s)"
+                ;;
+        esac
+    done
+    shift "$((OPTIND-1))"
+
+    [[ -z "$rotate" ]] && rotate=20
+    [[ -z "$interval" ]] && interval=weekly
+    [[ -z "$size" ]] && size=1000k
+    [[ -z "$name" ]] && name=common-config
+    [[ -z "$pattern" ]] && pattern='/var/log/*.log'
+
 
     rotate_confdir='/etc/logrotate.d'
-    target_conf="$rotate_confdir/common-config"
+    target_conf="$rotate_confdir/$name"
 
     [[ -d "$rotate_confdir" ]] || fail "[$rotate_confdir] is not a dir - is logrotate installed?"
 
@@ -100,10 +125,10 @@ setup_logrotate() {
         cat -- "$LOGROTATE_CONF" > "$target_conf"
     else
         cat > "$target_conf" <<EOF
-/var/log/*.log {
-                   rotate 20
-                   weekly
-                   size 1000k
+$pattern {
+                   rotate $rotate
+                   $interval
+                   size $size
                    copytruncate
                    compress
                    missingok
