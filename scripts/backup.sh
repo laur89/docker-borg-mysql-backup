@@ -270,6 +270,7 @@ validate_config() {
         err "[HC_URL] with {id} placeholder defined, but no replacement value provided"
     fi
 
+
     if [[ "$ERR_NOTIF" == *healthchecksio* ]]; then
         local hcio_rgx='^https?://hc-ping.com/[-a-z0-9]+/?$'
         if [[ -z "$HC_URL" ]]; then
@@ -289,7 +290,7 @@ create_dirs() {
 
 cleanup() {
     # make sure stopped containers are started on exit:
-    start_or_stop_containers start
+    start_containers
 
     [[ -d "$TMP" ]] && rm -rf -- "$TMP"
     [[ -d "$TMP_ROOT" ]] && is_dir_empty "$TMP_ROOT" && rm -rf -- "$TMP_ROOT"
@@ -367,7 +368,7 @@ readonly REMOTE+=":$REMOTE_REPO"  # define after validation
 create_dirs
 init_local_borg_repo
 
-start_or_stop_containers stop
+stop_containers
 do_backup
 
 exit 0

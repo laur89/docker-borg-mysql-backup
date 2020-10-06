@@ -29,25 +29,28 @@ export BORG_RELOCATED_REPO_ACCESS_IS_OK=no
 export BORG_UNKNOWN_UNENCRYPTED_REPO_ACCESS_IS_OK=no
 
 
-start_or_stop_containers() {
-    local start_or_stop c idx
-
-    readonly start_or_stop="$1"
+stop_containers() {
+    local c
 
     [[ "${#CONTAINERS[@]}" -eq 0 ]] && return 0  # no containers defined, return
-    #docker "$start_or_stop" "${CONTAINERS[@]}" || fail "${start_or_stop}ing container(s) [${CONTAINERS[*]}] failed w/ [$?]"
+
+    for c in "${CONTAINERS[@]}"; do
+        docker stop "$c" || fail "stopping container [$c] failed w/ [$?]"
+    done
+
+    return 0
+}
 
 
-    if [[ "$start_or_stop" == stop ]]; then
-        for c in "${CONTAINERS[@]}"; do
-            docker stop "$c" || fail "stopping container [$c] failed w/ [$?]"
-        done
-    else
-        for (( idx=${#CONTAINERS[@]}-1 ; idx>=0 ; idx-- )); do
-            c="${CONTAINERS[idx]}"
-            docker start "$c" || fail "starting container [$c] failed w/ [$?]"
-        done
-    fi
+start_containers() {
+    local c idx
+
+    [[ "${#CONTAINERS[@]}" -eq 0 ]] && return 0  # no containers defined, return
+
+    for (( idx=${#CONTAINERS[@]}-1 ; idx>=0 ; idx-- )); do
+        c="${CONTAINERS[idx]}"
+        docker start "$c" || fail "starting container [$c] failed w/ [$?]"
+    done
 
     return 0
 }

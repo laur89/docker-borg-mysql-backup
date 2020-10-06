@@ -187,7 +187,7 @@ readonly RESTORE_DIR="$RESTORE_DIR/restored-${ARCHIVE_NAME}"  # define & test af
 create_dirs
 verify_borg
 
-start_or_stop_containers stop
+stop_containers
 do_restore
 # do not start containers, so we'd have time to manualy move the data files back, if any
 
