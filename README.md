@@ -31,9 +31,17 @@ Currently supported notification methods are
 
 - sending mail via SMTP
 - sending [pushover](https://pushover.net/) notifications
+- posting to [healthchecks.io](https://healthchecks.io/) `/fail` endpoint (see
+note on healtchchecks in following paragraphs)
 
 If you wish to provide your own msmtprc config file instead of defining `SMTP_*` env
 vars, create it at the `/config` mount, named `msmtprc`.
+
+Dead man's switch support is provided via healthchecks; healthcheck provider will
+always bi pinged when backup job runs - regardless of the outcome.
+For error notifications you still need to configure notifications (see `ERR_NOTIF`)
+Note if you've configured healthchecks.io as your healthcheck provider, then you
+may also use it for error notifications (see above). 
 
 Additionally, following bindings are _strongly_ recommended:
 `-v /host/borg-conf/.borg/cache:/root/.cache/borg`
