@@ -30,17 +30,6 @@ readonly usage="
       -a ARCHIVE_NAME         name of the borg archive to restore/extract data from
 "
 
-# checks whether chosen borg repo really is a valid repo
-# TODO: deprecate, as we did in backup?
-verify_borg() {
-
-    if [[ "$LOC" -eq 1 ]]; then
-        borg list "$LOCAL_REPO" > /dev/null || fail "[borg list $LOCAL_REPO] failed w/ [$?]; is it a borg repo?"
-    elif [[ "$REM" -eq 1 ]]; then
-        borg list "$REMOTE" > /dev/null || fail "[borg list $REMOTE] failed w/ [$?]; please create remote repos manually beforehand"
-    fi
-}
-
 
 restore_db() {
     local sql_files i
@@ -185,7 +174,6 @@ readonly REMOTE+=":$REMOTE_REPO"  # define after validation
 readonly RESTORE_DIR="$RESTORE_DIR/restored-${ARCHIVE_NAME}"  # define & test after validation
 [[ -e "$RESTORE_DIR" ]] && fail "[$RESTORE_DIR] already exists, abort"
 create_dirs
-verify_borg
 
 stop_containers
 do_restore
