@@ -169,7 +169,7 @@ done
 
 
 validate_config
-[[ -n "$REMOTE" ]] && add_remote_to_known_hosts_if_missing
+[[ -n "$REMOTE" ]] && add_remote_to_known_hosts_if_missing "$REMOTE"
 readonly REMOTE+=":$REMOTE_REPO"  # define after validation
 readonly RESTORE_DIR="$RESTORE_DIR/restored-${ARCHIVE_NAME}"  # define & test after validation
 [[ -e "$RESTORE_DIR" ]] && fail "[$RESTORE_DIR] already exists, abort"

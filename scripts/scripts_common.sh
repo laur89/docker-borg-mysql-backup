@@ -276,17 +276,18 @@ hcio() {
 
 
 add_remote_to_known_hosts_if_missing() {
-    local host
+    local input host
 
-    [[ -z "$REMOTE" ]] && return 0
+    input="$1"
+    [[ -z "$input" ]] && return 0
 
-    host="${REMOTE#*@}"  # everything after '@'
+    host="${input#*@}"  # everything after '@'
     host="${host%%:*}"  # everything before ':'
 
-    [[ -z "$host" ]] && fail "could not extract host from our remote [$REMOTE]"
+    [[ -z "$host" ]] && fail "could not extract host from remote [$input]"
 
     if [[ -z "$(ssh-keygen -F "$host")" ]]; then
-        ssh-keyscan -H "$host" >> ~/.ssh/known_hosts || fail "adding host [$host] to ~/.ssh/known_hosts failed w/ [$?]"
+        ssh-keyscan -H "$host" >> "$HOME/.ssh/known_hosts" || fail "adding host [$host] to ~/.ssh/known_hosts failed w/ [$?]"
     fi
 }
 
