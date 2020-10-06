@@ -275,7 +275,7 @@ validate_config() {
         local hcio_rgx='^https?://hc-ping.com/[-a-z0-9]+/?$'
         if [[ -z "$HC_URL" ]]; then
             err "healthchecksio selected for notifications, but HC_URL not defined"
-        #elif ! grep -q '//hc-ping.com/' <<< "$HC_URL"; then
+        #elif [[ "$HC_URL" != *//hc-ping.com/* ]]; then
         elif ! [[ "$HC_URL" =~ $hcio_rgx ]]; then
             err "healthchecksio selected for notifications, but configured HC_URL [$HC_URL] does not match expected healthchecks.io url pattern"
         fi
