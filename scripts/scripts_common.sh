@@ -274,15 +274,17 @@ hcio() {
 
 
 add_remote_to_known_hosts_if_missing() {
-    local remote
+    local host
 
-    remote="${REMOTE#*@}"  # everything after '@'
-    remote="${remote%%:*}"  # everything before ':'
+    [[ -z "$REMOTE" ]] && return 0
 
-    [[ -z "$remote" ]] && return 0
+    host="${REMOTE#*@}"  # everything after '@'
+    host="${host%%:*}"  # everything before ':'
 
-    if [[ -z "$(ssh-keygen -F "$remote")" ]]; then
-        ssh-keyscan -H "$remote" >> ~/.ssh/known_hosts || fail "adding host [$remote] to ~/.ssh/known_hosts failed w/ [$?]"
+    [[ -z "$host" ]] && fail "could not extract host from our remote [$REMOTE]"
+
+    if [[ -z "$(ssh-keygen -F "$host")" ]]; then
+        ssh-keyscan -H "$host" >> ~/.ssh/known_hosts || fail "adding host [$host] to ~/.ssh/known_hosts failed w/ [$?]"
     fi
 }
 
@@ -360,6 +362,8 @@ file_type() {
         echo 'block special'
     elif [[ -S "$*" ]]; then
         echo socket
+    elif ! [[ -e "$*" ]]; then
+        echo 'does not exist'
     else
         echo UNKNOWN
     fi
