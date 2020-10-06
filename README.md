@@ -115,7 +115,7 @@ You should be able to access your offsite backups from _any_ system.
     SMTP_AUTH               defaults to 'on'
     SMTP_TLS                defaults to 'on'
     SMTP_STARTTLS           defaults to 'on'
-    SMTP_ACCOUNT            smtp account to use for sending mail, defaults to 'default';
+    SMTP_ACCOUNT            smtp account to use for sending mail;
                             makes sense only if you've provided your own MSMTPRC
                             config at /config/msmtprc that defines multiple accounts
 
@@ -161,8 +161,7 @@ as a one-off command for a single backup.
       -L LOCAL_REPO           overrides container env variable of same name;
       -e ERR_NOTIF            space separated error notification methods; overrides
                               env var of same name;
-      -A SMTP_ACCOUNT         msmtp account to use; defaults to 'default'; overrides
-                              env var of same name;
+      -A SMTP_ACCOUNT         msmtp account to use; overrides env var of same name;
       -D MYSQL_FAIL_FATAL     whether unsuccessful db dump should abort backup; overrides
                               env var of same name; true|false
       -R REMOTE               remote connection; overrides env var of same name

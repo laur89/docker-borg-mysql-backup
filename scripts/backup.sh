@@ -32,8 +32,7 @@ readonly usage="
       -L LOCAL_REPO           overrides container env variable of same name;
       -e ERR_NOTIF            space separated error notification methods; overrides
                               env var of same name;
-      -A SMTP_ACCOUNT         msmtp account to use; defaults to 'default'; overrides
-                              env var of same name;
+      -A SMTP_ACCOUNT         msmtp account to use; overrides env var of same name;
       -D MYSQL_FAIL_FATAL     whether unsuccessful db dump should abort backup; overrides
                               env var of same name; true|false
       -R REMOTE               remote connection; overrides env var of same name
@@ -268,13 +267,15 @@ create_dirs() {
 }
 
 
+# TODO: should start_containers() be called when we errored? or when -h (help) was called?
 cleanup() {
-    # make sure stopped containers are started on exit:
-    start_containers
-
     [[ -d "$TMP" ]] && rm -rf -- "$TMP"
     [[ -d "$TMP_ROOT" ]] && is_dir_empty "$TMP_ROOT" && rm -rf -- "$TMP_ROOT"
 
+    # make sure stopped containers are started on exit:
+    start_containers
+
+    # TODO: shouldn't we ping healthcheck the very first thing in cleanup()? ie it should fire regardles of the outcome of other calls in here
     ping_healthcheck
     log "==> backup script end"
 }

@@ -159,7 +159,7 @@ notif() {
 
 
 mail() {
-    local opt to from subj acc body is_fail err_code OPTIND
+    local opt to from subj acc body is_fail err_code account OPTIND
 
     while getopts "Ft:f:s:b:a:" opt; do
         case "$opt" in
@@ -181,7 +181,9 @@ mail() {
     done
     shift "$((OPTIND-1))"
 
-    msmtp -a "${acc:-default}" --read-envelope-from -t <<EOF
+    [[ -n "$acc" ]] && declare -a account=('-a' "$acc")
+
+    msmtp "${account[@]}" --read-envelope-from -t <<EOF
 To: $to
 From: $(expand_placeholders "${from:-$DEFAULT_MAIL_FROM}" "$is_fail")
 Subject: $(expand_placeholders "${subj:-$DEFAULT_NOTIF_SUBJECT}" "$is_fail")

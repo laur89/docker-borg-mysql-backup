@@ -76,10 +76,13 @@ logfile /var/log/msmtp.log
 protocol smtp
 port ${SMTP_PORT:-587}
 
-account default
+account common
 host ${SMTP_HOST}
 user ${SMTP_USER}
 password ${SMTP_PASS}
+
+# set default account:
+account default : common
 EOF
     fi
 }
