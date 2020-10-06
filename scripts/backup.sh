@@ -195,26 +195,6 @@ do_backup() {
 }
 
 
-init_local_borg_repo() {
-    local msg err_code
-
-    if [[ "$REMOTE_ONLY" -ne 1 ]]; then
-        if [[ ! -d "$LOCAL_REPO" ]] || is_dir_empty "$LOCAL_REPO"; then
-            log "=> initialising local repo [$LOCAL_REPO]..."
-            borg init --make-parent-dirs --show-rc "$LOCAL_REPO" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2)
-            err_code="$?"
-
-            if [[ "$err_code" -ne 0 ]]; then
-                msg="=> local borg repo init @ [$LOCAL_REPO] failed w/ [$?]"
-                [[ "$LOCAL_ONLY" -eq 1 ]] && fail "$msg" || { err "$msg"; LOCAL_ONLY=0; REMOTE_ONLY=1; }  # local would fail for sure; force remote_only
-            else
-                log "=> local repo [$LOCAL_REPO] initialised successfully"
-            fi
-        fi
-    fi
-}
-
-
 validate_config() {
     local i vars
 
@@ -366,7 +346,6 @@ validate_config
 [[ -n "$REMOTE" ]] && add_remote_to_known_hosts_if_missing
 readonly REMOTE+=":$REMOTE_REPO"  # define after validation
 create_dirs
-init_local_borg_repo
 
 stop_containers
 do_backup
