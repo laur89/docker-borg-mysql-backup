@@ -39,7 +39,7 @@ readonly usage="
       -T REMOTE_REPO          path to repo on remote host; overrides env var of same name
       -H HC_ID                the unique/id part of healthcheck url, replacing the '{id}'
                               placeholder in HC_URL; may also provide new full url to call
-                              instead
+                              instead, overriding the env var HC_URL
       -p PREFIX               borg archive name prefix. note that the full archive name already
                               contains HOST_NAME and timestamp, so omit those.
       NODES_TO_BACK_UP...     last arguments to $SELF are files&directories to be
@@ -245,7 +245,8 @@ validate_config() {
         else
             HC_URL="$(sed "s/{id}/$HC_ID/g" <<< "$HC_URL")"
         fi
-    elif [[ -n "$HC_URL" && "$HC_URL" =~ '{id}' ]]; then
+    fi
+    if [[ -n "$HC_URL" && "$HC_URL" =~ '{id}' ]]; then
         err "[HC_URL] with {id} placeholder defined, but no replacement value provided"
     fi
 

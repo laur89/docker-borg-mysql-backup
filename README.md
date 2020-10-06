@@ -106,7 +106,7 @@ You should be able to access your offsite backups from _any_ system.
 
     HC_URL                  healthcheck url to ping upon backup completion; may contain
                             {id} placeholder to provide general template and provide the
-                            unique/id part via backup script option
+                            unique/id part via backup script option HC_ID
     ERR_NOTIF               space separated error notification methods; supported values
                             are {mail,pushover,healthchecksio}; optional
     NOTIF_SUBJECT           notifications' subject/title; defaults to '{p}: backup error on {h}'
@@ -176,7 +176,7 @@ as a one-off command for a single backup.
       -T REMOTE_REPO          path to repo on remote host; overrides env var of same name
       -H HC_ID                the unique/id part of healthcheck url, replacing the '{id}'
                               placeholder in HC_URL; may also provide new full url to call
-                              instead
+                              instead, overriding the env var HC_URL
       -p PREFIX               borg archive name prefix. note that the full archive name already
                               contains HOST_NAME and timestamp, so omit those.
       NODES_TO_BACK_UP...     last arguments to backup.sh are files&directories to be
