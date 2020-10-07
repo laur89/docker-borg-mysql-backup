@@ -66,11 +66,7 @@ log "ERR_NOTIF: [$ERR_NOTIF]"
 JOB_ID="${ARCHIVE_PREFIX}-$$"
 [[ -z "$HOST_NAME" ]] && HOST_NAME='dummy-host'
 
-[[ -z "$MSG" ]] && MSG="Test error message
-host: {h}
-archive prefix: {p}
-job id: {i}
-fatal?: {f}"
+[[ -z "$MSG" ]] && MSG='Test error message'
 
 unset NO_NOTIF
 [[ "$FATAL" -eq 1 ]] && fail "$MSG" || err "$MSG"
