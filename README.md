@@ -38,8 +38,8 @@ If you wish to provide your own msmtprc config file instead of defining `SMTP_*`
 vars, create it at the `/config` mount, named `msmtprc`.
 
 Dead man's switch support is provided via healthchecks; healthcheck provider will
-always bi pinged when backup job runs - regardless of the outcome.
-For error notifications you still need to configure notifications (see `ERR_NOTIF`)
+always be pinged when backup job runs - regardless of the outcome.
+For error notifications you still need to configure notifications (see `ERR_NOTIF`).
 Note if you've configured healthchecks.io as your healthcheck provider, then you
 may also use it for error notifications (see above). 
 
@@ -110,6 +110,10 @@ You should be able to access your offsite backups from _any_ system.
     ERR_NOTIF               space separated error notification methods; supported values
                             are {mail,pushover,healthchecksio}; optional
     NOTIF_SUBJECT           notifications' subject/title; defaults to '{p}: backup error on {h}'
+    ADD_NOTIF_TAIL          whether all error messages should contain the
+                            trailing block of additional info; defaults to 'true';
+    NOTIF_TAIL_MSG          replaces the default contents of trailing error
+                            notifications; only in effect if ADD_NOTIF_TAIL=true
 
       following params {MAIL,SMTP}_* are only used if ERR_NOTIF value contains 'mail';
       also note all SMTP_* env vars besides SMTP_ACCOUNT are ignored if you've

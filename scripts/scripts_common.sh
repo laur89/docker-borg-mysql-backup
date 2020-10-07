@@ -11,6 +11,13 @@ readonly LOGROTATE_CONF="$CONF_ROOT/logrotate.conf"
 readonly ENV_CONF="$CONF_ROOT/env.conf"
 readonly SSH_KEY="$CONF_ROOT/id_rsa"
 LOG_TIMESTAMP_FORMAT='+%F %T'
+readonly DEFAULT_NOTIF_TAIL_MSG='\n
+----------------
+host: {h}
+archive prefix: {p}
+job id: {i}
+fatal?: {f}'
+
 
 DEFAULT_MAIL_FROM='{h} backup reporter'
 DEFAULT_NOTIF_SUBJECT='{p}: backup error on {h}'
@@ -137,12 +144,17 @@ err() {
 
 # note no notifications are generated if shell is in interactive mode
 notif() {
-    local msg f
+    local msg f msg_tail
 
     [[ "$1" == '-F' ]] && { f='-F'; shift; }
     [[ "$-" == *i* || "$NO_NOTIF" == true ]] && return 0
 
-    readonly msg="$1"
+    msg="$1"
+
+    if [[ "${ADD_NOTIF_TAIL:-true}" == true ]]; then
+        msg_tail="$(echo -e "${NOTIF_TAIL_MSG:-$DEFAULT_NOTIF_TAIL_MSG}")"
+        msg+="$msg_tail"
+    fi
 
     if [[ "$ERR_NOTIF" == *mail* && "$NO_SEND_MAIL" != true ]]; then
         mail $f -t "$MAIL_TO" -f "$MAIL_FROM" -s "$NOTIF_SUBJECT" -a "$SMTP_ACCOUNT" -b "$msg" &
@@ -321,7 +333,8 @@ validate_config_common() {
 
     vars_defined "${vars[@]}"
 
-    [[ -n "$MYSQL_FAIL_FATAL" ]] && ! [[ "$MYSQL_FAIL_FATAL" =~ ^(true|false)$ ]] && fail "MYSQL_FAIL_FATAL value, when given, can be either [true] or [false]"
+    [[ -n "$MYSQL_FAIL_FATAL" ]] && ! is_true_false "$MYSQL_FAIL_FATAL" && fail "MYSQL_FAIL_FATAL value, when given, can be either [true] or [false]"
+    [[ -n "$ADD_NOTIF_TAIL" ]] && ! is_true_false "$ADD_NOTIF_TAIL" && fail "ADD_NOTIF_TAIL value, when given, can be either [true] or [false]"
 }
 
 
@@ -332,6 +345,17 @@ vars_defined() {
         val="$(eval echo "\$$i")" || fail "evaling [echo \"\$$i\"] failed w/ [$?]"
         [[ -z "$val" ]] && fail "[$i] is not defined"
     done
+}
+
+
+is_true_false() {
+    #local i
+
+    #i="$(tr '[:upper:]' '[:lower:]' <<< "$*")"
+    #[[ "$i" == 1 ]] && i=true
+    #[[ "$i" == 0 ]] && i=false
+
+    [[ "$*" =~ ^(true|false)$ ]]
 }
 
 
