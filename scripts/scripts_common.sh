@@ -42,8 +42,11 @@ stop_containers() {
     [[ "${#CONTAINERS[@]}" -eq 0 ]] && return 0  # no containers defined, return
 
     for c in "${CONTAINERS[@]}"; do
+        log "=> stopping container [$c]..."
         docker stop "$c" || fail "stopping container [$c] failed w/ [$?]"
     done
+
+    log "=> all containers stopped"
 
     return 0
 }
@@ -56,8 +59,11 @@ start_containers() {
 
     for (( idx=${#CONTAINERS[@]}-1 ; idx>=0 ; idx-- )); do
         c="${CONTAINERS[idx]}"
+        log "=> starting container [$c]..."
         docker start "$c" || fail "starting container [$c] failed w/ [$?]"
     done
+
+    log "=> all containers started"
 
     return 0
 }
