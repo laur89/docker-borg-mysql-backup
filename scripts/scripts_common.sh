@@ -3,7 +3,7 @@
 # common vars & functions
 
 readonly CONF_ROOT='/config'
-readonly SCRIPTS_ROOT="$CONF_ROOT/scripts"
+readonly SCRIPTS_ROOT="$CONF_ROOT/scripts"  # TODO: not used atm
 
 readonly CRON_FILE="$CONF_ROOT/crontab"
 readonly MSMTPRC="$CONF_ROOT/msmtprc"

@@ -169,7 +169,7 @@ do_backup() {
     pushd -- "$TMP" &> /dev/null || fail "unable to pushd into [$TMP]"  # cd there because files in $TMP are added without full path (to avoid "$TMP_ROOT" prefix in borg repo)
 
     # note! log files/types out _after_ pushd to $TMP, otherwise some files would not resolve
-    log "following files will be backed up:"
+    log "following ${#NODES_TO_BACK_UP[@]} files will be backed up:"
     for i in "${NODES_TO_BACK_UP[@]}"; do
         log "     - $i   (type: $(file_type "$i"))"
     done
