@@ -443,8 +443,8 @@ variables are not usable with `list`.
 
     arguments:
       -h                      show help and exit
-      -r                      operate on remote repo
-      -l                      operate on local repo
+      -r                      only delete from remote borg repo (remote-only)
+      -l                      only delete from local borg repo (local-only)
       -p ARCHIVE_PREFIX       delete archives with given prefix; same as providing
                               -B '--prefix ARCHIVE_PREFIX'
       -a ARCHIVE              archive name to delete; -p & -a are mutually exclusive

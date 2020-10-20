@@ -16,6 +16,8 @@ readonly usage="
       -h                      show help and exit
       -r                      operate on remote repo
       -l                      operate on local repo
+      -r                      only delete from remote borg repo (remote-only)
+      -l                      only delete from local borg repo (local-only)
       -p ARCHIVE_PREFIX       delete archives with given prefix; same as providing
                               -B '--prefix ARCHIVE_PREFIX'
       -a ARCHIVE              archive name to delete; -p & -a are mutually exclusive
@@ -43,13 +45,12 @@ _del_common() {
 
 # TODO: do not fail() if err code <=1?
 delete() {
+    if [[ "$REMOTE_ONLY" -ne 1 ]]; then
+        _del_common local "$LOCAL_REPO"  # no need to background
+    fi
 
-    if [[ "$LOC" -eq 1 ]]; then
-        _del_common local "$LOCAL_REPO"
-    elif [[ "$REM" -eq 1 ]]; then
-        _del_common remote "$REMOTE"
-    else
-        fail "need to select local or remote repo"
+    if [[ "$LOCAL_ONLY" -ne 1 ]]; then
+        _del_common remote "$REMOTE"  # no need to background
     fi
 }
 
@@ -59,13 +60,13 @@ validate_config() {
 
     declare -a vars
 
-    [[ "$REM" -eq 1 ]] && vars+=(REMOTE REMOTE_REPO)
-    [[ "$LOC" -eq 1 ]] && vars+=(LOCAL_REPO)
+    [[ "$LOCAL_ONLY" -ne 1 ]] && vars+=(REMOTE REMOTE_REPO)
+    [[ "$REMOTE_ONLY" -ne 1 ]] && vars+=(LOCAL_REPO)
 
     vars_defined "${vars[@]}"
 
-    [[ "$REMOTE_OR_LOCAL_OPT_COUNTER" -ne 1 ]] && fail "need to select whether to operate on local or remote repo"
-    [[ "$LOC" -eq 1 ]] && [[ ! -d "$LOCAL_REPO" || ! -w "$LOCAL_REPO" ]] && fail "[$LOCAL_REPO] does not exist or is not writable; missing mount?"
+    [[ "$REMOTE_OR_LOCAL_OPT_COUNTER" -gt 1 ]] && fail "-r & -l options are exclusive"
+    [[ "$REMOTE_ONLY" -ne 1 ]] && [[ ! -d "$LOCAL_REPO" || ! -w "$LOCAL_REPO" ]] && fail "[$LOCAL_REPO] does not exist or is not writable; missing mount?"
     [[ "$ARCHIVE_OR_PREFIX_OPT_COUNTER" -gt 1 ]] && fail "defining both archive prefix & full archive name are mutually exclusive"
 }
 
@@ -81,10 +82,10 @@ unset ARCHIVE ARCHIVE_PREFIX BORG_OPTS  # just in case
 
 while getopts "rlp:a:B:L:R:T:h" opt; do
     case "$opt" in
-        r) REM=1
+        r) REMOTE_ONLY=1
            let REMOTE_OR_LOCAL_OPT_COUNTER+=1
             ;;
-        l) LOC=1
+        l) LOCAL_ONLY=1
            let REMOTE_OR_LOCAL_OPT_COUNTER+=1
             ;;
         p) ARCHIVE_PREFIX="$OPTARG"
