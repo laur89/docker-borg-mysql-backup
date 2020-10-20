@@ -46,6 +46,8 @@ may also use it for error notifications (see above).
 Additionally, following bindings are _strongly_ recommended:
 `-v /host/borg-conf/.borg/cache:/root/.cache/borg`
 `-v /host/borg-conf/.borg/config:/root/.config/borg`
+You might want to change where borg conf & cache are located via
+`BORG_CONFIG_DIR` & `BORG_CACHE_DIR` env vars as described [in docs](https://borgbackup.readthedocs.io/en/stable/usage/general.html?highlight=BORG_CACHE_DIR#environment-variables)
 
 You might also wish to expose the logs:
 `-v /host/borg-conf/logs:/var/log`
@@ -539,4 +541,5 @@ variables are not usable with `delete`.
   - [velero](https://github.com/vmware-tanzu/velero)
   - [k8up](https://github.com/vshn/k8up) - based on restic
   - [stash](https://github.com/stashed/stash)
+- [web interface for borg](https://github.com/borgbackup/borgweb/)
 
