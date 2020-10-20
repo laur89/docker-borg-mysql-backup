@@ -7,7 +7,7 @@ readonly LOG="/var/log/${SELF}.log"
 JOB_ID="list-$$"
 
 readonly usage="
-    usage: $SELF [-h] [-rl] [-L LOCAL_REPO] [-R REMOTE] [-T REMOTE_REPO]
+    usage: $SELF [-h] [-rl] [-B BORG_OPTS] [-L LOCAL_REPO] [-R REMOTE] [-T REMOTE_REPO]
 
     List archives in a borg repository
 
@@ -15,6 +15,7 @@ readonly usage="
       -h                      show help and exit
       -r                      list remote borg repo
       -l                      list local borg repo
+      -B BORG_OPTS            additional borg params to pass to extract command
       -L LOCAL_REPO           overrides container env variable of same name
       -R REMOTE               remote connection; overrides env var of same name
       -T REMOTE_REPO          path to repo on remote host; overrides env var of same name
@@ -22,18 +23,16 @@ readonly usage="
 
 
 _list_common() {
-    local l_or_r repo extra_opts
+    local l_or_r repo
     local -
 
     set -o noglob
 
     l_or_r="$1"
     repo="$2"
-    extra_opts="$3"
 
     borg list --show-rc \
-        $BORG_EXTRA_OPTS \
-        $extra_opts \
+        $BORG_OPTS \
         "$repo" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || fail "listing $l_or_r repo [$repo] failed w/ [$?]"
 }
 
@@ -42,9 +41,9 @@ _list_common() {
 list_repos() {
 
     if [[ "$LOC" -eq 1 ]]; then
-        _list_common local "$LOCAL_REPO" "$BORG_LOCAL_EXTRA_OPTS"
+        _list_common local "$LOCAL_REPO"
     elif [[ "$REM" -eq 1 ]]; then
-        _list_common remote "$REMOTE" "$BORG_REMOTE_EXTRA_OPTS"
+        _list_common remote "$REMOTE"
     else
         fail "need to select local or remote repo"
     fi
@@ -72,13 +71,15 @@ NO_NOTIF=true  # do not notify errors
 source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_common.sh" | tee -a "$LOG"; exit 1; }
 REMOTE_OR_LOCAL_OPT_COUNTER=0
 
-while getopts "rlL:R:T:h" opt; do
+while getopts "rlB:L:R:T:h" opt; do
     case "$opt" in
         r) REM=1
            let REMOTE_OR_LOCAL_OPT_COUNTER+=1
             ;;
         l) LOC=1
            let REMOTE_OR_LOCAL_OPT_COUNTER+=1
+            ;;
+        B) BORG_OPTS="$OPTARG"
             ;;
         L) LOCAL_REPO="$OPTARG"  # overrides env var of same name
             ;;

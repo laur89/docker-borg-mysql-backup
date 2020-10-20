@@ -314,7 +314,7 @@ Note none of the data is
 copied/moved automatically - user is expected to carry this operation out on their own.
 Only db will be restored from a dump, given the option is provided to the script.
 
-    usage: restore [-h] [-d] [-c CONTAINERS] [-rl] [-L LOCAL_REPO]
+    usage: restore [-h] [-d] [-c CONTAINERS] [-rl] [-B BORG_OPTS] [-L LOCAL_REPO]
                    [-R REMOTE] [-T REMOTE_REPO] -O RESTORE_DIR -a ARCHIVE_NAME
     
     Restore data from borg archive
@@ -330,6 +330,7 @@ Only db will be restored from a dump, given the option is provided to the script
                               requires mounting the docker socket (-v /var/run/docker.sock:/var/run/docker.sock)
       -r                      restore from remote borg repo
       -l                      restore from local borg repo
+      -B BORG_OPTS            additional borg params to pass to extract command
       -L LOCAL_REPO           overrides container env variable of same name
       -R REMOTE               remote connection; overrides env var of same name
       -T REMOTE_REPO          path to repo on remote host; overrides env var of same name
@@ -386,13 +387,13 @@ env-var-configured value `/backup/repo`. Also note missing
 env variable `BORG_PASSPHRASE`, which will be required to be typed in manually.
 
 Note the `BORG_EXTRA_OPTS`, `BORG_LOCAL_EXTRA_OPTS`, `BORG_REMOTE_EXTRA_OPTS` env
-variables are still usable with `restore`.
+variables are not usable with `restore`.
 
 ### list.sh
 
 `list` script is for listing archives in a borg repo.
 
-    usage: list [-h] [-rl] [-L LOCAL_REPO] [-R REMOTE] [-T REMOTE_REPO]
+    usage: list [-h] [-rl] [-B BORG_OPTS] [-L LOCAL_REPO] [-R REMOTE] [-T REMOTE_REPO]
     
     List archives in a borg repository
     
@@ -400,6 +401,7 @@ variables are still usable with `restore`.
       -h                      show help and exit
       -r                      list remote borg repo
       -l                      list local borg repo
+      -B BORG_OPTS            additional borg params to pass to list command
       -L LOCAL_REPO           overrides container env variable of same name
       -R REMOTE               remote connection; overrides env var of same name
       -T REMOTE_REPO          path to repo on remote host; overrides env var of same name
@@ -419,17 +421,16 @@ variables are still usable with `restore`.
 ##### List the remote repository contents
 
     docker run -it --rm \
-        -e BORG_EXTRA_OPTS="--prefix my-prefix" \
         -e REMOTE=remoteuser@server.com \
         -e BORG_PASSPHRASE=borgrepopassword \
         -v /host/borg-conf:/config:ro \
         -v /host/borg-conf/.borg/cache:/root/.cache/borg \
         -v /host/borg-conf/.borg/config:/root/.config/borg \
         -v /host/borg-conf/logs:/var/log \
-           layr/borg-mysql-backup list.sh -r -T repo/location
+           layr/borg-mysql-backup list.sh -r -T repo/location -B '--prefix my-prefix'
 
 Note the `BORG_EXTRA_OPTS`, `BORG_LOCAL_EXTRA_OPTS`, `BORG_REMOTE_EXTRA_OPTS` env
-variables are still usable with `list`.
+variables are not usable with `list`.
 
 ### notif-test.sh
 
@@ -478,6 +479,6 @@ variables are still usable with `list`.
 - [vorta](https://github.com/borgbase/vorta) - mac & linux desktop client; by borgbase
 - for backups from k8s:
   - [velero](https://github.com/vmware-tanzu/velero)
-  - [k8up](https://github.com/vshn/k8up)
+  - [k8up](https://github.com/vshn/k8up) - based on restic
   - [stash](https://github.com/stashed/stash)
 
