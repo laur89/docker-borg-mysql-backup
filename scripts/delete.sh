@@ -1,20 +1,24 @@
 #!/usr/bin/env bash
 #
-# lists contents of local or remote archive
+# delete archive or whole repository
 
 readonly SELF="${0##*/}"
 readonly LOG="/var/log/${SELF}.log"
-JOB_ID="list-$$"
+JOB_ID="delete-$$"
 
 readonly usage="
-    usage: $SELF [-h] [-rl] [-B BORG_OPTS] [-L LOCAL_REPO] [-R REMOTE] [-T REMOTE_REPO]
+    usage: $SELF [-h] [-rl] [-p ARCHIVE_PREFIX] [-a ARCHIVE] [-B BORG_OPTS]
+             [-L LOCAL_REPO] [-R REMOTE] [-T REMOTE_REPO]
 
-    List archives in a borg repository
+    Delete whole borg repository or archives in it
 
     arguments:
       -h                      show help and exit
-      -r                      list remote borg repo
-      -l                      list local borg repo
+      -r                      operate on remote repo
+      -l                      operate on local repo
+      -p ARCHIVE_PREFIX       delete archives with given prefix; same as providing
+                              -B '--prefix ARCHIVE_PREFIX'
+      -a ARCHIVE              archive name to delete; -p & -a are mutually exclusive
       -B BORG_OPTS            additional borg params to pass to extract command
       -L LOCAL_REPO           overrides container env variable of same name
       -R REMOTE               remote connection; overrides env var of same name
@@ -22,7 +26,7 @@ readonly usage="
 "
 
 
-_list_common() {
+_del_common() {
     local l_or_r repo
     local -
 
@@ -31,19 +35,19 @@ _list_common() {
     l_or_r="$1"
     repo="$2"
 
-    borg list --show-rc \
+    borg delete --stats --show-rc \
         $BORG_OPTS \
-        "$repo" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || fail "listing $l_or_r repo [$repo] failed w/ [$?]"
+        "${repo}${ARCHIVE:+::$ARCHIVE}" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || fail "delete operation on $l_or_r repo [$repo] failed w/ [$?]"
 }
 
 
 # TODO: do not fail() if err code <=1?
-list_repos() {
+delete() {
 
     if [[ "$LOC" -eq 1 ]]; then
-        _list_common local "$LOCAL_REPO"
+        _del_common local "$LOCAL_REPO"
     elif [[ "$REM" -eq 1 ]]; then
-        _list_common remote "$REMOTE"
+        _del_common remote "$REMOTE"
     else
         fail "need to select local or remote repo"
     fi
@@ -60,8 +64,9 @@ validate_config() {
 
     vars_defined "${vars[@]}"
 
-    [[ "$REMOTE_OR_LOCAL_OPT_COUNTER" -ne 1 ]] && fail "need to select whether to list local or remote repo"
+    [[ "$REMOTE_OR_LOCAL_OPT_COUNTER" -ne 1 ]] && fail "need to select whether to operate on local or remote repo"
     [[ "$LOC" -eq 1 ]] && [[ ! -d "$LOCAL_REPO" || ! -w "$LOCAL_REPO" ]] && fail "[$LOCAL_REPO] does not exist or is not writable; missing mount?"
+    [[ "$ARCHIVE_OR_PREFIX_OPT_COUNTER" -gt 1 ]] && fail "defining both archive prefix & full archive name are mutually exclusive"
 }
 
 # ================
@@ -70,16 +75,23 @@ validate_config() {
 NO_NOTIF=true  # do not notify errors
 source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_common.sh" | tee -a "$LOG"; exit 1; }
 REMOTE_OR_LOCAL_OPT_COUNTER=0
+ARCHIVE_OR_PREFIX_OPT_COUNTER=0
 
-unset BORG_OPTS  # just in case
+unset ARCHIVE ARCHIVE_PREFIX BORG_OPTS  # just in case
 
-while getopts "rlB:L:R:T:h" opt; do
+while getopts "rlp:a:B:L:R:T:h" opt; do
     case "$opt" in
         r) REM=1
            let REMOTE_OR_LOCAL_OPT_COUNTER+=1
             ;;
         l) LOC=1
            let REMOTE_OR_LOCAL_OPT_COUNTER+=1
+            ;;
+        p) ARCHIVE_PREFIX="$OPTARG"
+           let ARCHIVE_OR_PREFIX_OPT_COUNTER+=1
+            ;;
+        a) ARCHIVE="$OPTARG"
+           let ARCHIVE_OR_PREFIX_OPT_COUNTER+=1
             ;;
         B) BORG_OPTS="$OPTARG"
             ;;
@@ -100,7 +112,9 @@ done
 validate_config
 [[ -n "$REMOTE" ]] && add_remote_to_known_hosts_if_missing "$REMOTE"
 readonly REMOTE+=":$REMOTE_REPO"  # define after validation
-list_repos
+
+[[ -n "$ARCHIVE_PREFIX" ]] && BORG_OPTS+=" --prefix $ARCHIVE_PREFIX"
+delete
 
 exit 0
 

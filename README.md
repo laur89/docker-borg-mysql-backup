@@ -5,7 +5,7 @@ This image is mainly intended for backing up mysql dumps to local and/or remote
 Other files/dirs may be included in the backup, and database dumps can be excluded
 altogether.
 
-The container features `backup`, `restore`, `list` and `notif-test` scripts that can
+The container features `backup`, `restore`, `list`, `delete` and `notif-test` scripts that can
 either be ran as one-off jobs or by cron - latter being the preferred method for `backup`.
 
 For cron and/or remote borg usage, you also need to mount container configuration
@@ -140,7 +140,7 @@ You should be able to access your offsite backups from _any_ system.
 
 ## Script usage
 
-Container incorporates `backup`, `restore`, `list` and `notif-test` scripts.
+Container incorporates `backup`, `restore`, `list`, `delete` and `notif-test` scripts.
 
 ### backup.sh
 
@@ -431,6 +431,64 @@ variables are not usable with `restore`.
 
 Note the `BORG_EXTRA_OPTS`, `BORG_LOCAL_EXTRA_OPTS`, `BORG_REMOTE_EXTRA_OPTS` env
 variables are not usable with `list`.
+
+### delete.sh
+
+`delete` script is for deleting archives in a borg repo (or whole repo itself)
+
+    usage: delete [-h] [-rl] [-p ARCHIVE_PREFIX] [-a ARCHIVE] [-B BORG_OPTS]
+             [-L LOCAL_REPO] [-R REMOTE] [-T REMOTE_REPO]
+
+    Delete whole borg repository or archives in it
+
+    arguments:
+      -h                      show help and exit
+      -r                      operate on remote repo
+      -l                      operate on local repo
+      -p ARCHIVE_PREFIX       delete archives with given prefix; same as providing
+                              -B '--prefix ARCHIVE_PREFIX'
+      -a ARCHIVE              archive name to delete; -p & -a are mutually exclusive
+      -B BORG_OPTS            additional borg params to pass to extract command
+      -L LOCAL_REPO           overrides container env variable of same name
+      -R REMOTE               remote connection; overrides env var of same name
+      -T REMOTE_REPO          path to repo on remote host; overrides env var of same name
+
+#### Usage examples
+
+##### Delete the local archives starting with 'prefix-HOST'
+
+    docker run -it --rm \
+        -e BORG_PASSPHRASE=borgrepopassword \
+        -v /host/backup:/backup \
+        -v /host/borg-conf/.borg/cache:/root/.cache/borg \
+        -v /host/borg-conf/.borg/config:/root/.config/borg \
+        -v /host/borg-conf/logs:/var/log \
+           layr/borg-mysql-backup delete.sh -l -p 'prefix-HOST'
+
+##### Delete a specific archive from local repository
+
+    docker run -it --rm \
+        -e BORG_PASSPHRASE=borgrepopassword \
+        -v /host/backup:/backup \
+        -v /host/borg-conf/.borg/cache:/root/.cache/borg \
+        -v /host/borg-conf/.borg/config:/root/.config/borg \
+        -v /host/borg-conf/logs:/var/log \
+           layr/borg-mysql-backup delete.sh -l -a 'prefix-HOST-timestamp'
+
+##### Delete the contents of a whole remote repository 
+
+    docker run -it --rm \
+        -e REMOTE=remoteuser@server.com \
+        -e BORG_PASSPHRASE=borgrepopassword \
+        -v /host/borg-conf:/config:ro \
+        -v /host/borg-conf/.borg/cache:/root/.cache/borg \
+        -v /host/borg-conf/.borg/config:/root/.config/borg \
+        -v /host/borg-conf/logs:/var/log \
+           layr/borg-mysql-backup delete.sh -r -T repo/location
+
+Note the `BORG_EXTRA_OPTS`, `BORG_LOCAL_EXTRA_OPTS`, `BORG_REMOTE_EXTRA_OPTS` env
+variables are not usable with `delete`.
+
 
 ### notif-test.sh
 

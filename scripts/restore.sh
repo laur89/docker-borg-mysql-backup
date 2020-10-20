@@ -136,6 +136,8 @@ NO_NOTIF=true  # do not notify errors
 source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_common.sh" | tee -a "$LOG"; exit 1; }
 REMOTE_OR_LOCAL_OPT_COUNTER=0
 
+unset BORG_OPTS  # just in case
+
 while getopts "dc:rlB:L:R:T:O:a:h" opt; do
     case "$opt" in
         d) RESTORE_DB=1
