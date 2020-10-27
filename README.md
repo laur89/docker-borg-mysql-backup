@@ -163,7 +163,8 @@ as a one-off command for a single backup.
       -c CONTAINERS           space separated container names to stop for the backup process;
                               requires mounting the docker socket (-v /var/run/docker.sock:/var/run/docker.sock);
                               note containers will be stopped in given order; after backup
-                              completion, containers are started in reverse order;
+                              completion, containers are started in reverse order; only containers
+                              that were stopped by the script will be re-started afterwards
       -r                      only back to remote borg repo (remote-only)
       -l                      only back to local borg repo (local-only)
       -P BORG_PRUNE_OPTS      overrides container env variable BORG_PRUNE_OPTS; only required when

@@ -27,6 +27,8 @@ CURL_FLAGS=(
     --connect-timeout 3
     -s -S --fail -L
 )
+declare -A CONTAINER_TO_STATE=()
+declare -a CONTAINERS_TO_START=()  # list of containers that were stopped by this script and should be started back up upon completion
 
 export BORG_RSH='ssh -oBatchMode=yes'  # https://borgbackup.readthedocs.io/en/stable/usage/notes.html#ssh-batch-mode
 
@@ -42,8 +44,13 @@ stop_containers() {
     [[ "${#CONTAINERS[@]}" -eq 0 ]] && return 0  # no containers defined, return
 
     for c in "${CONTAINERS[@]}"; do
-        log "=> stopping container [$c]..."
-        docker stop "$c" || fail "stopping container [$c] failed w/ [$?]"
+        if [[ "${CONTAINER_TO_STATE[$c]}" == true ]]; then
+            log "=> stopping container [$c]..."
+            docker stop "$c" || fail "stopping container [$c] failed w/ [$?]"
+            CONTAINERS_TO_START+=("$c")
+        else
+            log "=> container [$c] already stopped"
+        fi
     done
 
     log "=> all containers stopped"
@@ -55,10 +62,11 @@ stop_containers() {
 start_containers() {
     local c idx
 
-    [[ "${#CONTAINERS[@]}" -eq 0 ]] && return 0  # no containers defined, return
+    [[ "${#CONTAINERS_TO_START[@]}" -eq 0 ]] && return 0  # no containers defined, return
 
-    for (( idx=${#CONTAINERS[@]}-1 ; idx>=0 ; idx-- )); do
-        c="${CONTAINERS[idx]}"
+    log "going to start following containers that were previously stopped by this job: [${CONTAINERS_TO_START[*]}]"
+    for (( idx=${#CONTAINERS_TO_START[@]}-1 ; idx>=0 ; idx-- )); do
+        c="${CONTAINERS_TO_START[idx]}"
         log "=> starting container [$c]..."
         docker start "$c" || fail "starting container [$c] failed w/ [$?]"
     done
@@ -341,6 +349,27 @@ validate_config_common() {
 
     [[ -n "$MYSQL_FAIL_FATAL" ]] && ! is_true_false "$MYSQL_FAIL_FATAL" && fail "MYSQL_FAIL_FATAL value, when given, can be either [true] or [false]"
     [[ -n "$ADD_NOTIF_TAIL" ]] && ! is_true_false "$ADD_NOTIF_TAIL" && fail "ADD_NOTIF_TAIL value, when given, can be either [true] or [false]"
+
+    validate_containers
+}
+
+
+# validate valid container names have been given
+# and store their current running state globally
+validate_containers() {
+    local c running
+
+    [[ "${#CONTAINERS[@]}" -eq 0 ]] && return 0
+
+    for c in "${CONTAINERS[@]}"; do
+        running="$(docker container inspect -f '{{.State.Running}}' "$c")"
+        if [[ "$?" -ne 0 ]]; then
+            err "container [$c] inspection failed - does the container exist?"
+        else
+            is_true_false "$running" || err "container [$c] inspection result not true|false: [$running]"
+            CONTAINER_TO_STATE[$c]="$running"
+        fi
+    done
 }
 
 
