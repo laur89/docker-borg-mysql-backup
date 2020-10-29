@@ -7,7 +7,9 @@ readonly LOG="/var/log/${SELF}.log"
 JOB_ID="list-$$"
 
 readonly usage="
-    usage: $SELF [-h] [-rl] [-B BORG_OPTS] [-L LOCAL_REPO] [-R REMOTE] [-T REMOTE_REPO]
+    usage: $SELF [-h] [-rl] [-p ARCHIVE_PREFIX] [-B BORG_OPTS] [-L LOCAL_REPO]
+             [-R REMOTE] [-T REMOTE_REPO]
+
 
     List archives in a borg repository
 
@@ -15,6 +17,8 @@ readonly usage="
       -h                      show help and exit
       -r                      list remote borg repo
       -l                      list local borg repo
+      -p ARCHIVE_PREFIX       list archives with given prefix; same as providing
+                              -B '--prefix ARCHIVE_PREFIX'
       -B BORG_OPTS            additional borg params to pass to extract command
       -L LOCAL_REPO           overrides container env variable of same name
       -R REMOTE               remote connection; overrides env var of same name
@@ -71,15 +75,17 @@ NO_NOTIF=true  # do not notify errors
 source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_common.sh" | tee -a "$LOG"; exit 1; }
 REMOTE_OR_LOCAL_OPT_COUNTER=0
 
-unset BORG_OPTS  # just in case
+unset ARCHIVE_PREFIX BORG_OPTS  # just in case
 
-while getopts "rlB:L:R:T:h" opt; do
+while getopts "rlp:B:L:R:T:h" opt; do
     case "$opt" in
         r) REM=1
            let REMOTE_OR_LOCAL_OPT_COUNTER+=1
             ;;
         l) LOC=1
            let REMOTE_OR_LOCAL_OPT_COUNTER+=1
+            ;;
+        p) ARCHIVE_PREFIX="$OPTARG"
             ;;
         B) BORG_OPTS="$OPTARG"
             ;;
@@ -100,6 +106,8 @@ done
 validate_config
 [[ -n "$REMOTE" ]] && add_remote_to_known_hosts_if_missing "$REMOTE"
 readonly REMOTE+=":$REMOTE_REPO"  # define after validation
+
+[[ -n "$ARCHIVE_PREFIX" ]] && BORG_OPTS+=" --prefix $ARCHIVE_PREFIX"
 list_repos
 
 exit 0

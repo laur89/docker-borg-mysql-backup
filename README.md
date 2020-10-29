@@ -396,7 +396,8 @@ variables are not usable with `restore`.
 
 `list` script is for listing archives in a borg repo.
 
-    usage: list [-h] [-rl] [-B BORG_OPTS] [-L LOCAL_REPO] [-R REMOTE] [-T REMOTE_REPO]
+    usage: list [-h] [-rl] [-p ARCHIVE_PREFIX] [-B BORG_OPTS] [-L LOCAL_REPO]
+             [-R REMOTE] [-T REMOTE_REPO]
     
     List archives in a borg repository
     
@@ -404,6 +405,8 @@ variables are not usable with `restore`.
       -h                      show help and exit
       -r                      list remote borg repo
       -l                      list local borg repo
+      -p ARCHIVE_PREFIX       list archives with given prefix; same as providing
+                              -B '--prefix ARCHIVE_PREFIX'
       -B BORG_OPTS            additional borg params to pass to list command
       -L LOCAL_REPO           overrides container env variable of same name
       -R REMOTE               remote connection; overrides env var of same name
