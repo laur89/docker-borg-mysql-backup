@@ -150,8 +150,8 @@ Container incorporates `backup`, `restore`, `list`, `delete` and `notif-test` sc
 as a one-off command for a single backup.
 
     usage: backup [-h] [-d MYSQL_DBS] [-c CONTAINERS] [-rl]
-                  [-P BORG_PRUNE_OPTS] [-B|-Z BORG_EXTRA_OPTS] [-L LOCAL_REPO]
-                  [-e ERR_NOTIF] [-A SMTP_ACCOUNT] [-D MYSQL_FAIL_FATAL]
+                  [-P BORG_PRUNE_OPTS] [-B|-Z BORG_EXTRA_OPTS] [-E EXCLUDE_PATHS]
+                  [-L LOCAL_REPO] [-e ERR_NOTIF] [-A SMTP_ACCOUNT] [-D MYSQL_FAIL_FATAL]
                   [-R REMOTE] [-T REMOTE_REPO] [-H HC_ID] -p PREFIX  [NODES_TO_BACK_UP...]
     
     Create new archive
@@ -173,6 +173,8 @@ as a one-off command for a single backup.
                               the BORG_EXTRA_OPTS env var, but extends it;
       -Z BORG_EXTRA_OPTS      additional borg params; note it _overrides_
                               the BORG_EXTRA_OPTS env var;
+      -E EXCLUDE_PATHS        space separated paths to exclude from backup; [-E 'p1 p2']
+                              would be equivalent to [-B '-e p1 -e p2']
       -L LOCAL_REPO           overrides container env variable of same name;
       -e ERR_NOTIF            space separated error notification methods; overrides
                               env var of same name;
