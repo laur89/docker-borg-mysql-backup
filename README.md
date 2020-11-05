@@ -58,9 +58,9 @@ the changes to get picked up.
 
 ## Limitations/pitfalls
 
-The `-c` (containers) & `-d` (db names) options of `backup.sh` accept space
-separated list of names; make sure none of those parameters contain any whitespace
-nor shell-expandable characters (eg `*`). We could change the api to accept multiple
+The `-c` (containers), `-d` (db names) & `-E` (exclude path patterns) options of
+`backup.sh` accept space separated list of names; make sure none of those parameters
+contain any whitespace. We could change the api to accept multiple
 instances of -c & -d flags, but the author finds current implementation easier to
 read & use, and is willing to accept these limitations.
 
