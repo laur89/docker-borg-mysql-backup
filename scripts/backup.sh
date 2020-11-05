@@ -105,7 +105,6 @@ dump_db() {
 }
 
 
-# TODO: should we skip prune if create exits w/ code >=2?
 _backup_common() {
     local l_or_r repo extra_opts start_timestamp err_code err_
     local -
@@ -126,7 +125,18 @@ _backup_common() {
         "${NODES_TO_BACK_UP[@]}" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || { err "$l_or_r borg create exited w/ [$?]"; err_code=1; err_=failed; }
     log "=> $l_or_r backup ${err_:-succeeded} in $(( $(date +%s) - start_timestamp )) seconds"
 
-    unset err_  # reset
+    return "${err_code:-0}"
+}
+
+
+_prune_common() {
+    local l_or_r repo start_timestamp err_code err_
+    local -
+
+    set -o noglob
+
+    l_or_r="$1"
+    repo="$2"
 
     log "=> starting $l_or_r prune..."
     start_timestamp="$(date +%s)"
@@ -151,9 +161,21 @@ backup_remote() {
 }
 
 
+prune_local() {
+    _prune_common local "${LOCAL_REPO}"
+}
+
+
+prune_remote() {
+    _prune_common remote "${REMOTE}"
+}
+
+
 # backup selected data
 # note the borg processes are executed in a sub-shell, so local & remote backup could be
 # run in parallel
+#
+# TODO: should we skip prune if create exits w/ code >=2?
 do_backup() {
     local started_pids start_timestamp i err_
 
@@ -190,7 +212,29 @@ do_backup() {
     done
 
     popd &> /dev/null
-    log "=> Backup finished, duration $(( $(date +%s) - start_timestamp )) seconds${err_:+; at least one step failed or produced warning}"
+
+    # backup is done, we can go ahead and start the containers while pruning:
+    # TODO: should start_containers() be called when we errored?
+    start_containers "${CONTAINERS_TO_START[@]}" &
+    CONTAINERS_TO_START=()  # empty so no secondary start attempts would be made after
+
+    started_pids=()  # reset
+
+    if [[ "$REMOTE_ONLY" -ne 1 ]]; then
+        prune_local &
+        started_pids+=("$!")
+    fi
+
+    if [[ "$LOCAL_ONLY" -ne 1 ]]; then
+        prune_remote &
+        started_pids+=("$!")
+    fi
+
+    for i in "${started_pids[@]}"; do
+        wait "$i" || err_=TRUE
+    done
+
+    log "=> Backup+prune finished, duration $(( $(date +%s) - start_timestamp )) seconds${err_:+; at least one step failed or produced warning}"
 
     return 0
 }
@@ -270,13 +314,11 @@ create_dirs() {
 }
 
 
-# TODO: should start_containers() be called when we errored? or when -h (help) was called?
 cleanup() {
     [[ -d "$TMP" ]] && rm -rf -- "$TMP"
     [[ -d "$TMP_ROOT" ]] && is_dir_empty "$TMP_ROOT" && rm -rf -- "$TMP_ROOT"
 
-    # make sure stopped containers are started on exit:
-    start_containers
+    start_containers "${CONTAINERS_TO_START[@]}"  # do not background here
 
     # TODO: shouldn't we ping healthcheck the very first thing in cleanup()? ie it should fire regardles of the outcome of other calls in here
     ping_healthcheck
@@ -292,6 +334,9 @@ source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_com
 REMOTE_OR_LOCAL_OPT_COUNTER=0
 BORG_OTPS_COUNTER=0
 
+unset MYSQL_DB ARCHIVE_PREFIX CONTAINERS HC_ID  # just in case
+
+# TODO: add -E opt to provide list of borg-excluded nodes for convenience
 while getopts "d:p:c:rlP:B:Z:L:e:A:D:R:T:hH:" opt; do
     case "$opt" in
         d) declare -ar MYSQL_DB=($OPTARG)

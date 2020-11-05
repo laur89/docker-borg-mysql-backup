@@ -27,7 +27,7 @@ CURL_FLAGS=(
     --connect-timeout 3
     -s -S --fail -L
 )
-declare -A CONTAINER_TO_STATE=()
+declare -A CONTAINER_TO_RUNNING_STATE=()  # container_name->is_running(bool) mappings at the beginning of script
 declare -a CONTAINERS_TO_START=()  # list of containers that were stopped by this script and should be started back up upon completion
 
 export BORG_RSH='ssh -oBatchMode=yes'  # https://borgbackup.readthedocs.io/en/stable/usage/notes.html#ssh-batch-mode
@@ -43,8 +43,9 @@ stop_containers() {
 
     [[ "${#CONTAINERS[@]}" -eq 0 ]] && return 0  # no containers defined, return
 
+    log "going to stop following containers before starting with backup job: [${CONTAINERS[*]}]"
     for c in "${CONTAINERS[@]}"; do
-        if [[ "${CONTAINER_TO_STATE[$c]}" == true ]]; then
+        if [[ "${CONTAINER_TO_RUNNING_STATE[$c]}" == true ]]; then
             log "=> stopping container [$c]..."
             docker stop "$c" || fail "stopping container [$c] failed w/ [$?]"
             CONTAINERS_TO_START+=("$c")
@@ -59,24 +60,27 @@ stop_containers() {
 }
 
 
+# caller might be backgrounding!
 start_containers() {
-    local c idx
+    local containers c idx err_
 
-    [[ "${#CONTAINERS_TO_START[@]}" -eq 0 ]] && return 0  # no containers defined, return
+    containers=("$@")
+    [[ "${#containers[@]}" -eq 0 ]] && return 0  # no containers given, return
 
-    log "going to start following containers that were previously stopped by this job: [${CONTAINERS_TO_START[*]}]"
-    for (( idx=${#CONTAINERS_TO_START[@]}-1 ; idx>=0 ; idx-- )); do
-        c="${CONTAINERS_TO_START[idx]}"
+    log "going to start following containers that were previously stopped by this job: [${containers[*]}]"
+    for (( idx=${#containers[@]}-1 ; idx>=0 ; idx-- )); do
+        c="${containers[idx]}"
         log "=> starting container [$c]..."
-        docker start "$c" || fail "starting container [$c] failed w/ [$?]"
+        docker start "$c" || { err "starting container [$c] failed w/ [$?]"; err_='at least one container failed to start'; }
     done
 
-    log "=> all containers started"
+    log "=> ${err_:-all containers started}"
 
     return 0
 }
 
 
+# dir existence needs to be verified by the caller!
 is_dir_empty() {
     local dir
 
@@ -318,6 +322,8 @@ add_remote_to_known_hosts_if_missing() {
 }
 
 
+# note this validation can't be called for anything else than backup script;
+# eg listing/extracting shouldn't validate existence of SMTP_* env vars.
 validate_config_common() {
     local i vars
 
@@ -367,7 +373,7 @@ validate_containers() {
             err "container [$c] inspection failed - does the container exist?"
         else
             is_true_false "$running" || err "container [$c] inspection result not true|false: [$running]"
-            CONTAINER_TO_STATE[$c]="$running"
+            CONTAINER_TO_RUNNING_STATE[$c]="$running"
         fi
     done
 }
