@@ -30,9 +30,6 @@ readonly usage="
 
 _del_common() {
     local l_or_r repo
-    local -
-
-    set -o noglob
 
     l_or_r="$1"
     repo="$2"

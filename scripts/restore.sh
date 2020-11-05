@@ -55,9 +55,6 @@ restore_db() {
 
 _restore_common() {
     local l_or_r repo start_timestamp
-    local -
-
-    set -o noglob
 
     l_or_r="$1"
     repo="$2"

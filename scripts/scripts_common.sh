@@ -2,6 +2,8 @@
 #
 # common vars & functions
 
+set -o noglob
+
 readonly CONF_ROOT='/config'
 readonly SCRIPTS_ROOT="$CONF_ROOT/scripts"  # TODO: not used atm
 

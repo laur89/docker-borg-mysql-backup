@@ -62,9 +62,6 @@ expand_nodes_to_back_up() {
 # dumps selected db(s) to $TMP
 dump_db() {
     local output_filename dbs dbs_log err_code start_timestamp err_
-    local -
-
-    set -o noglob
 
     [[ "${#MYSQL_DB[@]}" -eq 0 ]] && return 0  # no db specified, meaning db dump not required
 
@@ -107,9 +104,6 @@ dump_db() {
 
 _backup_common() {
     local l_or_r repo extra_opts start_timestamp err_code err_
-    local -
-
-    set -o noglob
 
     l_or_r="$1"
     repo="$2"
@@ -131,9 +125,6 @@ _backup_common() {
 
 _prune_common() {
     local l_or_r repo start_timestamp err_code err_
-    local -
-
-    set -o noglob
 
     l_or_r="$1"
     repo="$2"
@@ -336,7 +327,6 @@ BORG_OTPS_COUNTER=0
 
 unset MYSQL_DB ARCHIVE_PREFIX CONTAINERS HC_ID  # just in case
 
-# TODO: add -E opt to provide list of borg-excluded nodes for convenience
 while getopts "d:p:c:rlP:B:Z:L:e:A:D:R:T:hH:" opt; do
     case "$opt" in
         d) declare -ar MYSQL_DB=($OPTARG)
