@@ -49,7 +49,7 @@ restore_db() {
             --host="${MYSQL_HOST}" \
             --port="${MYSQL_PORT}" \
             --user="${MYSQL_USER}" \
-            --password="${MYSQL_PASS}" < "${sql_files[@]}" || fail "restoring db from [${sql_files[*]}] failed w/ [$?]"
+            --password="${MYSQL_PASS}" < "${sql_files[@]}" 2> >(tee -a "$LOG" >&2) || fail "restoring db from [${sql_files[*]}] failed w/ [$?]"
 }
 
 
