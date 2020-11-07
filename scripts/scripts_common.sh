@@ -7,7 +7,10 @@ set -o noglob
 readonly CONF_ROOT='/config'
 readonly SCRIPTS_ROOT="$CONF_ROOT/scripts"  # TODO: not used atm
 
+[[ "$SEPARATOR" == space ]] && SEPARATOR=' '
+[[ "$SEPARATOR" == comma ]] && SEPARATOR=','
 readonly SEPARATOR="${SEPARATOR:-,}"  # default to comma
+
 readonly CRON_FILE="$CONF_ROOT/crontab"
 readonly MSMTPRC="$CONF_ROOT/msmtprc"
 readonly LOGROTATE_CONF="$CONF_ROOT/logrotate.conf"
