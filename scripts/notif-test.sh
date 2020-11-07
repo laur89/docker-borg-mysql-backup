@@ -14,7 +14,7 @@ readonly usage="
 
     arguments:
       -p ARCHIVE_PREFIX
-      -H HOST_NAME
+      -H HOST_ID
       -s NOTIF_SUBJECT
       -T MAIL_TO
       -F MAIL_FROM
@@ -34,7 +34,7 @@ while getopts "p:H:s:T:F:A:m:e:fh" opt; do
     case "$opt" in
         p) ARCHIVE_PREFIX="$OPTARG"
             ;;
-        H) HOST_NAME="$OPTARG"  # overrides env var of same name
+        H) HOST_ID="$OPTARG"  # overrides env var of same name
             ;;
         s) NOTIF_SUBJECT="$OPTARG"  # overrides env var of same name
             ;;
@@ -64,7 +64,7 @@ log "ERR_NOTIF: [$ERR_NOTIF]"
 
 [[ -z "$ARCHIVE_PREFIX" ]] && ARCHIVE_PREFIX='dummy-prefix'
 JOB_ID="${ARCHIVE_PREFIX}-$$"
-[[ -z "$HOST_NAME" ]] && HOST_NAME='dummy-host'
+[[ -z "$HOST_ID" ]] && HOST_ID='dummy-host'
 
 [[ -z "$MSG" ]] && MSG='Test error message'
 

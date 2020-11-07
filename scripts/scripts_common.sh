@@ -306,7 +306,7 @@ hcio() {
 
     curl "${CURL_FLAGS[@]}" \
         --retry 5 \
-        --user-agent "$HOST_NAME" \
+        --user-agent "$HOST_ID" \
         --data-raw "$(expand_placeholders "${body:-NO MESSAGE BODY PROVIDED}" "$is_fail")" \
         "$url" || err -N "pinging healthchecks.io endpoint [$url] failed w/ [$?]"
 }
@@ -413,7 +413,7 @@ expand_placeholders() {
     m="$1"
     is_fatal="${2:-false}"  # true|false; indicates whether given error caused job to abort/exit
 
-    m="$(sed "s/{h}/$HOST_NAME/g" <<< "$m")"
+    m="$(sed "s/{h}/$HOST_ID/g" <<< "$m")"
     m="$(sed "s/{p}/$ARCHIVE_PREFIX/g" <<< "$m")"
     m="$(sed "s/{i}/$JOB_ID/g" <<< "$m")"
     m="$(sed "s/{f}/$is_fatal/g" <<< "$m")"
@@ -464,7 +464,7 @@ ping_healthcheck() {
 
     curl "${CURL_FLAGS[@]}" \
         --retry 5 \
-        --user-agent "$HOST_NAME" \
+        --user-agent "$HOST_ID" \
         "$HC_URL" || err "pinging healthcheck service at [$HC_URL] failed w/ [$?]"
 }
 

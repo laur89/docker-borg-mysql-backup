@@ -79,7 +79,7 @@ You should be able to access your offsite backups from _any_ system.
       mysql env variables are only required if you intend to back up databases
 
 
-    HOST_NAME               hostname to include in the borg archive name
+    HOST_ID                 host identifier to include in the borg archive name
     REMOTE                  remote connection - user & host; eg for rsync.net
                             it'd be something like '12345@ch-s010.rsync.net'
                             optional - can be omitted when only backing up to local
@@ -180,7 +180,7 @@ as a one-off command for a single backup.
                               placeholder in HC_URL; may also provide new full url to call
                               instead, overriding the env var HC_URL
       -p PREFIX               borg archive name prefix. note that the full archive name already
-                              contains HOST_NAME env var and timestamp, so omit those.
+                              contains HOST_ID env var and timestamp, so omit those.
       NODES_TO_BACK_UP...     last arguments to backup.sh are files&directories to be
                               included in the backup
 
@@ -193,7 +193,7 @@ as a one-off command for a single backup.
         -e MYSQL_PORT=27017 \
         -e MYSQL_USER=admin \
         -e MYSQL_PASS=password \
-        -e HOST_NAME=hostname-to-use-in-archive-prefix \
+        -e HOST_ID=hostname-to-use-in-archive-prefix \
         -e REMOTE=remoteuser@server.com \
         -e REMOTE_REPO=repo/location \
         -e LOCAL_REPO=/backup/repo \
@@ -220,7 +220,7 @@ as a one-off command for a single backup.
         -e MYSQL_PORT=27017 \
         -e MYSQL_USER=admin \
         -e MYSQL_PASS=password \
-        -e HOST_NAME=hostname-to-use-in-archive-prefix \
+        -e HOST_ID=hostname-to-use-in-archive-prefix \
         -e REMOTE=remoteuser@server.com \
         -e REMOTE_REPO=repo/location \
         -e LOCAL_REPO=/backup/repo \
@@ -242,7 +242,7 @@ as a one-off command for a single backup.
 ##### Back up directories /app1 & /app2 every 6 hours to local borg repo (ie remote is excluded)
 
     docker run -d \
-        -e HOST_NAME=hostname-to-use-in-archive-prefix \
+        -e HOST_ID=hostname-to-use-in-archive-prefix \
         -e LOCAL_REPO=/backup/repo \
         -e BORG_PASSPHRASE=borgrepopassword \
         -e BORG_PRUNE_OPTS='--keep-daily=7 --keep-weekly=4' \
@@ -284,7 +284,7 @@ errors via email.
 ##### Back up directory /emby once to remote borg repo (ie local is excluded)
 
     docker run -it --rm \
-        -e HOST_NAME=hostname-to-use-in-archive-prefix \
+        -e HOST_ID=hostname-to-use-in-archive-prefix \
         -e REMOTE=remoteuser@server.com \
         -e REMOTE_REPO=repo/location \
         -e BORG_PASSPHRASE=borgrepopassword \
@@ -502,7 +502,7 @@ variables are not usable with `delete`.
 
     arguments:
       -p ARCHIVE_PREFIX
-      -H HOST_NAME
+      -H HOST_ID
       -s NOTIF_SUBJECT
       -T MAIL_TO
       -F MAIL_FROM
@@ -523,7 +523,7 @@ variables are not usable with `delete`.
         -e SMTP_USER='your.google.username' \
         -e SMTP_PASS='your-google-app-password-you-created-for-this' \
         -e ERR_NOTIF='mail pushover' \
-        -e HOST_NAME='our-hostname' \
+        -e HOST_ID='our-hostname' \
            layr/borg-mysql-backup notif-test.sh -p 'my-prefix' [-f]
 
 

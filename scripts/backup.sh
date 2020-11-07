@@ -42,7 +42,7 @@ readonly usage="
                               placeholder in HC_URL; may also provide new full url to call
                               instead, overriding the env var HC_URL
       -p PREFIX               borg archive name prefix. note that the full archive name already
-                              contains HOST_NAME env var and timestamp, so omit those.
+                              contains HOST_ID env var and timestamp, so omit those.
       NODES_TO_BACK_UP...     last arguments to $SELF are files&directories to be
                               included in the backup
 "
@@ -240,7 +240,7 @@ validate_config() {
         ARCHIVE_PREFIX
         BORG_PASSPHRASE
         BORG_PRUNE_OPTS
-        HOST_NAME
+        HOST_ID
     )
     [[ -n "${MYSQL_DB[*]}" ]] && vars+=(
         MYSQL_HOST
@@ -385,7 +385,7 @@ readonly TMP_ROOT="/tmp/${SELF}.tmp"
 readonly TMP="$TMP_ROOT/${ARCHIVE_PREFIX}-$RANDOM"
 
 [[ -n "$BORG_EXCLUDE_OPTS" ]] && BORG_EXTRA_OPTS+="$BORG_EXCLUDE_OPTS"
-readonly PREFIX_WITH_HOSTNAME="${ARCHIVE_PREFIX}-${HOST_NAME}-"  # used for pruning
+readonly PREFIX_WITH_HOSTNAME="${ARCHIVE_PREFIX}-${HOST_ID}-"  # used for pruning
 readonly ARCHIVE_NAME="$PREFIX_WITH_HOSTNAME"'{now:%Y-%m-%d-%H%M%S}'
 
 validate_config
