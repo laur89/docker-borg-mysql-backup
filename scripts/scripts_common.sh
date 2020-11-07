@@ -3,6 +3,7 @@
 # common vars & functions
 
 set -o noglob
+set -o pipefail
 
 readonly CONF_ROOT='/config'
 readonly SCRIPTS_ROOT="$CONF_ROOT/scripts"  # TODO: not used atm
@@ -34,7 +35,7 @@ CURL_FLAGS=(
     --connect-timeout 3
     -s -S --fail -L
 )
-declare -A CONTAINER_TO_RUNNING_STATE=()  # container_name->is_running(bool) mappings at the beginning of script
+declare -A CONTAINER_TO_RUNNING_STATE=()  # container_name->is_running<bool> mappings at the beginning of script
 declare -a CONTAINERS_TO_START=()  # list of containers that were stopped by this script and should be started back up upon completion
 
 export BORG_RSH='ssh -oBatchMode=yes'  # https://borgbackup.readthedocs.io/en/stable/usage/notes.html#ssh-batch-mode
@@ -377,6 +378,7 @@ validate_containers() {
     for c in "${CONTAINERS[@]}"; do
         running="$(docker container inspect -f '{{.State.Running}}' "$c")"
         if [[ "$?" -ne 0 ]]; then
+            # TODO: should we fail here instead?
             err "container [$c] inspection failed - does the container exist?"
         else
             is_true_false "$running" || err "container [$c] inspection result not true|false: [$running]"
@@ -397,12 +399,6 @@ vars_defined() {
 
 
 is_true_false() {
-    #local i
-
-    #i="$(tr '[:upper:]' '[:lower:]' <<< "$*")"
-    #[[ "$i" == 1 ]] && i=true
-    #[[ "$i" == 0 ]] && i=false
-
     [[ "$*" =~ ^(true|false)$ ]]
 }
 

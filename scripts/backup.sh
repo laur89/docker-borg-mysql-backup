@@ -277,13 +277,14 @@ validate_config() {
             unset HC_URL
         elif [[ -z "$HC_URL" ]]; then
             err "[HC_ID] given, but no healthcheck url template provided"
-        elif ! [[ "$HC_URL" =~ '{id}' ]]; then
+        elif [[ "$HC_URL" != *'{id}'* ]]; then
             err "[HC_URL] template does not contain id placeholder [{id}]"
         else
             HC_URL="$(sed "s/{id}/$HC_ID/g" <<< "$HC_URL")"
         fi
     fi
-    if [[ -n "$HC_URL" && "$HC_URL" =~ '{id}' ]]; then
+
+    if [[ -n "$HC_URL" && "$HC_URL" == *'{id}'* ]]; then
         err "[HC_URL] with {id} placeholder defined, but no replacement value provided"
     fi
 
@@ -294,7 +295,7 @@ validate_config() {
             err "healthchecksio selected for notifications, but HC_URL not defined"
         #elif [[ "$HC_URL" != *//hc-ping.com/* ]]; then
         elif ! [[ "$HC_URL" =~ $hcio_rgx ]]; then
-            err "healthchecksio selected for notifications, but configured HC_URL [$HC_URL] does not match expected healthchecks.io url pattern"
+            err "healthchecksio selected for notifications, but configured HC_URL [$HC_URL] does not match expected healthchecks.io url pattern [$hcio_rgx]"
         fi
     fi
 }

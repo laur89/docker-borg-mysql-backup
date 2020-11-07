@@ -58,13 +58,15 @@ the changes to get picked up.
 
 ## Be careful
 
-**Please make sure you _verify_ you're able to access your offsite (ie remote)
+**Please make sure to verify you're able to access your offsite (ie remote)
 backups without your local repo/config! You don't want to find yourself unable
 to access remote backups in case local configuration/repository gets nuked.**
 This is especially the case for `keyfile-`initialized repositories, where the key
 will be stored locally and you'll need to manage it separately.
 
 You should be able to access your offsite backups from _any_ system.
+
+Remember - "Untested backup is no backup at all"
 
 
 ## Container Parameters
