@@ -34,15 +34,15 @@ while getopts "p:H:s:T:F:A:m:e:fh" opt; do
     case "$opt" in
         p) ARCHIVE_PREFIX="$OPTARG"
             ;;
-        H) HOST_NAME="$OPTARG"
+        H) HOST_NAME="$OPTARG"  # overrides env var of same name
             ;;
-        s) NOTIF_SUBJECT="$OPTARG"
+        s) NOTIF_SUBJECT="$OPTARG"  # overrides env var of same name
             ;;
-        T) MAIL_TO="$OPTARG"
+        T) MAIL_TO="$OPTARG"  # overrides env var of same name
             ;;
-        F) MAIL_FROM="$OPTARG"
+        F) MAIL_FROM="$OPTARG"  # overrides env var of same name
             ;;
-        A) SMTP_ACCOUNT="$OPTARG"
+        A) SMTP_ACCOUNT="$OPTARG"  # overrides env var of same name
             ;;
         m) MSG="$OPTARG"
             ;;

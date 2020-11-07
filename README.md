@@ -1,8 +1,8 @@
 # borg-mysql-backup
 
-This image is mainly intended for backing up mysql dumps to local and/or remote
+This image is for backing up mysql dumps to local and/or remote
 [borg](https://github.com/borgbackup/borg) repos.
-Other files/dirs may be included in the backup, and database dumps can be excluded
+Other files&dirs may be included in the backup, and database dumps can be excluded
 altogether.
 
 The container features `backup`, `restore`, `list`, `delete` and `notif-test` scripts that can
@@ -24,7 +24,7 @@ implications - borg-mysql-backup will have essentially root permissions on the h
 
 To synchronize container tz with that of host's, then also add following mount:
 `-v /etc/localtime:/etc/localtime:ro`. You'll likely want to do this for cron times
-to match your local time.
+to match the host time.
 
 It's possible to get notified of _any_ errors that occur during backups.
 Currently supported notification methods are
@@ -59,9 +59,9 @@ the changes to get picked up.
 ## Limitations/pitfalls
 
 The `-c` (containers), `-d` (db names) & `-E` (exclude path patterns) options of
-`backup.sh` accept space separated list of names; make sure none of those parameters
-contain any whitespace. We could change the api to accept multiple
-instances of -c & -d flags, but the author finds current implementation easier to
+`backup.sh` accept space separated list of names, so make sure none of the values
+themselves contain any whitespace. We could change the api to accept multiple
+instances of `[cdE]` flags, but the author finds current implementation easier to
 read & use, and is willing to accept these limitations.
 
 **Please make sure you _verify_ you're able to access your offsite (ie remote)
