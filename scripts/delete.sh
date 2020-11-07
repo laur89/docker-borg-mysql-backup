@@ -28,6 +28,7 @@ readonly usage="
 "
 
 
+# TODO: do not fail() if err code <=1?
 _del_common() {
     local l_or_r repo
 
@@ -41,7 +42,6 @@ _del_common() {
 }
 
 
-# TODO: do not fail() if err code <=1?
 delete() {
     if [[ "$REMOTE_ONLY" -ne 1 ]]; then
         _del_common local "$LOCAL_REPO"  # no need to background

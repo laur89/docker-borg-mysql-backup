@@ -53,6 +53,7 @@ restore_db() {
 }
 
 
+# TODO: do not fail() if err code <=1?
 _restore_common() {
     local l_or_r repo start_timestamp
 
@@ -77,7 +78,6 @@ _restore_common() {
 }
 
 
-# TODO: do not fail() if err code <=1?
 do_restore() {
 
     if [[ "$LOC" -eq 1 ]]; then
@@ -133,7 +133,7 @@ NO_NOTIF=true  # do not notify errors
 source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_common.sh" | tee -a "$LOG"; exit 1; }
 REMOTE_OR_LOCAL_OPT_COUNTER=0
 
-unset BORG_OPTS  # just in case
+unset RESTORE_DB CONTAINERS REM LOC BORG_OPTS RESTORE_DIR ARCHIVE_NAME  # just in case
 
 while getopts "dc:rlB:L:R:T:O:a:h" opt; do
     case "$opt" in

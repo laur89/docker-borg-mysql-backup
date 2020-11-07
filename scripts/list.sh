@@ -26,6 +26,7 @@ readonly usage="
 "
 
 
+# TODO: do not fail() if err code <=1?
 _list_common() {
     local l_or_r repo
 
@@ -38,7 +39,6 @@ _list_common() {
 }
 
 
-# TODO: do not fail() if err code <=1?
 list_repos() {
 
     if [[ "$LOC" -eq 1 ]]; then
