@@ -29,6 +29,7 @@ DEFAULT_MAIL_FROM='{h} backup reporter'
 DEFAULT_NOTIF_SUBJECT='{p}: backup error on {h}'
 CURL_FLAGS=(
     -w '\n'
+    --output /dev/null
     --max-time 6
     --connect-timeout 3
     -s -S --fail -L
