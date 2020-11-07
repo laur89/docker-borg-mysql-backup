@@ -24,11 +24,11 @@ readonly usage="
       -r                      restore from remote borg repo
       -l                      restore from local borg repo
       -B BORG_OPTS            additional borg params to pass to extract command
-      -L LOCAL_REPO           overrides container env variable of same name
-      -R REMOTE               remote connection; overrides env var of same name
-      -T REMOTE_REPO          path to repo on remote host; overrides env var of same name
-      -O RESTORE_DIR          path to directory where archive will get extracted/restored to
-      -a ARCHIVE_NAME         name of the borg archive to restore/extract data from
+      -L LOCAL_REPO           overrides container env var of same name
+      -R REMOTE               overrides container env var of same name
+      -T REMOTE_REPO          overrides container env var of same name
+      -O RESTORE_DIR          path to directory where archive will get extracted to
+      -a ARCHIVE_NAME         full name of the borg archive to extract data from
 "
 
 

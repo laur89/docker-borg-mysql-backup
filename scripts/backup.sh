@@ -24,27 +24,25 @@ readonly usage="
                               that were stopped by the script will be re-started afterwards
       -r                      only back to remote borg repo (remote-only)
       -l                      only back to local borg repo (local-only)
-      -P BORG_PRUNE_OPTS      overrides container env variable BORG_PRUNE_OPTS; only required when
+      -P BORG_PRUNE_OPTS      overrides container env var of same name; only required when
                               container var is not defined or needs to be overridden;
-      -B BORG_EXTRA_OPTS      additional borg params; note it doesn't overwrite
-                              the BORG_EXTRA_OPTS env var, but extends it;
-      -Z BORG_EXTRA_OPTS      additional borg params; note it _overrides_
-                              the BORG_EXTRA_OPTS env var;
-      -E EXCLUDE_PATHS        space separated paths to exclude from backup; [-E 'p1 p2']
-                              would be equivalent to [-B '-e p1 -e p2']
-      -L LOCAL_REPO           overrides container env variable of same name;
-      -e ERR_NOTIF            space separated error notification methods; overrides
-                              env var of same name;
-      -A SMTP_ACCOUNT         msmtp account to use; overrides env var of same name;
-      -D MYSQL_FAIL_FATAL     whether unsuccessful db dump should abort backup; overrides
-                              env var of same name; true|false
-      -R REMOTE               remote connection; overrides env var of same name
-      -T REMOTE_REPO          path to repo on remote host; overrides env var of same name
+      -B BORG_EXTRA_OPTS      additional borg params; note it doesn't overwrite the
+                              env var of same name, but extends it;
+      -Z BORG_EXTRA_OPTS      additional borg params; note it _overrides_ the env
+                              var of same name;
+      -E EXCLUDE_PATHS        space separated paths to exclude from backup;
+                              [-E '/p1 /p2'] would be equivalent to [-B '-e /p1 -e /p2']
+      -L LOCAL_REPO           overrides container env var of same name;
+      -e ERR_NOTIF            overrides container env var of same name;
+      -A SMTP_ACCOUNT         overrides container env var of same name;
+      -D MYSQL_FAIL_FATAL     overrides container env var of same name;
+      -R REMOTE               overrides container env var of same name;
+      -T REMOTE_REPO          overrides container env var of same name;
       -H HC_ID                the unique/id part of healthcheck url, replacing the '{id}'
                               placeholder in HC_URL; may also provide new full url to call
                               instead, overriding the env var HC_URL
       -p PREFIX               borg archive name prefix. note that the full archive name already
-                              contains HOST_NAME and timestamp, so omit those.
+                              contains HOST_NAME env var and timestamp, so omit those.
       NODES_TO_BACK_UP...     last arguments to $SELF are files&directories to be
                               included in the backup
 "

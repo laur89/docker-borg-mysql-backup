@@ -96,14 +96,15 @@ You should be able to access your offsite backups from _any_ system.
     LOCAL_REPO              path to local borg repo; optional - can be omitted
                             when only backing up to remote borg repo, or if
                             providing value via script
-    BORG_EXTRA_OPTS         additional borg params (for both local & remote borg commands); optional
-    BORG_LOCAL_EXTRA_OPTS   additional borg params for local borg command; optional
-    BORG_REMOTE_EXTRA_OPTS  additional borg params for remote borg command; optional
+    BORG_EXTRA_OPTS         additional borg params to the borg backup command
+                            (for both local & remote borg commands); optional
+    BORG_LOCAL_EXTRA_OPTS   additional borg params for local borg backup command; optional
+    BORG_REMOTE_EXTRA_OPTS  additional borg params for remote borg backup command; optional
     BORG_REMOTE_PATH        remote borg executable path; eg with rsync.net
                             you'd  want to use value 'borg1'; optional
     BORG_PASSPHRASE         borg repo password
-    BORG_PRUNE_OPTS         options for borg prune (both local and remote); not required when
-                            restoring or if it's defined by backup script -P param
+    BORG_PRUNE_OPTS         options for borg prune (both local and remote); not 
+                            required when it's defined by backup script -P param
                             (which overrides this container env var)
 
     HC_URL                  healthcheck url to ping upon backup completion; may contain
@@ -117,7 +118,7 @@ You should be able to access your offsite backups from _any_ system.
     NOTIF_TAIL_MSG          replaces the default contents of trailing error
                             notifications; only in effect if ADD_NOTIF_TAIL=true
 
-      following params {MAIL,SMTP}_* are only used if ERR_NOTIF value contains 'mail';
+      following {MAIL,SMTP}_* params are only used if ERR_NOTIF value contains 'mail';
       also note all SMTP_* env vars besides SMTP_ACCOUNT are ignored if you've
       provided smtp config file at /config/msmtprc
     MAIL_TO                 address to send notifications to
@@ -167,27 +168,25 @@ as a one-off command for a single backup.
                               that were stopped by the script will be re-started afterwards
       -r                      only back to remote borg repo (remote-only)
       -l                      only back to local borg repo (local-only)
-      -P BORG_PRUNE_OPTS      overrides container env variable BORG_PRUNE_OPTS; only required when
+      -P BORG_PRUNE_OPTS      overrides container env var of same name; only required when
                               container var is not defined or needs to be overridden;
-      -B BORG_EXTRA_OPTS      additional borg params; note it doesn't overwrite
-                              the BORG_EXTRA_OPTS env var, but extends it;
-      -Z BORG_EXTRA_OPTS      additional borg params; note it _overrides_
-                              the BORG_EXTRA_OPTS env var;
-      -E EXCLUDE_PATHS        space separated paths to exclude from backup; [-E 'p1 p2']
-                              would be equivalent to [-B '-e p1 -e p2']
-      -L LOCAL_REPO           overrides container env variable of same name;
-      -e ERR_NOTIF            space separated error notification methods; overrides
-                              env var of same name;
-      -A SMTP_ACCOUNT         msmtp account to use; overrides env var of same name;
-      -D MYSQL_FAIL_FATAL     whether unsuccessful db dump should abort backup; overrides
-                              env var of same name; true|false
-      -R REMOTE               remote connection; overrides env var of same name
-      -T REMOTE_REPO          path to repo on remote host; overrides env var of same name
+      -B BORG_EXTRA_OPTS      additional borg params; note it doesn't overwrite the
+                              env var of same name, but extends it;
+      -Z BORG_EXTRA_OPTS      additional borg params; note it _overrides_ the env
+                              var of same name;
+      -E EXCLUDE_PATHS        space separated paths to exclude from backup; 
+                              [-E '/p1 /p2'] would be equivalent to [-B '-e /p1 -e /p2']
+      -L LOCAL_REPO           overrides container env var of same name;
+      -e ERR_NOTIF            overrides container env var of same name;
+      -A SMTP_ACCOUNT         overrides container env var of same name;
+      -D MYSQL_FAIL_FATAL     overrides container env var of same name;
+      -R REMOTE               overrides container env var of same name;
+      -T REMOTE_REPO          overrides container env var of same name;
       -H HC_ID                the unique/id part of healthcheck url, replacing the '{id}'
                               placeholder in HC_URL; may also provide new full url to call
                               instead, overriding the env var HC_URL
       -p PREFIX               borg archive name prefix. note that the full archive name already
-                              contains HOST_NAME and timestamp, so omit those.
+                              contains HOST_NAME env var and timestamp, so omit those.
       NODES_TO_BACK_UP...     last arguments to backup.sh are files&directories to be
                               included in the backup
 
@@ -265,7 +264,7 @@ as a one-off command for a single backup.
 
 `/config/crontab` contents:
 
-    0 */6 * * *   /backup.sh -l -H eb095278-f28d-448d-87fb-7b75c171a6aa -p my_app_prefix /app1 /app2
+    0 */6 * * *   /backup.sh -l -p my_app_prefix -H eb095278-f28d-448d-87fb-7b75c171a6aa /app1 /app2
 
 Note we didn't need to define mysql- or remote borg repo related docker env vars.
 Also there's no need to have ssh key in `/config`, as we're not connecting to a remote server.
@@ -276,14 +275,14 @@ is replaced by -H value provided by backup.sh
 
 ##### Same as above, but report errors via mail
 
-    Use same docker command as above, with following env vars included:
+    Use same docker command as above, with following env vars added:
 
         -e ERR_NOTIF=mail \
         -e MAIL_TO=receiver@example.com \
         -e NOTIF_SUBJECT='{i} backup error' \
         -e SMTP_HOST='smtp.gmail.com' \
         -e SMTP_USER='your.google.username' \
-        -e SMTP_PASS='your-google-app-password' \
+        -e SMTP_PASS='your-google-app-password-you-created-for-this' \
 
 Same as the example before, but we've also opted to get notified of any backup
 errors via email.
@@ -336,11 +335,11 @@ Only db will be restored from a dump, given the option is provided to the script
       -r                      restore from remote borg repo
       -l                      restore from local borg repo
       -B BORG_OPTS            additional borg params to pass to extract command
-      -L LOCAL_REPO           overrides container env variable of same name
-      -R REMOTE               remote connection; overrides env var of same name
-      -T REMOTE_REPO          path to repo on remote host; overrides env var of same name
-      -O RESTORE_DIR          path to directory where archive will get extracted/restored to
-      -a ARCHIVE_NAME         name of the borg archive to restore/extract data from
+      -L LOCAL_REPO           overrides container env var of same name
+      -R REMOTE               overrides container env var of same name
+      -T REMOTE_REPO          overrides container env var of same name
+      -O RESTORE_DIR          path to directory where archive will get extracted to
+      -a ARCHIVE_NAME         full name of the borg archive to extract data from
 
 #### Usage examples
 
@@ -408,11 +407,11 @@ variables are not usable with `restore`.
       -r                      list remote borg repo
       -l                      list local borg repo
       -p ARCHIVE_PREFIX       list archives with given prefix; same as providing
-                              -B '--prefix ARCHIVE_PREFIX'
-      -B BORG_OPTS            additional borg params to pass to list command
-      -L LOCAL_REPO           overrides container env variable of same name
-      -R REMOTE               remote connection; overrides env var of same name
-      -T REMOTE_REPO          path to repo on remote host; overrides env var of same name
+                              [-B '--prefix ARCHIVE_PREFIX']
+      -B BORG_OPTS            additional borg params to pass to borg list command
+      -L LOCAL_REPO           overrides container env var of same name
+      -R REMOTE               overrides container env var of same name
+      -T REMOTE_REPO          overrides container env var of same name
 
 #### Usage examples
 
@@ -456,10 +455,10 @@ variables are not usable with `list`.
       -p ARCHIVE_PREFIX       delete archives with given prefix; same as providing
                               -B '--prefix ARCHIVE_PREFIX'
       -a ARCHIVE              archive name to delete; -p & -a are mutually exclusive
-      -B BORG_OPTS            additional borg params to pass to extract command
-      -L LOCAL_REPO           overrides container env variable of same name
-      -R REMOTE               remote connection; overrides env var of same name
-      -T REMOTE_REPO          path to repo on remote host; overrides env var of same name
+      -B BORG_OPTS            additional borg params to pass to borg delete command
+      -L LOCAL_REPO           overrides container env var of same name
+      -R REMOTE               overrides container env var of same name
+      -T REMOTE_REPO          overrides container env var of same name
 
 #### Usage examples
 
@@ -520,7 +519,7 @@ variables are not usable with `delete`.
 
 #### Usage examples
 
-##### Test all the notifications at once
+##### Simulate an error message to test all the notifications at once
 
     docker run -it --rm \
         -e PUSHOVER_USER_KEY='key' \
@@ -528,7 +527,7 @@ variables are not usable with `delete`.
         -e MAIL_TO='your@mail.com' \
         -e SMTP_HOST='smtp.gmail.com' \
         -e SMTP_USER='your.google.username' \
-        -e SMTP_PASS='your-google-app-password' \
+        -e SMTP_PASS='your-google-app-password-you-created-for-this' \
         -e ERR_NOTIF='mail pushover' \
         -e HOST_NAME='our-hostname' \
            layr/borg-mysql-backup notif-test.sh -p 'my-prefix' [-f]

@@ -18,11 +18,11 @@ readonly usage="
       -r                      list remote borg repo
       -l                      list local borg repo
       -p ARCHIVE_PREFIX       list archives with given prefix; same as providing
-                              -B '--prefix ARCHIVE_PREFIX'
-      -B BORG_OPTS            additional borg params to pass to extract command
-      -L LOCAL_REPO           overrides container env variable of same name
-      -R REMOTE               remote connection; overrides env var of same name
-      -T REMOTE_REPO          path to repo on remote host; overrides env var of same name
+                              [-B '--prefix ARCHIVE_PREFIX']
+      -B BORG_OPTS            additional borg params to pass to borg list command
+      -L LOCAL_REPO           overrides container env var of same name
+      -R REMOTE               overrides container env var of same name
+      -T REMOTE_REPO          overrides container env var of same name
 "
 
 
