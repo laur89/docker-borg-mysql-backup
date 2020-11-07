@@ -15,9 +15,9 @@ readonly usage="
 
     arguments:
       -h                      show help and exit
-      -d MYSQL_DBS            space separated database names to back up; use value of
+      -d MYSQL_DBS            comma-separated database names to back up; use value of
                               __all__ to back up all dbs on the server
-      -c CONTAINERS           space separated container names to stop for the backup process;
+      -c CONTAINERS           comma-separated container names to stop for the backup process;
                               requires mounting the docker socket (-v /var/run/docker.sock:/var/run/docker.sock);
                               note containers will be stopped in given order; after backup
                               completion, containers are started in reverse order; only containers
@@ -30,8 +30,8 @@ readonly usage="
                               env var of same name, but extends it;
       -Z BORG_EXTRA_OPTS      additional borg params; note it _overrides_ the env
                               var of same name;
-      -E EXCLUDE_PATHS        space separated paths to exclude from backup;
-                              [-E '/p1 /p2'] would be equivalent to [-B '-e /p1 -e /p2']
+      -E EXCLUDE_PATHS        comma-separated paths to exclude from backup;
+                              [-E '/p1,/p2'] would be equivalent to [-B '-e /p1 -e /p2']
       -L LOCAL_REPO           overrides container env var of same name;
       -e ERR_NOTIF            overrides container env var of same name;
       -A SMTP_ACCOUNT         overrides container env var of same name;
@@ -329,12 +329,12 @@ unset MYSQL_DB ARCHIVE_PREFIX CONTAINERS HC_ID  # just in case
 
 while getopts "d:p:c:rlP:B:Z:E:L:e:A:D:R:T:hH:" opt; do
     case "$opt" in
-        d) declare -ar MYSQL_DB=($OPTARG)
+        d) IFS="$SEPARATOR" read -ra MYSQL_DB <<< "$OPTARG"
             ;;
         p) ARCHIVE_PREFIX="$OPTARG"
            JOB_ID="${OPTARG}-$$"
             ;;
-        c) declare -ar CONTAINERS=($OPTARG)
+        c) IFS="$SEPARATOR" read -ra CONTAINERS <<< "$OPTARG"
             ;;
         r) REMOTE_ONLY=1
            let REMOTE_OR_LOCAL_OPT_COUNTER+=1
@@ -350,10 +350,11 @@ while getopts "d:p:c:rlP:B:Z:E:L:e:A:D:R:T:hH:" opt; do
         Z) BORG_EXTRA_OPTS="$OPTARG"  # overrides env var of same name
            let BORG_OTPS_COUNTER+=1
             ;;
-        E)
-           for i in $OPTARG; do
+        E) IFS="$SEPARATOR" read -ra _exclude_paths <<< "$OPTARG"
+           for i in "${_exclude_paths[@]}"; do
                 BORG_EXCLUDE_OPTS+=" --exclude $i"
            done
+           unset _exclude_paths i
             ;;
         L) LOCAL_REPO="$OPTARG"  # overrides env var of same name
             ;;
@@ -391,6 +392,9 @@ validate_config
 [[ -n "$REMOTE" ]] && add_remote_to_known_hosts_if_missing "$REMOTE"
 readonly REMOTE+=":$REMOTE_REPO"  # define after validation
 create_dirs
+
+log "=> BORG_EXTRA_OPTS=[$BORG_EXTRA_OPTS]"
+log "=> ARCHIVE_NAME=[$ARCHIVE_NAME]"
 
 stop_containers
 do_backup

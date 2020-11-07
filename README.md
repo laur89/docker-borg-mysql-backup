@@ -56,13 +56,7 @@ Every time any config is changed in `/config`, container needs to be restarted f
 the changes to get picked up.
 
 
-## Limitations/pitfalls
-
-The `-c` (containers), `-d` (db names) & `-E` (exclude path patterns) options of
-`backup.sh` accept space separated list of names, so make sure none of the values
-themselves contain any whitespace. We could change the api to accept multiple
-instances of `[cdE]` flags, but the author finds current implementation easier to
-read & use, and is willing to accept these limitations.
+## Be careful
 
 **Please make sure you _verify_ you're able to access your offsite (ie remote)
 backups without your local repo/config! You don't want to find yourself unable
@@ -159,9 +153,9 @@ as a one-off command for a single backup.
     
     arguments:
       -h                      show help and exit
-      -d MYSQL_DBS            space separated database names to back up; use value of
+      -d MYSQL_DBS            comma-separated database names to back up; use value of
                               __all__ to back up all dbs on the server
-      -c CONTAINERS           space separated container names to stop for the backup process;
+      -c CONTAINERS           comma-separated container names to stop for the backup process;
                               requires mounting the docker socket (-v /var/run/docker.sock:/var/run/docker.sock);
                               note containers will be stopped in given order; after backup
                               completion, containers are started in reverse order; only containers
@@ -174,8 +168,8 @@ as a one-off command for a single backup.
                               env var of same name, but extends it;
       -Z BORG_EXTRA_OPTS      additional borg params; note it _overrides_ the env
                               var of same name;
-      -E EXCLUDE_PATHS        space separated paths to exclude from backup; 
-                              [-E '/p1 /p2'] would be equivalent to [-B '-e /p1 -e /p2']
+      -E EXCLUDE_PATHS        comma-separated paths to exclude from backup; 
+                              [-E '/p1,/p2'] would be equivalent to [-B '-e /p1 -e /p2']
       -L LOCAL_REPO           overrides container env var of same name;
       -e ERR_NOTIF            overrides container env var of same name;
       -A SMTP_ACCOUNT         overrides container env var of same name;
@@ -217,7 +211,7 @@ as a one-off command for a single backup.
 
 `/config/crontab` contents:
 
-    15 05 * * *   /backup.sh -p app1-app2 -d "App1 App2" /app1-data 
+    15 05 * * *   /backup.sh -p app1-app2 -d "App1,App2" /app1-data 
 
 ##### Back up all databases daily at 04:10 and 16:10 to local&remote borg repos, stopping containers myapp1 & myapp2 for the process
 
@@ -243,7 +237,7 @@ as a one-off command for a single backup.
 
 `/config/crontab` contents:
 
-    10 04,16 * * *   /backup.sh -p myapp-prefix -d __all__ -c "myapp1 myapp2"
+    10 04,16 * * *   /backup.sh -p myapp-prefix -d __all__ -c "myapp1,myapp2"
 
 ##### Back up directories /app1 & /app2 every 6 hours to local borg repo (ie remote is excluded)
 
@@ -328,7 +322,7 @@ Only db will be restored from a dump, given the option is provided to the script
       -d                      automatically restore mysql database from dumped file; if this
                               option is given and archive contains no sql dumps, it's an error;
                               be careful, this is destructive operation!
-      -c CONTAINERS           space separated container names to stop before the restore begins;
+      -c CONTAINERS           comma-separated container names to stop before the restore begins;
                               note they won't be started afterwards, as there might be need
                               to restore other data (only sql dumps are restored automatically);
                               requires mounting the docker socket (-v /var/run/docker.sock:/var/run/docker.sock)

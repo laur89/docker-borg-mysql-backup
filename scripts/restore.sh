@@ -17,7 +17,7 @@ readonly usage="
       -d                      automatically restore mysql database from dumped file; if this
                               option is given and archive contains no sql dumps, it's an error;
                               be careful, this is destructive operation!
-      -c CONTAINERS           space separated container names to stop before the restore begins;
+      -c CONTAINERS           comma-separated container names to stop before the restore begins;
                               note they won't be started afterwards, as there might be need
                               to restore other data (only sql dumps are restored automatically);
                               requires mounting the docker socket (-v /var/run/docker.sock:/var/run/docker.sock)
@@ -139,7 +139,7 @@ while getopts "dc:rlB:L:R:T:O:a:h" opt; do
     case "$opt" in
         d) RESTORE_DB=1
             ;;
-        c) declare -ar CONTAINERS=($OPTARG)
+        c) IFS="$SEPARATOR" read -ra CONTAINERS <<< "$OPTARG"
             ;;
         r) REM=1
            let REMOTE_OR_LOCAL_OPT_COUNTER+=1
