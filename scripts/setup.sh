@@ -24,7 +24,7 @@ setup_crontab() {
     #local cron_target
     #readonly cron_target='/var/spool/cron/crontabs/root'
 
-    if [[ -f "$CRON_FILE" ]]; then
+    if [[ -f "$CRON_FILE" && -s "$CRON_FILE" ]]; then
         ## TODO: this won't work, as /config is mounted read-only:
         #grep -q '^BASH_ENV=' "$CRON_FILE" || sed -i '1s+^+BASH_ENV=/container.env\n+' "$CRON_FILE"
         #grep -q '^SHELL=' "$CRON_FILE" || sed -i '1s+^+SHELL=/bin/bash\n+' "$CRON_FILE"
@@ -44,7 +44,7 @@ install_ssh_key() {
     readonly ssh_key_target=~/.ssh/id_rsa
 
     [[ -d ~/.ssh ]] || fail "[~/.ssh] is not a dir; is ssh client installed?"
-    [[ -f "$SSH_KEY" ]] && cp -- "$SSH_KEY" "$ssh_key_target"
+    [[ -f "$SSH_KEY" && -s "$SSH_KEY" ]] && cp -- "$SSH_KEY" "$ssh_key_target"
 
     # sanitize .ssh perms:
     chmod -R u=rwX,g=,o= -- ~/.ssh

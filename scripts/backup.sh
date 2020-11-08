@@ -80,6 +80,8 @@ dump_db() {
 
     # TODO: add following column-stats option back once mysqldump from alpine accepts it:
             #--column-statistics=0 \
+    # TODO: add --routines ?
+    # TODO: add --add-locks ?
     mysqldump \
             --add-drop-database \
             --max-allowed-packet=512M \
@@ -266,7 +268,7 @@ validate_config() {
     [[ "$REMOTE_ONLY" -ne 1 ]] && [[ ! -d "$LOCAL_REPO" || ! -w "$LOCAL_REPO" ]] && fail "[$LOCAL_REPO] does not exist or is not writable; missing mount?"
 
     if [[ "$LOCAL_ONLY" -ne 1 && "$-" != *i* ]]; then
-        [[ -f "$SSH_KEY" ]] || fail "[$SSH_KEY] is not a file; is /config mounted?"
+        [[ -f "$SSH_KEY" && -s "$SSH_KEY" ]] || fail "[$SSH_KEY] is not a file; is /config mounted?"
     fi
 
 
@@ -284,7 +286,7 @@ validate_config() {
         fi
     fi
 
-    if [[ -n "$HC_URL" && "$HC_URL" == *'{id}'* ]]; then
+    if [[ "$HC_URL" == *'{id}'* ]]; then
         err "[HC_URL] with {id} placeholder defined, but no replacement value provided"
     fi
 
