@@ -55,7 +55,7 @@ stop_containers() {
     for c in "${CONTAINERS[@]}"; do
         if [[ "${CONTAINER_TO_RUNNING_STATE[$c]}" == true ]]; then
             log "=> stopping container [$c]..."
-            docker stop "$c" || fail "stopping container [$c] failed w/ [$?]"
+            docker stop "$c" 2> >(tee -a "$LOG" >&2) || fail "stopping container [$c] failed w/ [$?]"
             CONTAINERS_TO_START+=("$c")
         else
             log "=> container [$c] already stopped"
@@ -79,7 +79,7 @@ start_containers() {
     for (( idx=${#containers[@]}-1 ; idx>=0 ; idx-- )); do
         c="${containers[idx]}"
         log "=> starting container [$c]..."
-        docker start "$c" || { err "starting container [$c] failed w/ [$?]"; err_='at least one container failed to start'; }
+        docker start "$c" 2> >(tee -a "$LOG" >&2) || { err "starting container [$c] failed w/ [$?]"; err_='at least one container failed to start'; }
     done
 
     log "=> ${err_:-all containers started}"
@@ -361,8 +361,10 @@ validate_config_common() {
 
     vars_defined "${vars[@]}"
 
-    [[ -n "$MYSQL_FAIL_FATAL" ]] && ! is_true_false "$MYSQL_FAIL_FATAL" && fail "MYSQL_FAIL_FATAL value, when given, can be either [true] or [false]"
-    [[ -n "$ADD_NOTIF_TAIL" ]] && ! is_true_false "$ADD_NOTIF_TAIL" && fail "ADD_NOTIF_TAIL value, when given, can be either [true] or [false]"
+    vars=()  # reset
+    [[ -n "$MYSQL_FAIL_FATAL" ]] && vars+=(MYSQL_FAIL_FATAL)
+    [[ -n "$ADD_NOTIF_TAIL" ]] && vars+=(ADD_NOTIF_TAIL)
+    validate_true_false "${vars[@]}"
 
     validate_containers
 }
@@ -394,6 +396,16 @@ vars_defined() {
     for i in "$@"; do
         val="$(eval echo "\$$i")" || fail "evaling [echo \"\$$i\"] failed w/ [$?]"
         [[ -z "$val" ]] && fail "[$i] is not defined"
+    done
+}
+
+
+validate_true_false() {
+    local i val
+
+    for i in "$@"; do
+        val="$(eval echo "\$$i")" || fail "evaling [echo \"\$$i\"] failed w/ [$?]"
+        is_true_false "$val" || fail "$i value, when given, can be either [true] or [false]"
     done
 }
 
