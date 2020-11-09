@@ -488,25 +488,28 @@ run_scripts() {
     flags=()
     [[ "${SCRIPT_FAIL_FATAL:-true}" == true ]] && flags+=('--exit-on-error')
     flags+=(
+        -a "$stage"
         -a "$ARCHIVE_PREFIX"
         -a "$TMP"
+        -a "$CONF_ROOT"
         -a "$(join "${NODES_TO_BACK_UP[@]}")"
         -a "$(join "${CONTAINERS[@]}")"
     )
 
     for dir in \
+            "$SCRIPT_ROOT/always" \
             "$SCRIPT_ROOT/$stage" \
             "$JOB_SCRIPT_ROOT/$stage"; do
 
         [[ -d "$dir" ]] || continue
         is_dir_empty "$dir" && continue
 
-        log "executing following scripts in [$dir]:"
-        run-parts --test "${flags[@]}" "$dir" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || err "run-parts dry-run in [$dir] failed w/ $?"
+        log "stage [$stage]: executing following scripts in [$dir]:"
+        run-parts --test "${flags[@]}" "$dir" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || err "run-parts dry-run for stage [$stage] in [$dir] failed w/ $?"
 
         run-parts "${flags[@]}" "$dir" 2> >(tee -a "$LOG" >&2)  # no need to log stdout right?
         if [[ "$?" -ne 0 ]]; then
-            msg="custom script execution in [$dir] failed"
+            msg="custom script execution for stage [$stage] in [$dir] failed"
             [[ "${SCRIPT_FAIL_FATAL:-true}" == true ]] && fail "${msg}; aborting" || err "${msg}; not aborting"
         fi
     done
@@ -541,4 +544,10 @@ join() {
 
 [[ -f "${ENV_ROOT}/common-env.conf" ]] && source "${ENV_ROOT}/common-env.conf"
 
-true  # always exit w/ good code
+if [[ "$DEBUG" == true ]]; then
+    set -x
+    printenv
+    echo
+fi
+
+true  # always exit common w/ good code
