@@ -100,7 +100,7 @@ dump_db() {
     if [[ "$err_code" -ne 0 ]]; then
         local msg
         msg="db dump for input args [${MYSQL_DB[*]}] failed w/ [$err_code]"
-        [[ "${MYSQL_FAIL_FATAL:-true}" == true ]] && fail "$msg" || err "$msg"
+        [[ "${MYSQL_FAIL_FATAL:-true}" == true ]] && fail "${msg}; aborting" || err "${msg}; not aborting"
         err_=failed
     fi
 
@@ -350,7 +350,7 @@ while getopts "d:p:c:rlP:B:Z:E:L:e:A:D:S:R:T:hH:" opt; do
     case "$opt" in
         d) IFS="$SEPARATOR" read -ra MYSQL_DB <<< "$OPTARG"
             ;;
-        p) readonly ARCHIVE_PREFIX="$OPTARG"  # be careful w/ rename! eg run_scripts() depends on many var names
+        p) readonly ARCHIVE_PREFIX="$OPTARG"  # be careful w/ var rename! eg run_scripts() depends on many var names
            readonly JOB_ID="${OPTARG}-$$"
             ;;
         c) IFS="$SEPARATOR" read -ra CONTAINERS <<< "$OPTARG"
@@ -369,11 +369,7 @@ while getopts "d:p:c:rlP:B:Z:E:L:e:A:D:S:R:T:hH:" opt; do
         Z) BORG_EXTRA_OPTS="$OPTARG"  # overrides env var of same name
            let BORG_OTPS_COUNTER+=1
             ;;
-        E) IFS="$SEPARATOR" read -ra _exclude_paths <<< "$OPTARG"
-           for i in "${_exclude_paths[@]}"; do
-                BORG_EXCLUDE_OPTS+=" --exclude $i"
-           done
-           unset _exclude_paths i
+        E) IFS="$SEPARATOR" read -ra BORG_EXCLUDE_PATHS <<< "$OPTARG"
             ;;
         L) LOCAL_REPO="$OPTARG"  # overrides env var of same name
             ;;
@@ -406,10 +402,19 @@ JOB_SCRIPT_ROOT="$SCRIPT_ROOT/jobs/$ARCHIVE_PREFIX"
 readonly TMP_ROOT="/tmp/${SELF}.tmp"
 readonly TMP="$TMP_ROOT/${ARCHIVE_PREFIX}-$RANDOM"
 
-# TODO: should we source _before_ parsing input opts instead?
 [[ -f "$ENV_ROOT/${ARCHIVE_PREFIX}.conf" ]] && source "$ENV_ROOT/${ARCHIVE_PREFIX}.conf"  # load job-specific config if avail
 
-[[ -n "$BORG_EXCLUDE_OPTS" ]] && BORG_EXTRA_OPTS+="$BORG_EXCLUDE_OPTS"
+# process these _after_ sourcing job-specific config:
+if [[ "${#BORG_EXCLUDE_PATHS[@]}" -gt 0 ]]; then
+    for i in "${BORG_EXCLUDE_PATHS[@]}"; do
+        BORG_EXCLUDE_OPTS+=" --exclude $i"
+    done
+    unset BORG_EXCLUDE_PATHS i
+fi
+
+[[ -n "$BORG_EXCLUDE_OPTS" ]] && BORG_EXTRA_OPTS+=" $BORG_EXCLUDE_OPTS"
+unset BORG_EXCLUDE_OPTS
+
 readonly PREFIX_WITH_HOSTNAME="${ARCHIVE_PREFIX}-${HOST_ID}-"  # used for pruning
 readonly ARCHIVE_NAME="$PREFIX_WITH_HOSTNAME"'{now:%Y-%m-%d-%H%M%S}'
 
