@@ -6,7 +6,7 @@ set -o noglob
 set -o pipefail
 
 readonly CONF_ROOT='/config'
-readonly SCRIPTS_ROOT="$CONF_ROOT/scripts"  # TODO: not used atm
+readonly SCRIPT_ROOT="$CONF_ROOT/scripts"
 
 [[ "$SEPARATOR" == space ]] && SEPARATOR=' '
 [[ "$SEPARATOR" == comma ]] && SEPARATOR=','
@@ -364,6 +364,7 @@ validate_config_common() {
     vars=()  # reset
     [[ -n "$MYSQL_FAIL_FATAL" ]] && vars+=(MYSQL_FAIL_FATAL)
     [[ -n "$ADD_NOTIF_TAIL" ]] && vars+=(ADD_NOTIF_TAIL)
+    [[ -n "$SCRIPT_FAIL_FATAL" ]] && vars+=(SCRIPT_FAIL_FATAL)
     validate_true_false "${vars[@]}"
 
     validate_containers
@@ -474,6 +475,65 @@ ping_healthcheck() {
         --retry 5 \
         --user-agent "$HOST_ID" \
         "$HC_URL" || err "pinging healthcheck service at [$HC_URL] failed w/ [$?]"
+}
+
+
+run_scripts() {
+    local stage dir flags msg
+
+    stage="$1"
+
+    flags=()
+    [[ "${SCRIPT_FAIL_FATAL:-true}" == true ]] && flags+=('--exit-on-error')
+    flags+=(
+        -a "$ARCHIVE_PREFIX"
+        -a "$TMP"
+        -a "$(join "${NODES_TO_BACK_UP[@]}")"
+        -a "$(join "${CONTAINERS[@]}")"
+    )
+
+    for dir in \
+            "$SCRIPT_ROOT/$stage" \
+            "$JOB_SCRIPT_ROOT/$stage"; do
+
+        [[ -d "$dir" ]] || continue
+        is_dir_empty "$dir" && continue
+
+        log "executing following scripts in [$dir]:"
+        run-parts --test "${flags[@]}" "$dir" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || err "run-parts dry-run in [$dir] failed w/ $?"
+
+        run-parts "${flags[@]}" "$dir" 2> >(tee -a "$LOG" >&2)  # no need to log stdout right?
+        if [[ "$?" -ne 0 ]]; then
+            msg="custom script execution in [$dir] failed"
+            [[ "${SCRIPT_FAIL_FATAL:-true}" == true ]] && fail "${msg}; aborting" || err "${msg}; not aborting"
+        fi
+    done
+}
+
+
+contains() {
+    local src i
+
+    [[ "$#" -lt 2 ]] && { err "at least 2 args needed for $FUNCNAME"; return 2; }
+
+    src="$1"
+    shift
+
+    for i in "$@"; do
+        [[ "$i" == "$src" ]] && return 0
+    done
+
+    return 1
+}
+
+
+join() {
+    local list i
+    for i in "$@"; do
+        list+="${i}$SEPARATOR"
+    done
+
+    echo "${list:0:$(( ${#list} - ${#SEPARATOR} ))}"
 }
 
 

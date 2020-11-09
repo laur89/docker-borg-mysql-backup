@@ -54,7 +54,9 @@ expand_nodes_to_back_up() {
     is_dir_empty "$TMP" && return 0
 
     while IFS= read -r -d $'\0' i; do
-        NODES_TO_BACK_UP+=("$(basename -- "$i")")  # note relative path; we don't want borg archive to contain "$TMP_ROOT" path
+        i="$(basename -- "$i")"  # note relative path; we don't want borg archive to contain "$TMP_ROOT" path
+        contains "$i" "${NODES_TO_BACK_UP[@]}" && continue
+        NODES_TO_BACK_UP+=("$i")
     done < <(find "$TMP" -mindepth 1 -maxdepth 1 -print0)
 }
 
@@ -177,9 +179,15 @@ do_backup() {
     log "=> Backup started"
     start_timestamp="$(date +%s)"
 
+    run_scripts  before-mysql-dump
     dump_db
-    expand_nodes_to_back_up
+    run_scripts  after-mysql-dump
 
+    expand_nodes_to_back_up  # adds dump sql (and any possible custom script additions) to NODES_TO_BACK_UP
+
+    run_scripts  before-backup
+
+    expand_nodes_to_back_up  # once again, in case any of the custom scripts added files
     [[ "${#NODES_TO_BACK_UP[@]}" -eq 0 ]] && fail "no items selected for backup"
 
     pushd -- "$TMP" &> /dev/null || fail "unable to pushd into [$TMP]"  # cd there because files in $TMP are added without full path (to avoid "$TMP_ROOT" prefix in borg repo)
@@ -206,12 +214,16 @@ do_backup() {
 
     popd &> /dev/null
 
+    run_scripts  after-backup
+
     # backup is done, we can go ahead and start the containers while pruning:
     # TODO: should start_containers() be called when we errored?
     start_containers "${CONTAINERS_TO_START[@]}" &
     CONTAINERS_TO_START=()  # empty so no secondary start attempts would be made after
 
     started_pids=()  # reset
+
+    run_scripts  before-prune
 
     if [[ "$REMOTE_ONLY" -ne 1 ]]; then
         prune_local &
@@ -226,6 +238,8 @@ do_backup() {
     for i in "${started_pids[@]}"; do
         wait "$i" || err_=TRUE
     done
+
+    run_scripts  after-prune
 
     log "=> Backup+prune finished, duration $(( $(date +%s) - start_timestamp )) seconds${err_:+; at least one step failed or produced warning}"
 
@@ -334,7 +348,7 @@ while getopts "d:p:c:rlP:B:Z:E:L:e:A:D:R:T:hH:" opt; do
     case "$opt" in
         d) IFS="$SEPARATOR" read -ra MYSQL_DB <<< "$OPTARG"
             ;;
-        p) ARCHIVE_PREFIX="$OPTARG"
+        p) ARCHIVE_PREFIX="$OPTARG"  # be careful w/ rename! eg run_scripts() depends on many var names
            JOB_ID="${OPTARG}-$$"
             ;;
         c) IFS="$SEPARATOR" read -ra CONTAINERS <<< "$OPTARG"
@@ -383,6 +397,7 @@ done
 shift "$((OPTIND-1))"
 
 NODES_TO_BACK_UP=("$@")
+JOB_SCRIPT_ROOT="$SCRIPT_ROOT/$ARCHIVE_PREFIX"
 
 readonly TMP_ROOT="/tmp/${SELF}.tmp"
 readonly TMP="$TMP_ROOT/${ARCHIVE_PREFIX}-$RANDOM"
@@ -399,8 +414,12 @@ create_dirs
 log "=> BORG_EXTRA_OPTS=[$BORG_EXTRA_OPTS]"
 log "=> ARCHIVE_NAME=[$ARCHIVE_NAME]"
 
+run_scripts  before
+
 stop_containers
 do_backup
+
+run_scripts  after
 
 exit 0
 

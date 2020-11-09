@@ -102,6 +102,8 @@ Remember - "Untested backup is no backup at all"
     BORG_PRUNE_OPTS         options for borg prune (both local and remote); not 
                             required when it's defined by backup script -P param
                             (which overrides this container env var)
+    SCRIPT_FAIL_FATAL       whether failure of custom script execution should abort
+                            backup, defaults to 'true';
 
     HC_URL                  healthcheck url to ping upon backup completion; may contain
                             {id} placeholder to provide general template and provide the

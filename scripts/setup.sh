@@ -14,7 +14,7 @@ JOB_ID="setup-$$"
 check_dependencies() {
     local i
 
-    for i in curl docker mysql mysqldump borg ssh-keygen ssh-keyscan tr sed find msmtp; do
+    for i in curl docker mysql mysqldump borg ssh-keygen ssh-keyscan tr sed find msmtp run-parts; do
         command -v "$i" >/dev/null || fail "[$i] not installed"
     done
 }
