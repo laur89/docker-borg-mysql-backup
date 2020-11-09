@@ -102,6 +102,8 @@ Remember - "Untested backup is no backup at all"
     BORG_PRUNE_OPTS         options for borg prune (both local and remote); not 
                             required when it's defined by backup script -P param
                             (which overrides this container env var)
+    SCRIPT_FAIL_FATAL       whether failure of custom script execution should abort
+                            backup, defaults to 'true';
 
     HC_URL                  healthcheck url to ping upon backup completion; may contain
                             {id} placeholder to provide general template and provide the
@@ -149,7 +151,8 @@ as a one-off command for a single backup.
     usage: backup [-h] [-d MYSQL_DBS] [-c CONTAINERS] [-rl]
                   [-P BORG_PRUNE_OPTS] [-B|-Z BORG_EXTRA_OPTS] [-E EXCLUDE_PATHS]
                   [-L LOCAL_REPO] [-e ERR_NOTIF] [-A SMTP_ACCOUNT] [-D MYSQL_FAIL_FATAL]
-                  [-R REMOTE] [-T REMOTE_REPO] [-H HC_ID] -p PREFIX  [NODES_TO_BACK_UP...]
+                  [-S SCRIPT_FAIL_FATAL] [-R REMOTE] [-T REMOTE_REPO] [-H HC_ID]
+                  -p PREFIX  [NODES_TO_BACK_UP...]
     
     Create new archive
     
@@ -176,6 +179,7 @@ as a one-off command for a single backup.
       -e ERR_NOTIF            overrides container env var of same name;
       -A SMTP_ACCOUNT         overrides container env var of same name;
       -D MYSQL_FAIL_FATAL     overrides container env var of same name;
+      -S SCRIPT_FAIL_FATAL    overrides container env var of same name;
       -R REMOTE               overrides container env var of same name;
       -T REMOTE_REPO          overrides container env var of same name;
       -H HC_ID                the unique/id part of healthcheck url, replacing the '{id}'

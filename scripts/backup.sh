@@ -9,7 +9,8 @@ readonly usage="
     usage: $SELF [-h] [-d MYSQL_DBS] [-c CONTAINERS] [-rl]
                   [-P BORG_PRUNE_OPTS] [-B|-Z BORG_EXTRA_OPTS] [-E EXCLUDE_PATHS]
                   [-L LOCAL_REPO] [-e ERR_NOTIF] [-A SMTP_ACCOUNT] [-D MYSQL_FAIL_FATAL]
-                  [-R REMOTE] [-T REMOTE_REPO] [-H HC_ID] -p PREFIX  [NODES_TO_BACK_UP...]
+                  [-S SCRIPT_FAIL_FATAL] [-R REMOTE] [-T REMOTE_REPO] [-H HC_ID]
+                  -p PREFIX  [NODES_TO_BACK_UP...]
 
     Create new archive
 
@@ -36,6 +37,7 @@ readonly usage="
       -e ERR_NOTIF            overrides container env var of same name;
       -A SMTP_ACCOUNT         overrides container env var of same name;
       -D MYSQL_FAIL_FATAL     overrides container env var of same name;
+      -S SCRIPT_FAIL_FATAL    overrides container env var of same name;
       -R REMOTE               overrides container env var of same name;
       -T REMOTE_REPO          overrides container env var of same name;
       -H HC_ID                the unique/id part of healthcheck url, replacing the '{id}'
@@ -54,7 +56,9 @@ expand_nodes_to_back_up() {
     is_dir_empty "$TMP" && return 0
 
     while IFS= read -r -d $'\0' i; do
-        NODES_TO_BACK_UP+=("$(basename -- "$i")")  # note relative path; we don't want borg archive to contain "$TMP_ROOT" path
+        i="$(basename -- "$i")"  # note relative path; we don't want borg archive to contain "$TMP_ROOT" path
+        contains "$i" "${NODES_TO_BACK_UP[@]}" && continue
+        NODES_TO_BACK_UP+=("$i")
     done < <(find "$TMP" -mindepth 1 -maxdepth 1 -print0)
 }
 
@@ -96,7 +100,7 @@ dump_db() {
     if [[ "$err_code" -ne 0 ]]; then
         local msg
         msg="db dump for input args [${MYSQL_DB[*]}] failed w/ [$err_code]"
-        [[ "${MYSQL_FAIL_FATAL:-true}" == true ]] && fail "$msg" || err "$msg"
+        [[ "${MYSQL_FAIL_FATAL:-true}" == true ]] && fail "${msg}; aborting" || err "${msg}; not aborting"
         err_=failed
     fi
 
@@ -111,7 +115,7 @@ _backup_common() {
     repo="$2"
     extra_opts="$3"
 
-    log "=> starting $l_or_r backup..."
+    log "=> starting $l_or_r backup to [$repo]..."
     start_timestamp="$(date +%s)"
 
     borg create --stats --show-rc \
@@ -131,7 +135,7 @@ _prune_common() {
     l_or_r="$1"
     repo="$2"
 
-    log "=> starting $l_or_r prune..."
+    log "=> starting $l_or_r prune from [$repo]..."
     start_timestamp="$(date +%s)"
 
     borg prune --show-rc \
@@ -177,9 +181,15 @@ do_backup() {
     log "=> Backup started"
     start_timestamp="$(date +%s)"
 
+    run_scripts  before-mysql-dump
     dump_db
-    expand_nodes_to_back_up
+    run_scripts  after-mysql-dump
 
+    expand_nodes_to_back_up  # adds dump sql (and any possible custom script additions) to NODES_TO_BACK_UP
+
+    run_scripts  before-backup
+
+    expand_nodes_to_back_up  # once again, in case any of the custom scripts added files
     [[ "${#NODES_TO_BACK_UP[@]}" -eq 0 ]] && fail "no items selected for backup"
 
     pushd -- "$TMP" &> /dev/null || fail "unable to pushd into [$TMP]"  # cd there because files in $TMP are added without full path (to avoid "$TMP_ROOT" prefix in borg repo)
@@ -206,12 +216,16 @@ do_backup() {
 
     popd &> /dev/null
 
+    run_scripts  after-backup
+
     # backup is done, we can go ahead and start the containers while pruning:
     # TODO: should start_containers() be called when we errored?
     start_containers "${CONTAINERS_TO_START[@]}" &
     CONTAINERS_TO_START=()  # empty so no secondary start attempts would be made after
 
     started_pids=()  # reset
+
+    run_scripts  before-prune
 
     if [[ "$REMOTE_ONLY" -ne 1 ]]; then
         prune_local &
@@ -226,6 +240,8 @@ do_backup() {
     for i in "${started_pids[@]}"; do
         wait "$i" || err_=TRUE
     done
+
+    run_scripts  after-prune
 
     log "=> Backup+prune finished, duration $(( $(date +%s) - start_timestamp )) seconds${err_:+; at least one step failed or produced warning}"
 
@@ -327,15 +343,16 @@ trap -- 'cleanup; exit' EXIT HUP INT QUIT PIPE TERM
 source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_common.sh" | tee -a "$LOG"; exit 1; }
 REMOTE_OR_LOCAL_OPT_COUNTER=0
 BORG_OTPS_COUNTER=0
+BORG_EXCLUDE_PATHS=()
 
 unset MYSQL_DB ARCHIVE_PREFIX CONTAINERS HC_ID  # just in case
 
-while getopts "d:p:c:rlP:B:Z:E:L:e:A:D:R:T:hH:" opt; do
+while getopts "d:p:c:rlP:B:Z:E:L:e:A:D:S:R:T:hH:" opt; do
     case "$opt" in
         d) IFS="$SEPARATOR" read -ra MYSQL_DB <<< "$OPTARG"
             ;;
-        p) ARCHIVE_PREFIX="$OPTARG"
-           JOB_ID="${OPTARG}-$$"
+        p) readonly ARCHIVE_PREFIX="$OPTARG"  # be careful w/ var rename! eg run_scripts() depends on many var names
+           readonly JOB_ID="${OPTARG}-$$"
             ;;
         c) IFS="$SEPARATOR" read -ra CONTAINERS <<< "$OPTARG"
             ;;
@@ -353,11 +370,7 @@ while getopts "d:p:c:rlP:B:Z:E:L:e:A:D:R:T:hH:" opt; do
         Z) BORG_EXTRA_OPTS="$OPTARG"  # overrides env var of same name
            let BORG_OTPS_COUNTER+=1
             ;;
-        E) IFS="$SEPARATOR" read -ra _exclude_paths <<< "$OPTARG"
-           for i in "${_exclude_paths[@]}"; do
-                BORG_EXCLUDE_OPTS+=" --exclude $i"
-           done
-           unset _exclude_paths i
+        E) IFS="$SEPARATOR" read -ra BORG_EXCLUDE_PATHS <<< "$OPTARG"
             ;;
         L) LOCAL_REPO="$OPTARG"  # overrides env var of same name
             ;;
@@ -366,6 +379,8 @@ while getopts "d:p:c:rlP:B:Z:E:L:e:A:D:R:T:hH:" opt; do
         A) SMTP_ACCOUNT="$OPTARG"
             ;;
         D) MYSQL_FAIL_FATAL="$OPTARG"
+            ;;
+        S) SCRIPT_FAIL_FATAL="$OPTARG"
             ;;
         R) REMOTE="$OPTARG"  # overrides env var of same name
             ;;
@@ -383,24 +398,42 @@ done
 shift "$((OPTIND-1))"
 
 NODES_TO_BACK_UP=("$@")
+JOB_SCRIPT_ROOT="$SCRIPT_ROOT/jobs/$ARCHIVE_PREFIX"
 
 readonly TMP_ROOT="/tmp/${SELF}.tmp"
 readonly TMP="$TMP_ROOT/${ARCHIVE_PREFIX}-$RANDOM"
 
-[[ -n "$BORG_EXCLUDE_OPTS" ]] && BORG_EXTRA_OPTS+="$BORG_EXCLUDE_OPTS"
+[[ -f "$ENV_ROOT/${ARCHIVE_PREFIX}.conf" ]] && source "$ENV_ROOT/${ARCHIVE_PREFIX}.conf"  # load job-specific config if avail
+
+# process these _after_ sourcing job-specific config:
+if [[ "${#BORG_EXCLUDE_PATHS[@]}" -gt 0 ]]; then
+    for i in "${BORG_EXCLUDE_PATHS[@]}"; do
+        BORG_EXCLUDE_OPTS+=" --exclude $i"
+    done
+    unset BORG_EXCLUDE_PATHS i
+fi
+
+[[ -n "$BORG_EXCLUDE_OPTS" ]] && BORG_EXTRA_OPTS+=" $BORG_EXCLUDE_OPTS"
+unset BORG_EXCLUDE_OPTS
+
 readonly PREFIX_WITH_HOSTNAME="${ARCHIVE_PREFIX}-${HOST_ID}-"  # used for pruning
 readonly ARCHIVE_NAME="$PREFIX_WITH_HOSTNAME"'{now:%Y-%m-%d-%H%M%S}'
 
 validate_config
 [[ -n "$REMOTE" ]] && add_remote_to_known_hosts_if_missing "$REMOTE"
-readonly REMOTE+=":$REMOTE_REPO"  # define after validation
+readonly REMOTE+=":$REMOTE_REPO"  # define after validation, as we're re-defining the arg
 create_dirs
 
+# log out some params for easier post-mortem debugging:
 log "=> BORG_EXTRA_OPTS=[$BORG_EXTRA_OPTS]"
 log "=> ARCHIVE_NAME=[$ARCHIVE_NAME]"
 
+run_scripts  before
+
 stop_containers
 do_backup
+
+run_scripts  after
 
 exit 0
 
