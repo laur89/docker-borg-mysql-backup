@@ -99,7 +99,7 @@ Remember - "Untested backup is no backup at all"
     BORG_REMOTE_PATH        remote borg executable path; eg with rsync.net
                             you'd  want to use value 'borg1'; optional
     BORG_PASSPHRASE         borg repo password
-    BORG_PRUNE_OPTS         options for borg prune (both local and remote); not 
+    PRUNE_OPTS              options for borg prune (both local and remote); not 
                             required when it's defined by backup script -P param
                             (which overrides this container env var)
     SCRIPT_FAIL_FATAL       whether failure of custom script execution should abort
@@ -149,7 +149,7 @@ Container incorporates `backup`, `restore`, `list`, `delete` and `notif-test` sc
 as a one-off command for a single backup.
 
     usage: backup [-h] [-d MYSQL_DBS] [-c CONTAINERS] [-rl]
-                  [-P BORG_PRUNE_OPTS] [-B|-Z BORG_EXTRA_OPTS] [-E EXCLUDE_PATHS]
+                  [-P PRUNE_OPTS] [-B|-Z BORG_EXTRA_OPTS] [-E EXCLUDE_PATHS]
                   [-L LOCAL_REPO] [-e ERR_NOTIF] [-A SMTP_ACCOUNT] [-D MYSQL_FAIL_FATAL]
                   [-S SCRIPT_FAIL_FATAL] [-R REMOTE] [-T REMOTE_REPO] [-H HC_ID]
                   -p PREFIX  [NODES_TO_BACK_UP...]
@@ -167,7 +167,7 @@ as a one-off command for a single backup.
                               that were stopped by the script will be re-started afterwards
       -r                      only back to remote borg repo (remote-only)
       -l                      only back to local borg repo (local-only)
-      -P BORG_PRUNE_OPTS      overrides container env var of same name; only required when
+      -P PRUNE_OPTS           overrides container env var of same name; only required when
                               container var is not defined or needs to be overridden;
       -B BORG_EXTRA_OPTS      additional borg params; note it doesn't overwrite the
                               env var of same name, but extends it;
@@ -205,7 +205,7 @@ as a one-off command for a single backup.
         -e LOCAL_REPO=/backup/repo \
         -e BORG_EXTRA_OPTS='--compression zlib,5 --lock-wait 60' \
         -e BORG_PASSPHRASE=borgrepopassword \
-        -e BORG_PRUNE_OPTS='--keep-daily=7 --keep-weekly=4' \
+        -e PRUNE_OPTS='--keep-daily=7 --keep-weekly=4' \
         -v /etc/localtime:/etc/localtime:ro \
         -v /host/backup:/backup \
         -v /host/borg-conf:/config:ro \
@@ -231,7 +231,7 @@ as a one-off command for a single backup.
         -e REMOTE_REPO=repo/location \
         -e LOCAL_REPO=/backup/repo \
         -e BORG_PASSPHRASE=borgrepopassword \
-        -e BORG_PRUNE_OPTS='--keep-daily=7 --keep-weekly=4' \
+        -e PRUNE_OPTS='--keep-daily=7 --keep-weekly=4' \
         -v /var/run/docker.sock:/var/run/docker.sock \
         -v /etc/localtime:/etc/localtime:ro \
         -v /host/backup:/backup \
@@ -251,7 +251,7 @@ as a one-off command for a single backup.
         -e HOST_ID=hostname-to-use-in-archive-prefix \
         -e LOCAL_REPO=/backup/repo \
         -e BORG_PASSPHRASE=borgrepopassword \
-        -e BORG_PRUNE_OPTS='--keep-daily=7 --keep-weekly=4' \
+        -e PRUNE_OPTS='--keep-daily=7 --keep-weekly=4' \
         -e HC_URL='https://hc-ping.com/{id}' \
         -v /host/backup:/backup \
         -v /host/borg-conf:/config:ro \
@@ -294,7 +294,7 @@ errors via email.
         -e REMOTE=remoteuser@server.com \
         -e REMOTE_REPO=repo/location \
         -e BORG_PASSPHRASE=borgrepopassword \
-        -e BORG_PRUNE_OPTS='--keep-daily=7 --keep-weekly=4' \
+        -e PRUNE_OPTS='--keep-daily=7 --keep-weekly=4' \
         -e HC_URL='https://hc-ping.com/eb095278-f28d-448d-87fb-7b75c171a6aa' \
         -v /host/borg-conf:/config:ro \
         -v /host/borg-conf/.borg/cache:/root/.cache/borg \

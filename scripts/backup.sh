@@ -7,7 +7,7 @@ readonly LOG="/var/log/${SELF}.log"
 
 readonly usage="
     usage: $SELF [-h] [-d MYSQL_DBS] [-c CONTAINERS] [-rl]
-                  [-P BORG_PRUNE_OPTS] [-B|-Z BORG_EXTRA_OPTS] [-E EXCLUDE_PATHS]
+                  [-P PRUNE_OPTS] [-B|-Z BORG_EXTRA_OPTS] [-E EXCLUDE_PATHS]
                   [-L LOCAL_REPO] [-e ERR_NOTIF] [-A SMTP_ACCOUNT] [-D MYSQL_FAIL_FATAL]
                   [-S SCRIPT_FAIL_FATAL] [-R REMOTE] [-T REMOTE_REPO] [-H HC_ID]
                   -p PREFIX  [NODES_TO_BACK_UP...]
@@ -25,7 +25,7 @@ readonly usage="
                               that were stopped by the script will be re-started afterwards
       -r                      only back to remote borg repo (remote-only)
       -l                      only back to local borg repo (local-only)
-      -P BORG_PRUNE_OPTS      overrides container env var of same name; only required when
+      -P PRUNE_OPTS           overrides container env var of same name; only required when
                               container var is not defined or needs to be overridden;
       -B BORG_EXTRA_OPTS      additional borg params; note it doesn't overwrite the
                               env var of same name, but extends it;
@@ -141,7 +141,7 @@ _prune_common() {
     borg prune --show-rc \
         "$repo" \
         --prefix "$PREFIX_WITH_HOSTNAME" \
-        $BORG_PRUNE_OPTS > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || { err "$l_or_r borg prune exited w/ [$?]"; err_code=1; err_=failed; }
+        $PRUNE_OPTS > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || { err "$l_or_r borg prune exited w/ [$?]"; err_code=1; err_=failed; }
     log "=> $l_or_r prune ${err_:-succeeded} in $(( $(date +%s) - start_timestamp )) seconds"
 
     return "${err_code:-0}"
@@ -257,7 +257,7 @@ validate_config() {
     declare -a vars=(
         ARCHIVE_PREFIX
         BORG_PASSPHRASE
-        BORG_PRUNE_OPTS
+        PRUNE_OPTS
         HOST_ID
     )
     [[ -n "${MYSQL_DB[*]}" ]] && vars+=(
@@ -362,7 +362,7 @@ while getopts "d:p:c:rlP:B:Z:E:L:e:A:D:S:R:T:hH:" opt; do
         l) LOCAL_ONLY=1
            let REMOTE_OR_LOCAL_OPT_COUNTER+=1
             ;;
-        P) BORG_PRUNE_OPTS="$OPTARG"  # overrides env var of same name
+        P) PRUNE_OPTS="$OPTARG"  # overrides env var of same name
             ;;
         B) BORG_EXTRA_OPTS+=" $OPTARG"  # _extends_ env var of same name
            let BORG_OTPS_COUNTER+=1
