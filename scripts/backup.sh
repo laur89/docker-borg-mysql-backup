@@ -9,7 +9,8 @@ readonly usage="
     usage: $SELF [-h] [-d MYSQL_DBS] [-c CONTAINERS] [-rl]
                   [-P BORG_PRUNE_OPTS] [-B|-Z BORG_EXTRA_OPTS] [-E EXCLUDE_PATHS]
                   [-L LOCAL_REPO] [-e ERR_NOTIF] [-A SMTP_ACCOUNT] [-D MYSQL_FAIL_FATAL]
-                  [-R REMOTE] [-T REMOTE_REPO] [-H HC_ID] -p PREFIX  [NODES_TO_BACK_UP...]
+                  [-S SCRIPT_FAIL_FATAL] [-R REMOTE] [-T REMOTE_REPO] [-H HC_ID]
+                  -p PREFIX  [NODES_TO_BACK_UP...]
 
     Create new archive
 
@@ -36,6 +37,7 @@ readonly usage="
       -e ERR_NOTIF            overrides container env var of same name;
       -A SMTP_ACCOUNT         overrides container env var of same name;
       -D MYSQL_FAIL_FATAL     overrides container env var of same name;
+      -S SCRIPT_FAIL_FATAL    overrides container env var of same name;
       -R REMOTE               overrides container env var of same name;
       -T REMOTE_REPO          overrides container env var of same name;
       -H HC_ID                the unique/id part of healthcheck url, replacing the '{id}'
@@ -113,7 +115,7 @@ _backup_common() {
     repo="$2"
     extra_opts="$3"
 
-    log "=> starting $l_or_r backup..."
+    log "=> starting $l_or_r backup to [$repo]..."
     start_timestamp="$(date +%s)"
 
     borg create --stats --show-rc \
@@ -133,7 +135,7 @@ _prune_common() {
     l_or_r="$1"
     repo="$2"
 
-    log "=> starting $l_or_r prune..."
+    log "=> starting $l_or_r prune from [$repo]..."
     start_timestamp="$(date +%s)"
 
     borg prune --show-rc \
@@ -344,12 +346,12 @@ BORG_OTPS_COUNTER=0
 
 unset MYSQL_DB ARCHIVE_PREFIX CONTAINERS HC_ID  # just in case
 
-while getopts "d:p:c:rlP:B:Z:E:L:e:A:D:R:T:hH:" opt; do
+while getopts "d:p:c:rlP:B:Z:E:L:e:A:D:S:R:T:hH:" opt; do
     case "$opt" in
         d) IFS="$SEPARATOR" read -ra MYSQL_DB <<< "$OPTARG"
             ;;
-        p) ARCHIVE_PREFIX="$OPTARG"  # be careful w/ rename! eg run_scripts() depends on many var names
-           JOB_ID="${OPTARG}-$$"
+        p) readonly ARCHIVE_PREFIX="$OPTARG"  # be careful w/ rename! eg run_scripts() depends on many var names
+           readonly JOB_ID="${OPTARG}-$$"
             ;;
         c) IFS="$SEPARATOR" read -ra CONTAINERS <<< "$OPTARG"
             ;;
@@ -381,6 +383,8 @@ while getopts "d:p:c:rlP:B:Z:E:L:e:A:D:R:T:hH:" opt; do
             ;;
         D) MYSQL_FAIL_FATAL="$OPTARG"
             ;;
+        S) SCRIPT_FAIL_FATAL="$OPTARG"
+            ;;
         R) REMOTE="$OPTARG"  # overrides env var of same name
             ;;
         T) REMOTE_REPO="$OPTARG"  # overrides env var of same name
@@ -397,10 +401,13 @@ done
 shift "$((OPTIND-1))"
 
 NODES_TO_BACK_UP=("$@")
-JOB_SCRIPT_ROOT="$SCRIPT_ROOT/$ARCHIVE_PREFIX"
+JOB_SCRIPT_ROOT="$SCRIPT_ROOT/jobs/$ARCHIVE_PREFIX"
 
 readonly TMP_ROOT="/tmp/${SELF}.tmp"
 readonly TMP="$TMP_ROOT/${ARCHIVE_PREFIX}-$RANDOM"
+
+# TODO: should we source _before_ parsing input opts instead?
+[[ -f "$ENV_ROOT/${ARCHIVE_PREFIX}.conf" ]] && source "$ENV_ROOT/${ARCHIVE_PREFIX}.conf"  # load job-specific config if avail
 
 [[ -n "$BORG_EXCLUDE_OPTS" ]] && BORG_EXTRA_OPTS+="$BORG_EXCLUDE_OPTS"
 readonly PREFIX_WITH_HOSTNAME="${ARCHIVE_PREFIX}-${HOST_ID}-"  # used for pruning
@@ -408,9 +415,10 @@ readonly ARCHIVE_NAME="$PREFIX_WITH_HOSTNAME"'{now:%Y-%m-%d-%H%M%S}'
 
 validate_config
 [[ -n "$REMOTE" ]] && add_remote_to_known_hosts_if_missing "$REMOTE"
-readonly REMOTE+=":$REMOTE_REPO"  # define after validation
+readonly REMOTE+=":$REMOTE_REPO"  # define after validation, as we're re-defining the arg
 create_dirs
 
+# log out some params for easier post-mortem debugging:
 log "=> BORG_EXTRA_OPTS=[$BORG_EXTRA_OPTS]"
 log "=> ARCHIVE_NAME=[$ARCHIVE_NAME]"
 

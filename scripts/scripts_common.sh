@@ -6,16 +6,18 @@ set -o noglob
 set -o pipefail
 
 readonly CONF_ROOT='/config'
+readonly ENV_ROOT="$CONF_ROOT/env"
 readonly SCRIPT_ROOT="$CONF_ROOT/scripts"
 
 [[ "$SEPARATOR" == space ]] && SEPARATOR=' '
 [[ "$SEPARATOR" == comma ]] && SEPARATOR=','
+[[ "$SEPARATOR" == colon ]] && SEPARATOR=':'
+[[ "$SEPARATOR" == semicolon ]] && SEPARATOR=';'
 readonly SEPARATOR="${SEPARATOR:-,}"  # default to comma
 
 readonly CRON_FILE="$CONF_ROOT/crontab"
 readonly MSMTPRC="$CONF_ROOT/msmtprc"
 readonly LOGROTATE_CONF="$CONF_ROOT/logrotate.conf"
-readonly ENV_CONF="$CONF_ROOT/env.conf"
 readonly SSH_KEY="$CONF_ROOT/id_rsa"
 LOG_TIMESTAMP_FORMAT='+%F %T'
 readonly DEFAULT_NOTIF_TAIL_MSG='\n
@@ -537,6 +539,6 @@ join() {
 }
 
 
-[[ -f "$ENV_CONF" ]] && source "$ENV_CONF"
+[[ -f "${ENV_ROOT}/common-env.conf" ]] && source "${ENV_ROOT}/common-env.conf"
 
 true  # always exit w/ good code
