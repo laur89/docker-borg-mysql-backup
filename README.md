@@ -94,8 +94,8 @@ Remember - "Untested backup is no backup at all"
                             providing value via script
     CREATE_OPTS             additional borg params to the borg backup command
                             (for both local & remote borg commands); optional
-    BORG_LOCAL_EXTRA_OPTS   additional borg params for local borg backup command; optional
-    BORG_REMOTE_EXTRA_OPTS  additional borg params for remote borg backup command; optional
+    LOCAL_CREATE_OPTS       additional borg params for local borg backup command; optional
+    REMOTE_CREATE_OPTS      additional borg params for remote borg backup command; optional
     BORG_REMOTE_PATH        remote borg executable path; eg with rsync.net
                             you'd  want to use value 'borg1'; optional
     BORG_PASSPHRASE         borg repo password
@@ -390,7 +390,7 @@ Data will be restored from a local borg repo `/backup/otherrepo` that overrides 
 env-var-configured value `/backup/repo`. Also note missing
 env variable `BORG_PASSPHRASE`, which will be required to be typed in manually.
 
-Note the `CREATE_OPTS`, `BORG_LOCAL_EXTRA_OPTS`, `BORG_REMOTE_EXTRA_OPTS` env
+Note the `CREATE_OPTS`, `LOCAL_CREATE_OPTS`, `REMOTE_CREATE_OPTS` env
 variables are not usable with `restore`.
 
 ### list.sh
@@ -436,7 +436,7 @@ variables are not usable with `restore`.
         -v /host/borg-conf/logs:/var/log \
            layr/borg-mysql-backup list.sh -r -T repo/location -B '--prefix my-prefix'
 
-Note the `CREATE_OPTS`, `BORG_LOCAL_EXTRA_OPTS`, `BORG_REMOTE_EXTRA_OPTS` env
+Note the `CREATE_OPTS`, `LOCAL_CREATE_OPTS`, `REMOTE_CREATE_OPTS` env
 variables are not usable with `list`.
 
 ### delete.sh
@@ -493,7 +493,7 @@ variables are not usable with `list`.
         -v /host/borg-conf/logs:/var/log \
            layr/borg-mysql-backup delete.sh -r -T repo/location
 
-Note the `CREATE_OPTS`, `BORG_LOCAL_EXTRA_OPTS`, `BORG_REMOTE_EXTRA_OPTS` env
+Note the `CREATE_OPTS`, `LOCAL_CREATE_OPTS`, `REMOTE_CREATE_OPTS` env
 variables are not usable with `delete`.
 
 

@@ -149,12 +149,12 @@ _prune_common() {
 
 
 backup_local() {
-    _backup_common local "${LOCAL_REPO}" "$BORG_LOCAL_EXTRA_OPTS"
+    _backup_common local "${LOCAL_REPO}" "$LOCAL_CREATE_OPTS"
 }
 
 
 backup_remote() {
-    _backup_common remote "${REMOTE}" "$BORG_REMOTE_EXTRA_OPTS"
+    _backup_common remote "${REMOTE}" "$REMOTE_CREATE_OPTS"
 }
 
 
