@@ -7,7 +7,7 @@ readonly LOG="/var/log/${SELF}.log"
 
 readonly usage="
     usage: $SELF [-h] [-d MYSQL_DBS] [-c CONTAINERS] [-rl]
-                  [-P PRUNE_OPTS] [-B|-Z BORG_EXTRA_OPTS] [-E EXCLUDE_PATHS]
+                  [-P PRUNE_OPTS] [-B|-Z CREATE_OPTS] [-E EXCLUDE_PATHS]
                   [-L LOCAL_REPO] [-e ERR_NOTIF] [-A SMTP_ACCOUNT] [-D MYSQL_FAIL_FATAL]
                   [-S SCRIPT_FAIL_FATAL] [-R REMOTE] [-T REMOTE_REPO] [-H HC_ID]
                   -p PREFIX  [NODES_TO_BACK_UP...]
@@ -27,9 +27,9 @@ readonly usage="
       -l                      only back to local borg repo (local-only)
       -P PRUNE_OPTS           overrides container env var of same name; only required when
                               container var is not defined or needs to be overridden;
-      -B BORG_EXTRA_OPTS      additional borg params; note it doesn't overwrite the
+      -B CREATE_OPTS          additional borg params; note it doesn't overwrite the
                               env var of same name, but extends it;
-      -Z BORG_EXTRA_OPTS      additional borg params; note it _overrides_ the env
+      -Z CREATE_OPTS          additional borg params; note it _overrides_ the env
                               var of same name;
       -E EXCLUDE_PATHS        comma-separated paths to exclude from backup;
                               [-E '/p1,/p2'] would be equivalent to [-B '-e /p1 -e /p2']
@@ -119,7 +119,7 @@ _backup_common() {
     start_timestamp="$(date +%s)"
 
     borg create --stats --show-rc \
-        $BORG_EXTRA_OPTS \
+        $CREATE_OPTS \
         $extra_opts \
         "${repo}::${ARCHIVE_NAME}" \
         "${NODES_TO_BACK_UP[@]}" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || { err "$l_or_r borg create exited w/ [$?]"; err_code=1; err_=failed; }
@@ -364,10 +364,10 @@ while getopts "d:p:c:rlP:B:Z:E:L:e:A:D:S:R:T:hH:" opt; do
             ;;
         P) PRUNE_OPTS="$OPTARG"  # overrides env var of same name
             ;;
-        B) BORG_EXTRA_OPTS+=" $OPTARG"  # _extends_ env var of same name
+        B) CREATE_OPTS+=" $OPTARG"  # _extends_ env var of same name
            let BORG_OTPS_COUNTER+=1
             ;;
-        Z) BORG_EXTRA_OPTS="$OPTARG"  # overrides env var of same name
+        Z) CREATE_OPTS="$OPTARG"  # overrides env var of same name
            let BORG_OTPS_COUNTER+=1
             ;;
         E) IFS="$SEPARATOR" read -ra BORG_EXCLUDE_PATHS <<< "$OPTARG"
@@ -413,7 +413,7 @@ if [[ "${#BORG_EXCLUDE_PATHS[@]}" -gt 0 ]]; then
     unset BORG_EXCLUDE_PATHS i
 fi
 
-[[ -n "$BORG_EXCLUDE_OPTS" ]] && BORG_EXTRA_OPTS+=" $BORG_EXCLUDE_OPTS"
+[[ -n "$BORG_EXCLUDE_OPTS" ]] && CREATE_OPTS+=" $BORG_EXCLUDE_OPTS"
 unset BORG_EXCLUDE_OPTS
 
 readonly PREFIX_WITH_HOSTNAME="${ARCHIVE_PREFIX}-${HOST_ID}-"  # used for pruning
@@ -425,7 +425,7 @@ readonly REMOTE+=":$REMOTE_REPO"  # define after validation, as we're re-definin
 create_dirs
 
 # log out some params for easier post-mortem debugging:
-log "=> BORG_EXTRA_OPTS=[$BORG_EXTRA_OPTS]"
+log "=> CREATE_OPTS=[$CREATE_OPTS]"
 log "=> ARCHIVE_NAME=[$ARCHIVE_NAME]"
 
 run_scripts  before

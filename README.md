@@ -92,7 +92,7 @@ Remember - "Untested backup is no backup at all"
     LOCAL_REPO              path to local borg repo; optional - can be omitted
                             when only backing up to remote borg repo, or if
                             providing value via script
-    BORG_EXTRA_OPTS         additional borg params to the borg backup command
+    CREATE_OPTS             additional borg params to the borg backup command
                             (for both local & remote borg commands); optional
     BORG_LOCAL_EXTRA_OPTS   additional borg params for local borg backup command; optional
     BORG_REMOTE_EXTRA_OPTS  additional borg params for remote borg backup command; optional
@@ -149,7 +149,7 @@ Container incorporates `backup`, `restore`, `list`, `delete` and `notif-test` sc
 as a one-off command for a single backup.
 
     usage: backup [-h] [-d MYSQL_DBS] [-c CONTAINERS] [-rl]
-                  [-P PRUNE_OPTS] [-B|-Z BORG_EXTRA_OPTS] [-E EXCLUDE_PATHS]
+                  [-P PRUNE_OPTS] [-B|-Z CREATE_OPTS] [-E EXCLUDE_PATHS]
                   [-L LOCAL_REPO] [-e ERR_NOTIF] [-A SMTP_ACCOUNT] [-D MYSQL_FAIL_FATAL]
                   [-S SCRIPT_FAIL_FATAL] [-R REMOTE] [-T REMOTE_REPO] [-H HC_ID]
                   -p PREFIX  [NODES_TO_BACK_UP...]
@@ -169,9 +169,9 @@ as a one-off command for a single backup.
       -l                      only back to local borg repo (local-only)
       -P PRUNE_OPTS           overrides container env var of same name; only required when
                               container var is not defined or needs to be overridden;
-      -B BORG_EXTRA_OPTS      additional borg params; note it doesn't overwrite the
+      -B CREATE_OPTS          additional borg params; note it doesn't overwrite the
                               env var of same name, but extends it;
-      -Z BORG_EXTRA_OPTS      additional borg params; note it _overrides_ the env
+      -Z CREATE_OPTS          additional borg params; note it _overrides_ the env
                               var of same name;
       -E EXCLUDE_PATHS        comma-separated paths to exclude from backup; 
                               [-E '/p1,/p2'] would be equivalent to [-B '-e /p1 -e /p2']
@@ -203,7 +203,7 @@ as a one-off command for a single backup.
         -e REMOTE=remoteuser@server.com \
         -e REMOTE_REPO=repo/location \
         -e LOCAL_REPO=/backup/repo \
-        -e BORG_EXTRA_OPTS='--compression zlib,5 --lock-wait 60' \
+        -e CREATE_OPTS='--compression zlib,5 --lock-wait 60' \
         -e BORG_PASSPHRASE=borgrepopassword \
         -e PRUNE_OPTS='--keep-daily=7 --keep-weekly=4' \
         -v /etc/localtime:/etc/localtime:ro \
@@ -390,7 +390,7 @@ Data will be restored from a local borg repo `/backup/otherrepo` that overrides 
 env-var-configured value `/backup/repo`. Also note missing
 env variable `BORG_PASSPHRASE`, which will be required to be typed in manually.
 
-Note the `BORG_EXTRA_OPTS`, `BORG_LOCAL_EXTRA_OPTS`, `BORG_REMOTE_EXTRA_OPTS` env
+Note the `CREATE_OPTS`, `BORG_LOCAL_EXTRA_OPTS`, `BORG_REMOTE_EXTRA_OPTS` env
 variables are not usable with `restore`.
 
 ### list.sh
@@ -436,7 +436,7 @@ variables are not usable with `restore`.
         -v /host/borg-conf/logs:/var/log \
            layr/borg-mysql-backup list.sh -r -T repo/location -B '--prefix my-prefix'
 
-Note the `BORG_EXTRA_OPTS`, `BORG_LOCAL_EXTRA_OPTS`, `BORG_REMOTE_EXTRA_OPTS` env
+Note the `CREATE_OPTS`, `BORG_LOCAL_EXTRA_OPTS`, `BORG_REMOTE_EXTRA_OPTS` env
 variables are not usable with `list`.
 
 ### delete.sh
@@ -493,7 +493,7 @@ variables are not usable with `list`.
         -v /host/borg-conf/logs:/var/log \
            layr/borg-mysql-backup delete.sh -r -T repo/location
 
-Note the `BORG_EXTRA_OPTS`, `BORG_LOCAL_EXTRA_OPTS`, `BORG_REMOTE_EXTRA_OPTS` env
+Note the `CREATE_OPTS`, `BORG_LOCAL_EXTRA_OPTS`, `BORG_REMOTE_EXTRA_OPTS` env
 variables are not usable with `delete`.
 
 
