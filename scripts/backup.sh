@@ -243,7 +243,7 @@ do_backup() {
 
     run_scripts  after-prune
 
-    log "=> Backup+prune finished, duration $(( $(date +%s) - start_timestamp )) seconds${err_:+; at least one step failed or produced warning}"
+    log "=> Backup+prune finished${err_:- OK}, duration $(( $(date +%s) - start_timestamp )) seconds${err_:+; at least one step failed or produced warning}"
 
     return 0
 }
@@ -331,7 +331,7 @@ cleanup() {
     start_containers "${CONTAINERS_TO_START[@]}"  # do not background here
 
     # TODO: shouldn't we ping healthcheck the very first thing in cleanup()? ie it should fire regardles of the outcome of other calls in here
-    ping_healthcheck
+    [[ -z "$SKIP_HC_PING" ]] && ping_healthcheck
     log "==> backup script end"
 }
 
@@ -389,6 +389,7 @@ while getopts "d:p:c:rlP:B:Z:E:L:e:A:D:S:R:T:hH:" opt; do
         H) HC_ID="$OPTARG"
             ;;
         h) echo -e "$usage"
+           SKIP_HC_PING=true
            exit 0
             ;;
         *) fail "$SELF called with unsupported flag(s)"
