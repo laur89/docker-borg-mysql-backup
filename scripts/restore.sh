@@ -32,6 +32,7 @@ readonly usage="
 "
 
 
+# TODO: currently user-included sql files would also be picked up by find!
 restore_db() {
     local sql_files i
 
@@ -43,7 +44,7 @@ restore_db() {
         sql_files+=("$i")
     done < <(find "$RESTORE_DIR" -mindepth 1 -maxdepth 1 -type f -name '*.sql' -print0)
     [[ "${#sql_files[@]}" -ne 1 ]] && fail "expected to find exactly 1 .sql file in the root of [$RESTORE_DIR], but found ${#sql_files[@]}"
-    confirm "restore db from mysql dump [${sql_files[*]}]?" || { log "won't try to restore db"; return 0; }
+    confirm "restore db from mysql dump [${sql_files[*]}]?" || { log "skip restoring db..."; return 0; }
 
     mysql \
             --host="${MYSQL_HOST}" \

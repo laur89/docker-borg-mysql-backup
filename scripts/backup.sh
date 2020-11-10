@@ -336,7 +336,7 @@ cleanup() {
     start_containers "${CONTAINERS_TO_START[@]}"  # do not background here
 
     # TODO: shouldn't we ping healthcheck the very first thing in cleanup()? ie it should fire regardles of the outcome of other calls in here
-    [[ -z "$SKIP_HC_PING" ]] && ping_healthcheck
+    ping_healthcheck
     log "==> backup script end"
 }
 
@@ -344,7 +344,6 @@ cleanup() {
 # ================
 # Entry
 # ================
-trap -- 'cleanup; exit' EXIT HUP INT QUIT PIPE TERM
 source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_common.sh" | tee -a "$LOG"; exit 1; }
 REMOTE_OR_LOCAL_OPT_COUNTER=0
 BORG_OTPS_COUNTER=0
@@ -394,7 +393,6 @@ while getopts "d:p:c:rlP:B:Z:E:L:e:A:D:S:R:T:hH:" opt; do
         H) HC_ID="$OPTARG"
             ;;
         h) echo -e "$usage"
-           SKIP_HC_PING=true
            exit 0
             ;;
         *) fail "$SELF called with unsupported flag(s)"
@@ -402,6 +400,8 @@ while getopts "d:p:c:rlP:B:Z:E:L:e:A:D:S:R:T:hH:" opt; do
     esac
 done
 shift "$((OPTIND-1))"
+
+trap -- 'cleanup; exit' EXIT HUP INT QUIT PIPE TERM
 
 NODES_TO_BACK_UP=("$@")
 JOB_SCRIPT_ROOT="$SCRIPT_ROOT/jobs/$ARCHIVE_PREFIX"
