@@ -37,6 +37,7 @@ _del_common() {
 
     log "=> starting delete operation on $l_or_r repo [$repo]..."
     borg delete --stats --show-rc \
+        $COMMON_OPTS \
         $BORG_OPTS \
         "${repo}${ARCHIVE:+::$ARCHIVE}" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || fail "delete operation on $l_or_r repo [$repo] failed w/ [$?]"
 }

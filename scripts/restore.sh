@@ -66,6 +66,7 @@ _restore_common() {
     start_timestamp="$(date +%s)"
 
     borg extract -v --list --show-rc \
+        $COMMON_OPTS \
         $BORG_OPTS \
         "${repo}::${ARCHIVE_NAME}" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || fail "=> extracting $l_or_r repo failed w/ [$?] (duration $(( $(date +%s) - start_timestamp )) seconds)"
 

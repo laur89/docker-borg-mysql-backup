@@ -92,6 +92,9 @@ Remember - "Untested backup is no backup at all"
     LOCAL_REPO              path to local borg repo; optional - can be omitted
                             when only backing up to remote borg repo, or if
                             providing value via script
+    COMMON_OPTS             additional borg params to be used with _all_ borg
+                            commands. see
+                            https://borgbackup.readthedocs.io/en/stable/usage/general.html#common-options
     CREATE_OPTS             additional borg params to the borg backup command
                             (for both local & remote borg commands); optional
     LOCAL_CREATE_OPTS       additional borg params for local borg backup command; optional

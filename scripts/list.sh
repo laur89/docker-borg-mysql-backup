@@ -34,6 +34,7 @@ _list_common() {
     repo="$2"
 
     borg list --show-rc \
+        $COMMON_OPTS \
         $BORG_OPTS \
         "$repo" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || fail "listing $l_or_r repo [$repo] failed w/ [$?]"
 }

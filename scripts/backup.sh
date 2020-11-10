@@ -109,18 +109,20 @@ dump_db() {
 
 
 _backup_common() {
-    local l_or_r repo extra_opts start_timestamp err_code err_
+    local l_or_r repo extra_opts start_timestamp err_code err_ opts
 
     l_or_r="$1"
     repo="$2"
     extra_opts="$3"
 
+    opts="$(join -s ' ' "$COMMON_OPTS" "$CREATE_OPTS" "$extra_opts")"
+
     log "=> starting $l_or_r backup to [$repo]..."
+    log "=> effective $l_or_r create opts = [$opts]"
     start_timestamp="$(date +%s)"
 
     borg create --stats --show-rc \
-        $CREATE_OPTS \
-        $extra_opts \
+        $opts \
         "${repo}::${ARCHIVE_NAME}" \
         "${NODES_TO_BACK_UP[@]}" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || { err "$l_or_r borg create exited w/ [$?]"; err_code=1; err_=failed; }
     log "=> $l_or_r backup ${err_:-succeeded} in $(( $(date +%s) - start_timestamp )) seconds"
@@ -130,18 +132,21 @@ _backup_common() {
 
 
 _prune_common() {
-    local l_or_r repo start_timestamp err_code err_
+    local l_or_r repo start_timestamp err_code err_ opts
 
     l_or_r="$1"
     repo="$2"
 
+    opts="$(join -s ' ' "$COMMON_OPTS" "$PRUNE_OPTS")"
+
     log "=> starting $l_or_r prune from [$repo]..."
+    log "=> effective $l_or_r prune opts = [$opts]"
     start_timestamp="$(date +%s)"
 
     borg prune --show-rc \
-        "$repo" \
+        $opts \
         --prefix "$PREFIX_WITH_HOSTNAME" \
-        $PRUNE_OPTS > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || { err "$l_or_r borg prune exited w/ [$?]"; err_code=1; err_=failed; }
+        "$repo" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || { err "$l_or_r borg prune exited w/ [$?]"; err_code=1; err_=failed; }
     log "=> $l_or_r prune ${err_:-succeeded} in $(( $(date +%s) - start_timestamp )) seconds"
 
     return "${err_code:-0}"
@@ -425,8 +430,6 @@ validate_config
 readonly REMOTE+=":$REMOTE_REPO"  # define after validation, as we're re-defining the arg
 create_dirs
 
-# log out some params for easier post-mortem debugging:
-log "=> CREATE_OPTS=[$CREATE_OPTS]"
 log "=> ARCHIVE_NAME=[$ARCHIVE_NAME]"
 
 run_scripts  before

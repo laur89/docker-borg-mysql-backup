@@ -533,12 +533,26 @@ contains() {
 
 
 join() {
-    local list i
+    local opt OPTIND sep list i
+
+    sep="$SEPARATOR"  # default
+
+    while getopts "s:" opt; do
+        case "$opt" in
+            s) sep="$OPTARG"
+                ;;
+            *) fail "$FUNCNAME called with unsupported flag(s)"
+                ;;
+        esac
+    done
+    shift "$((OPTIND-1))"
+
     for i in "$@"; do
-        list+="${i}$SEPARATOR"
+        [[ -z "$i" ]] && continue
+        list+="${i}$sep"
     done
 
-    echo "${list:0:$(( ${#list} - ${#SEPARATOR} ))}"
+    echo "${list:0:$(( ${#list} - ${#sep} ))}"
 }
 
 
