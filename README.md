@@ -38,7 +38,8 @@ If you wish to provide your own msmtprc config file instead of defining `SMTP_*`
 vars, create it at the `/config` mount, named `msmtprc`.
 
 Dead man's switch support is provided via healthchecks; healthcheck provider will
-always be pinged when backup job runs - regardless of the outcome.
+always be pinged when backup job runs - regardless of the outcome; ie it's only
+there to monitor the scheduled backup is being executed, not that it succeeds.
 For error notifications you still need to configure notifications (see `ERR_NOTIF`).
 Note if you've configured healthchecks.io as your healthcheck provider, then you
 may also use it for error notifications (see above). 

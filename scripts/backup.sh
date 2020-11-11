@@ -115,7 +115,7 @@ _backup_common() {
     repo="$2"
     extra_opts="$3"
 
-    opts="$(join -s ' ' "$COMMON_OPTS" "$CREATE_OPTS" "$extra_opts")"
+    opts="$(join -s ' ' -- "$COMMON_OPTS" "$CREATE_OPTS" "$extra_opts")"
 
     log "=> starting $l_or_r backup to [$repo]..."
     log "=> effective $l_or_r create opts = [$opts]"
@@ -137,7 +137,7 @@ _prune_common() {
     l_or_r="$1"
     repo="$2"
 
-    opts="$(join -s ' ' "$COMMON_OPTS" "$PRUNE_OPTS")"
+    opts="$(join -s ' ' -- "$COMMON_OPTS" "$PRUNE_OPTS")"
 
     log "=> starting $l_or_r prune from [$repo]..."
     log "=> effective $l_or_r prune opts = [$opts]"

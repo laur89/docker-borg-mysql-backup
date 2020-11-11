@@ -492,12 +492,12 @@ run_scripts() {
         -a "$ARCHIVE_PREFIX"
         -a "$TMP"
         -a "$CONF_ROOT"
-        -a "$(join "${NODES_TO_BACK_UP[@]}")"
-        -a "$(join "${CONTAINERS[@]}")"
+        -a "$(join -- "${NODES_TO_BACK_UP[@]}")"
+        -a "$(join -- "${CONTAINERS[@]}")"
     )
 
     for dir in \
-            "$SCRIPT_ROOT/always" \
+            "$SCRIPT_ROOT/each" \
             "$SCRIPT_ROOT/$stage" \
             "$JOB_SCRIPT_ROOT/$stage"; do
 
