@@ -156,7 +156,7 @@ err() {
                 ;;
             M) NO_SEND_MAIL=true
                 ;;
-            *) fail -N "$FUNCNAME called with unsupported flag(s)"
+            *) fail -N "$FUNCNAME called with unsupported flag(s) [$opt]"
                 ;;
         esac
     done
@@ -215,7 +215,7 @@ mail() {
                 ;;
             a) acc="$OPTARG"
                 ;;
-            *) fail -M "$FUNCNAME called with unsupported flag(s)"
+            *) fail -M "$FUNCNAME called with unsupported flag(s) [$opt]"
                 ;;
         esac
     done
@@ -253,7 +253,7 @@ pushover() {
                 ;;
             e) expire="$OPTARG"
                 ;;
-            *) fail -N "$FUNCNAME called with unsupported flag(s)"
+            *) fail -N "$FUNCNAME called with unsupported flag(s) [$opt]"
                 ;;
         esac
     done
@@ -297,7 +297,7 @@ hcio() {
                 ;;
             b) body="$OPTARG"
                 ;;
-            *) fail -N "$FUNCNAME called with unsupported flag(s)"
+            *) fail -N "$FUNCNAME called with unsupported flag(s) [$opt]"
                 ;;
         esac
     done
@@ -541,7 +541,7 @@ join() {
         case "$opt" in
             s) sep="$OPTARG"
                 ;;
-            *) fail "$FUNCNAME called with unsupported flag(s)"
+            *) fail "$FUNCNAME called with unsupported flag(s) [$opt]"
                 ;;
         esac
     done

@@ -62,8 +62,8 @@ the changes to get picked up.
 **Please make sure to verify you're able to access your offsite (ie remote)
 backups without your local repo/config! You don't want to find yourself unable
 to access remote backups in case local configuration/repository gets nuked.**
-This is especially the case for `keyfile-`initialized repositories, where the key
-will be stored locally and you'll need to manage it separately.
+Refer to [brog docs](https://borgbackup.readthedocs.io/en/stable/quickstart.html#repository-encryption)
+as to how and what to back up, depending on the encryption mode used.
 
 You should be able to access your offsite backups from _any_ system.
 
@@ -71,6 +71,8 @@ Remember - "Untested backup is no backup at all"
 
 
 ## Container Parameters
+
+Note all `BORG_`-prefixed env vars are [borg native ones](https://borgbackup.readthedocs.io/en/stable/usage/general.html#environment-variables).
 
     MYSQL_HOST              the host/ip of your mysql database
     MYSQL_PORT              the port number of your mysql database
@@ -109,9 +111,9 @@ Remember - "Untested backup is no backup at all"
     SCRIPT_FAIL_FATAL       whether failure of custom script execution should abort
                             backup, defaults to 'true';
 
-    HC_URL                  healthcheck url to ping upon backup completion; may contain
-                            {id} placeholder to provide general template and provide the
-                            unique/id part via backup script option HC_ID
+    HC_URL                  healthcheck url to ping upon script completion; may contain
+                            {id} placeholder to define general template and provide the
+                            unique/id value via backup script option HC_ID
     ERR_NOTIF               space separated error notification methods; supported values
                             are {mail,pushover,healthchecksio}; optional
     NOTIF_SUBJECT           notifications' subject/title; defaults to '{p}: backup error on {h}'

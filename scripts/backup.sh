@@ -108,6 +108,7 @@ dump_db() {
 }
 
 
+# TODO: should we err() or fail() from here, as they are backgrounded anyway?
 _backup_common() {
     local l_or_r repo extra_opts start_timestamp err_code err_ opts
 
@@ -131,6 +132,7 @@ _backup_common() {
 }
 
 
+# TODO: should we err() or fail() from here, as they are backgrounded anyway?
 _prune_common() {
     local l_or_r repo start_timestamp err_code err_ opts
 
@@ -248,7 +250,7 @@ do_backup() {
 
     run_scripts  after-prune
 
-    log "=> Backup+prune finished${err_:- OK}, duration $(( $(date +%s) - start_timestamp )) seconds${err_:+; at least one step failed or produced warning}"
+    log "=> Backup+prune finished, duration $(( $(date +%s) - start_timestamp )) seconds${err_:+; at least one step failed or produced warning}"
 
     return 0
 }
