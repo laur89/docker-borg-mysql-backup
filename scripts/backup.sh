@@ -314,7 +314,7 @@ validate_config() {
     fi
 
 
-    if [[ "$ERR_NOTIF" == *healthchecksio* ]]; then
+    if contains healthchecksio "${ERR_NOTIF[@]}"; then
         local hcio_rgx='^https?://hc-ping.com/[-a-z0-9]+/?$'
         if [[ -z "$HC_URL" ]]; then
             err "healthchecksio selected for notifications, but HC_URL not defined"

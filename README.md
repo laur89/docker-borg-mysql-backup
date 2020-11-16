@@ -114,7 +114,7 @@ Note all `BORG_`-prefixed env vars are [borg native ones](https://borgbackup.rea
     HC_URL                  healthcheck url to ping upon script completion; may contain
                             {id} placeholder to define general template and provide the
                             unique/id value via backup script option HC_ID
-    ERR_NOTIF               space separated error notification methods; supported values
+    ERR_NOTIF               comma separated error notification methods; supported values
                             are {mail,pushover,healthchecksio}; optional
     NOTIF_SUBJECT           notifications' subject/title; defaults to '{p}: backup error on {h}'
     ADD_NOTIF_TAIL          whether all error messages should contain the
@@ -534,7 +534,7 @@ variables are not usable with `delete`.
         -e SMTP_HOST='smtp.gmail.com' \
         -e SMTP_USER='your.google.username' \
         -e SMTP_PASS='your-google-app-password-you-created-for-this' \
-        -e ERR_NOTIF='mail pushover' \
+        -e ERR_NOTIF='mail,pushover' \
         -e HOST_ID='our-hostname' \
            layr/borg-mysql-backup notif-test.sh -p 'my-prefix' [-f]
 

@@ -184,15 +184,15 @@ notif() {
         msg+="$msg_tail"
     fi
 
-    if [[ "$ERR_NOTIF" == *mail* && "$NO_SEND_MAIL" != true ]]; then
+    if contains mail "${ERR_NOTIF[@]}" && [[ "$NO_SEND_MAIL" != true ]]; then
         mail $f -t "$MAIL_TO" -f "$MAIL_FROM" -s "$NOTIF_SUBJECT" -a "$SMTP_ACCOUNT" -b "$msg" &
     fi
 
-    if [[ "$ERR_NOTIF" == *pushover* ]]; then
+    if contains pushover "${ERR_NOTIF[@]}"; then
         pushover $f -s "$NOTIF_SUBJECT" -b "$msg" &
     fi
 
-    if [[ "$ERR_NOTIF" == *healthchecksio* ]]; then
+    if contains healthchecksio "${ERR_NOTIF[@]}"; then
         hcio $f -b "$msg" &
     fi
 }
@@ -332,18 +332,22 @@ add_remote_to_known_hosts_if_missing() {
 }
 
 
-# note this validation can't be called for anything else than backup script;
+# note this validation can't be called for anything else than backup & notif-test scripts;
 # eg listing/extracting shouldn't validate existence of SMTP_* env vars.
+# also note we expand the ERR_NOTIF env var into an array here!
 validate_config_common() {
     local i vars
 
     declare -a vars
-    if [[ -n "$ERR_NOTIF" ]]; then
-        for i in $ERR_NOTIF; do
+
+    IFS="$SEPARATOR" read -ra ERR_NOTIF <<< "$ERR_NOTIF"
+
+    if [[ "${#ERR_NOTIF[@]}" -gt 0 ]]; then
+        for i in "${ERR_NOTIF[@]}"; do
             [[ "$i" =~ ^(mail|pushover|healthchecksio)$ ]] || fail "unsupported [ERR_NOTIF] value: [$i]"
         done
 
-        if [[ "$ERR_NOTIF" == *mail* ]]; then
+        if contains mail "${ERR_NOTIF[@]}"; then
             vars+=(MAIL_TO)
 
             [[ -f "$MSMTPRC" && -s "$MSMTPRC" ]] || vars+=(
@@ -353,7 +357,7 @@ validate_config_common() {
             )
         fi
 
-        [[ "$ERR_NOTIF" == *pushover* ]] && vars+=(
+        contains pushover "${ERR_NOTIF[@]}" && vars+=(
             PUSHOVER_APP_TOKEN
             PUSHOVER_USER_KEY
         )

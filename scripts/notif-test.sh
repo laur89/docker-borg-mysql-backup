@@ -59,8 +59,8 @@ while getopts "p:H:s:T:F:A:m:e:fh" opt; do
 done
 
 [[ -z "$ERR_NOTIF" ]] && fail "[ERR_NOTIF] is undefined - nothing to test here"
-validate_config_common
 log "ERR_NOTIF: [$ERR_NOTIF]"
+validate_config_common
 
 [[ -z "$ARCHIVE_PREFIX" ]] && ARCHIVE_PREFIX='dummy-prefix'
 JOB_ID="${ARCHIVE_PREFIX}-$$"
