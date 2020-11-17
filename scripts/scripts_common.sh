@@ -163,7 +163,7 @@ err() {
     shift "$((OPTIND-1))"
 
     readonly msg="$1"
-    echo -e "[$(date "$LOG_TIMESTAMP_FORMAT")] [$JOB_ID]\t    ERROR  $msg" | tee -a "$LOG"
+    echo -e "[$(date "$LOG_TIMESTAMP_FORMAT")] [$JOB_ID]\t    ERROR  $msg" | tee -a "$LOG" >&2
     [[ "$no_notif" -ne 1 ]] && notif $f "$msg"
 
     NO_SEND_MAIL="$no_mail_orig"  # reset to previous value
