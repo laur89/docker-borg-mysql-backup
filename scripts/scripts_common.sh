@@ -30,6 +30,7 @@ fatal?: {f}'
 
 DEFAULT_MAIL_FROM='{h} backup reporter'
 DEFAULT_NOTIF_SUBJECT='{p}: backup error on {h}'
+# make sure CURL_FLAGS don't contain $SEPARATOR! (as we join the array into string to export)
 CURL_FLAGS=(
     -w '\n'
     --output /dev/null
@@ -91,6 +92,8 @@ start_containers() {
 
 
 # dir existence needs to be verified by the caller!
+#
+# note this fun is exported
 is_dir_empty() {
     local dir
 
@@ -127,6 +130,7 @@ confirm() {
 }
 
 
+# note this fun is exported
 fail() {
     err -F "$@"
     err -N " - ABORTING -"
@@ -135,6 +139,8 @@ fail() {
 
 
 # info lvl logging
+#
+# note this fun is exported
 log() {
     local msg
     readonly msg="$1"
@@ -143,6 +149,8 @@ log() {
 }
 
 
+#
+# note this fun is exported
 err() {
     local opt msg f no_notif OPTIND no_mail_orig
 
@@ -150,11 +158,11 @@ err() {
 
     while getopts "FNM" opt; do
         case "$opt" in
-            F) f='-F'  # only to be provided by fail() !
+            F) f='-F'  # only to be provided by fail(), ie do not pass -F flag to err() yourself!
                 ;;
             N) no_notif=1
                 ;;
-            M) NO_SEND_MAIL=true
+            M) NO_SEND_MAIL=true  # note this would be redundant if -N is already given
                 ;;
             *) fail -N "$FUNCNAME called with unsupported flag(s) [$opt]"
                 ;;
@@ -171,6 +179,8 @@ err() {
 
 
 # note no notifications are generated if shell is in interactive mode
+#
+# note this fun is exported
 notif() {
     local msg f msg_tail
 
@@ -183,6 +193,9 @@ notif() {
         msg_tail="$(echo -e "${NOTIF_TAIL_MSG:-$DEFAULT_NOTIF_TAIL_MSG}")"
         msg+="$msg_tail"
     fi
+
+    # if this function was called from a script that accesses this function via exported vars:
+    [[ -n "${ERR_NOTIF[*]}" && "${#ERR_NOTIF[@]}" -eq 1 && "${ERR_NOTIF[*]}" == *"$SEPARATOR"* ]] && IFS="$SEPARATOR" read -ra ERR_NOTIF <<< "$ERR_NOTIF"
 
     if contains mail "${ERR_NOTIF[@]}" && [[ "$NO_SEND_MAIL" != true ]]; then
         mail $f -t "$MAIL_TO" -f "$MAIL_FROM" -s "$NOTIF_SUBJECT" -a "$SMTP_ACCOUNT" -b "$msg" &
@@ -198,6 +211,8 @@ notif() {
 }
 
 
+#
+# note this fun is exported
 mail() {
     local opt to from subj acc body is_fail err_code account OPTIND
 
@@ -236,6 +251,8 @@ EOF
 }
 
 
+#
+# note this fun is exported
 pushover() {
     local opt is_fail subj body prio retry expire hdrs OPTIND
 
@@ -275,6 +292,9 @@ pushover() {
         )
     fi
 
+    # if this function was called from a script that accesses this function via exported vars:
+    [[ -n "${CURL_FLAGS[*]}" && "${#CURL_FLAGS[@]}" -eq 1 && "${CURL_FLAGS[*]}" == *"$SEPARATOR"* ]] && IFS="$SEPARATOR" read -ra CURL_FLAGS <<< "$CURL_FLAGS"
+
     curl "${CURL_FLAGS[@]}" \
         --retry 2 \
         --form-string "token=$PUSHOVER_APP_TOKEN" \
@@ -288,6 +308,8 @@ pushover() {
 }
 
 
+#
+# note this fun is exported
 hcio() {
     local opt is_fail body OPTIND url
 
@@ -306,6 +328,9 @@ hcio() {
     url="$HC_URL"
     [[ "$url" != */ ]] && url+='/'
     url+='fail'
+
+    # if this function was called from a script that accesses this function via exported vars:
+    [[ -n "${CURL_FLAGS[*]}" && "${#CURL_FLAGS[@]}" -eq 1 && "${CURL_FLAGS[*]}" == *"$SEPARATOR"* ]] && IFS="$SEPARATOR" read -ra CURL_FLAGS <<< "$CURL_FLAGS"
 
     curl "${CURL_FLAGS[@]}" \
         --retry 5 \
@@ -422,6 +447,8 @@ is_true_false() {
 }
 
 
+#
+# note this fun is exported
 expand_placeholders() {
     local m is_fatal
 
@@ -465,6 +492,8 @@ file_type() {
 # @param {string}  url   url which validity to test.
 #
 # @returns {bool}  true, if provided url was a valid url.
+#
+# note this fun is exported
 is_valid_url() {
     local regex
 
@@ -500,9 +529,20 @@ run_scripts() {
         -a "$(join -- "${CONTAINERS[@]}")"
     )
 
+    # export all the necessary args & functions that child processes might want/need to use:
+    export LOG LOG_TIMESTAMP_FORMAT JOB_ID ARCHIVE_PREFIX HOST_ID SEPARATOR
+    export NO_SEND_MAIL NO_NOTIF ADD_NOTIF_TAIL NOTIF_TAIL_MSG DEFAULT_NOTIF_TAIL_MSG
+    export MAIL_TO MAIL_FROM DEFAULT_MAIL_FROM NOTIF_SUBJECT DEFAULT_NOTIF_SUBJECT SMTP_ACCOUNT
+    export PUSHOVER_USER_KEY PUSHOVER_APP_TOKEN PUSHOVER_PRIORITY PUSHOVER_EXPIRE
+    export HC_URL
+    #export ERR_NOTIF CURL_FLAGS  # arrays, need to be joined and passed directly to the command below
+    export -f fail err log notif mail pushover hcio expand_placeholders contains is_dir_empty print_time is_valid_url
+
+
     for dir in \
             "$SCRIPT_ROOT/each" \
             "$SCRIPT_ROOT/$stage" \
+            "$JOB_SCRIPT_ROOT/each" \
             "$JOB_SCRIPT_ROOT/$stage"; do
 
         [[ -d "$dir" ]] || continue
@@ -511,7 +551,9 @@ run_scripts() {
         log "stage [$stage]: executing following scripts in [$dir]:"
         run-parts --test "${flags[@]}" "$dir" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || err "run-parts dry-run for stage [$stage] in [$dir] failed w/ $?"
 
-        run-parts "${flags[@]}" "$dir" 2> >(tee -a "$LOG" >&2)  # no need to log stdout right?
+        ERR_NOTIF="$(join -- "${ERR_NOTIF[@]}")" \
+                CURL_FLAGS="$(join -- "${CURL_FLAGS[@]}")" \
+                run-parts "${flags[@]}" "$dir" 2> >(tee -a "$LOG" >&2)  # no need to log stdout right?
         if [[ "$?" -ne 0 ]]; then
             msg="custom script execution for stage [$stage] in [$dir] failed"
             [[ "${SCRIPT_FAIL_FATAL:-true}" == true ]] && fail "${msg}; aborting" || err "${msg}; not aborting"
@@ -520,6 +562,8 @@ run_scripts() {
 }
 
 
+#
+# note this fun is exported
 contains() {
     local src i
 
@@ -560,6 +604,8 @@ join() {
 }
 
 
+#
+# note this fun is exported
 print_time() {
     local sec tot r
 
