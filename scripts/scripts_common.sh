@@ -560,6 +560,32 @@ join() {
 }
 
 
+print_time() {
+    local sec tot r
+
+    sec="$1"
+
+    r="$((sec%60))s"
+    tot=$((sec%60))
+
+    if [[ "$sec" -gt "$tot" ]]; then
+        r="$((sec%3600/60))m:$r"
+        let tot+=$((sec%3600))
+    fi
+
+    if [[ "$sec" -gt "$tot" ]]; then
+        r="$((sec%86400/3600))h:$r"
+        let tot+=$((sec%86400))
+    fi
+
+    if [[ "$sec" -gt "$tot" ]]; then
+        r="$((sec/86400))d:$r"
+    fi
+
+    echo -n "$r"
+}
+
+
 [[ -f "${ENV_ROOT}/common-env.conf" ]] && source "${ENV_ROOT}/common-env.conf"
 
 if [[ "$DEBUG" == true ]]; then

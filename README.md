@@ -62,7 +62,7 @@ the changes to get picked up.
 ### For rsync.net (or other remote location):
 
 Running command from your computer: `BORG_REMOTE_PATH=borg1 borg init
---encryption=repokey rsync:dir/repodir`
+--encryption=repokey 12345@ch-s010.rsync.net:dir/path`
 
 ### Local repo:
 

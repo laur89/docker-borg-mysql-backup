@@ -56,7 +56,7 @@ restore_db() {
 
 # TODO: do not fail() if err code <=1?
 _restore_common() {
-    local l_or_r repo start_timestamp
+    local l_or_r repo start_timestamp t
 
     l_or_r="$1"
     repo="$2"
@@ -69,14 +69,18 @@ _restore_common() {
     borg extract -v --list --show-rc \
         $COMMON_OPTS \
         $BORG_OPTS \
-        "${repo}::${ARCHIVE_NAME}" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || fail "=> extracting $l_or_r repo failed w/ [$?] (duration $(( $(date +%s) - start_timestamp )) seconds)"
+        "${repo}::${ARCHIVE_NAME}" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || fail "=> extracting $l_or_r repo failed w/ [$?] (duration $(print_time "$(( $(date +%s) - start_timestamp ))"))"
 
-    log "=> Extract from $l_or_r repo succeeded in $(( $(date +%s) - start_timestamp )) seconds"
+
+    t="$(( $(date +%s) - start_timestamp ))"
+    log "=> Extract from $l_or_r repo succeeded in $(print_time "$t")"
 
     popd &> /dev/null
     KEEP_DIR=1  # from this point onward, we should not delete $RESTORE_DIR on failure
     restore_db
-    log "=> Restore finished OK in $(( $(date +%s) - start_timestamp )) seconds, contents are in [$RESTORE_DIR]"
+
+    t="$(( $(date +%s) - start_timestamp ))"
+    log "=> Restore finished OK in $(print_time "$t"), contents are in [$RESTORE_DIR]"
 }
 
 

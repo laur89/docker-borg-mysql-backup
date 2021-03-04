@@ -65,7 +65,7 @@ expand_nodes_to_back_up() {
 
 # dumps selected db(s) to $TMP
 dump_db() {
-    local output_filename dbs dbs_log err_code start_timestamp err_
+    local output_filename dbs dbs_log err_code start_timestamp err_ t
 
     [[ "${#MYSQL_DB[@]}" -eq 0 ]] && return 0  # no db specified, meaning db dump not required
 
@@ -104,13 +104,14 @@ dump_db() {
         err_=failed
     fi
 
-    log "=> db dump ${err_:-succeeded} in $(( $(date +%s) - start_timestamp )) seconds"
+    t="$(( $(date +%s) - start_timestamp ))"
+    log "=> db dump ${err_:-succeeded} in $(print_time "$t")"
 }
 
 
 # TODO: should we err() or fail() from here, as they are backgrounded anyway?
 _backup_common() {
-    local l_or_r repo extra_opts start_timestamp err_code err_ opts
+    local l_or_r repo extra_opts start_timestamp err_code err_ opts t
 
     l_or_r="$1"
     repo="$2"
@@ -126,7 +127,9 @@ _backup_common() {
         $opts \
         "${repo}::${ARCHIVE_NAME}" \
         "${NODES_TO_BACK_UP[@]}" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || { err "$l_or_r borg create exited w/ [$?]"; err_code=1; err_=failed; }
-    log "=> $l_or_r backup ${err_:-succeeded} in $(( $(date +%s) - start_timestamp )) seconds"
+
+    t="$(( $(date +%s) - start_timestamp ))"
+    log "=> $l_or_r backup ${err_:-succeeded} in $(print_time "$t")"
 
     return "${err_code:-0}"
 }
@@ -134,7 +137,7 @@ _backup_common() {
 
 # TODO: should we err() or fail() from here, as they are backgrounded anyway?
 _prune_common() {
-    local l_or_r repo start_timestamp err_code err_ opts
+    local l_or_r repo start_timestamp err_code err_ opts t
 
     l_or_r="$1"
     repo="$2"
@@ -149,7 +152,9 @@ _prune_common() {
         $opts \
         --prefix "$PREFIX_WITH_HOSTNAME" \
         "$repo" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || { err "$l_or_r borg prune exited w/ [$?]"; err_code=1; err_=failed; }
-    log "=> $l_or_r prune ${err_:-succeeded} in $(( $(date +%s) - start_timestamp )) seconds"
+
+    t="$(( $(date +%s) - start_timestamp ))"
+    log "=> $l_or_r prune ${err_:-succeeded} in $(print_time "$t")"
 
     return "${err_code:-0}"
 }
@@ -181,7 +186,7 @@ prune_remote() {
 #
 # TODO: should we skip prune if create exits w/ code >=2?
 do_backup() {
-    local started_pids start_timestamp i err_
+    local started_pids start_timestamp i err_ t
 
     declare -a started_pids=()
 
@@ -250,7 +255,8 @@ do_backup() {
 
     run_scripts  after-prune
 
-    log "=> Backup+prune finished, duration $(( $(date +%s) - start_timestamp )) seconds${err_:+; at least one step failed or produced warning}"
+    t="$(( $(date +%s) - start_timestamp ))"
+    log "=> Backup+prune finished, duration $(print_time "$t")${err_:+; at least one step failed or produced warning}"
 
     return 0
 }
