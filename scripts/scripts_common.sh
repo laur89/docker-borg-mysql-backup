@@ -365,6 +365,24 @@ validate_config_common() {
 
     declare -a vars
 
+    if [[ -n "$HC_ID" ]]; then
+        if is_valid_url "$HC_ID"; then
+            HC_URL="$HC_ID"
+        elif [[ "$HC_ID" == disable* ]]; then
+            unset HC_URL
+        elif [[ -z "$HC_URL" ]]; then
+            err "[HC_ID] given, but no healthcheck url template provided"
+        elif [[ "$HC_URL" != *'{id}'* ]]; then
+            err "[HC_URL] template does not contain id placeholder [{id}]"
+        else
+            HC_URL="$(sed "s/{id}/$HC_ID/g" <<< "$HC_URL")"
+        fi
+    fi
+
+    if [[ "$HC_URL" == *'{id}'* ]]; then
+        err "[HC_URL] with {id} placeholder defined, but no replacement value provided"
+    fi
+
     IFS="$SEPARATOR" read -ra ERR_NOTIF <<< "$ERR_NOTIF"
 
     if [[ "${#ERR_NOTIF[@]}" -gt 0 ]]; then
@@ -387,7 +405,14 @@ validate_config_common() {
             PUSHOVER_USER_KEY
         )
 
-        # note we cannot validate healthchecksio in here - url can/will be modified by backup.sh invocation
+        if contains healthchecksio "${ERR_NOTIF[@]}"; then
+            #vars+=(HC_URL)
+
+            local hcio_rgx='^https?://hc-ping.com/[-a-z0-9]+/?$'
+            if ! [[ "$HC_URL" =~ $hcio_rgx ]]; then
+                err "healthchecksio selected for notifications, but configured HC_URL [$HC_URL] does not match expected healthchecks.io url pattern [$hcio_rgx]"
+            fi
+        fi
     fi
 
     vars_defined "${vars[@]}"

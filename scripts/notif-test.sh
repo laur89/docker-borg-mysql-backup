@@ -7,14 +7,15 @@ readonly LOG=/dev/null
 JOB_ID="notif-test-$$"  # just for logging; will be overwritten before notification(s) are triggered
 
 readonly usage="
-    usage: $SELF [-hpHsTFAmef]
+    usage: $SELF [-hpIHsTFAmef]
 
     Test configured notifications. Running it will fire notification via each of
     the configured channels.
 
     arguments:
       -p ARCHIVE_PREFIX
-      -H HOST_ID
+      -I HOST_ID
+      -H HC_ID (id to replace in healthcheck url)
       -s NOTIF_SUBJECT
       -T MAIL_TO
       -F MAIL_FROM
@@ -30,11 +31,13 @@ readonly usage="
 NO_NOTIF=true
 source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_common.sh"; exit 1; }
 
-while getopts "p:H:s:T:F:A:m:e:fh" opt; do
+while getopts "p:I:H:s:T:F:A:m:e:fh" opt; do
     case "$opt" in
         p) ARCHIVE_PREFIX="$OPTARG"
             ;;
-        H) HOST_ID="$OPTARG"  # overrides env var of same name
+        I) HOST_ID="$OPTARG"  # overrides env var of same name
+            ;;
+        H) HC_ID="$OPTARG"
             ;;
         s) NOTIF_SUBJECT="$OPTARG"  # overrides env var of same name
             ;;

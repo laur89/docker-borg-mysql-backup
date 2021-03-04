@@ -299,36 +299,6 @@ validate_config() {
     if [[ "$LOCAL_ONLY" -ne 1 && "$-" != *i* ]]; then
         [[ -f "$SSH_KEY" && -s "$SSH_KEY" ]] || fail "[$SSH_KEY] is not a file; is /config mounted?"
     fi
-
-
-    if [[ -n "$HC_ID" ]]; then
-        if is_valid_url "$HC_ID"; then
-            HC_URL="$HC_ID"
-        elif [[ "$HC_ID" == disable* ]]; then
-            unset HC_URL
-        elif [[ -z "$HC_URL" ]]; then
-            err "[HC_ID] given, but no healthcheck url template provided"
-        elif [[ "$HC_URL" != *'{id}'* ]]; then
-            err "[HC_URL] template does not contain id placeholder [{id}]"
-        else
-            HC_URL="$(sed "s/{id}/$HC_ID/g" <<< "$HC_URL")"
-        fi
-    fi
-
-    if [[ "$HC_URL" == *'{id}'* ]]; then
-        err "[HC_URL] with {id} placeholder defined, but no replacement value provided"
-    fi
-
-
-    if contains healthchecksio "${ERR_NOTIF[@]}"; then
-        local hcio_rgx='^https?://hc-ping.com/[-a-z0-9]+/?$'
-        if [[ -z "$HC_URL" ]]; then
-            err "healthchecksio selected for notifications, but HC_URL not defined"
-        #elif [[ "$HC_URL" != *//hc-ping.com/* ]]; then
-        elif ! [[ "$HC_URL" =~ $hcio_rgx ]]; then
-            err "healthchecksio selected for notifications, but configured HC_URL [$HC_URL] does not match expected healthchecks.io url pattern [$hcio_rgx]"
-        fi
-    fi
 }
 
 
