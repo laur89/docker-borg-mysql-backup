@@ -358,29 +358,35 @@ add_remote_to_known_hosts_if_missing() {
 
 
 # note this validation can't be called for anything else than backup & notif-test scripts;
-# eg listing/extracting shouldn't validate existence of SMTP_* env vars.
+# eg list/extract scripts shouldn't validate existence of SMTP_* env vars.
+# !! it's also called by setup.sh, but with -i flag to skip some checks.
+#
 # also note we expand the ERR_NOTIF env var into an array here!
 validate_config_common() {
-    local i vars
+    local i vars init
+
+    [[ "$1" == -i ]] && init=1
 
     declare -a vars
 
-    if [[ -n "$HC_ID" ]]; then
-        if is_valid_url "$HC_ID"; then
-            HC_URL="$HC_ID"
-        elif [[ "$HC_ID" == disable* ]]; then
-            unset HC_URL
-        elif [[ -z "$HC_URL" ]]; then
-            err "[HC_ID] given, but no healthcheck url template provided"
-        elif [[ "$HC_URL" != *'{id}'* ]]; then
-            err "[HC_URL] template does not contain id placeholder [{id}]"
-        else
-            HC_URL="$(sed "s/{id}/$HC_ID/g" <<< "$HC_URL")"
+    if [[ "$init" -ne 1 ]]; then
+        if [[ -n "$HC_ID" ]]; then
+            if is_valid_url "$HC_ID"; then
+                HC_URL="$HC_ID"
+            elif [[ "$HC_ID" == disable* ]]; then
+                unset HC_URL
+            elif [[ -z "$HC_URL" ]]; then
+                err "[HC_ID] given, but no healthcheck url template provided"
+            elif [[ "$HC_URL" != *'{id}'* ]]; then
+                err "[HC_URL] template does not contain id placeholder [{id}]"
+            else
+                HC_URL="$(sed "s/{id}/$HC_ID/g" <<< "$HC_URL")"
+            fi
         fi
-    fi
 
-    if [[ "$HC_URL" == *'{id}'* ]]; then
-        err "[HC_URL] with {id} placeholder defined, but no replacement value provided"
+        if [[ "$HC_URL" == *'{id}'* ]]; then
+            err "[HC_URL] with {id} placeholder defined, but no replacement value provided"
+        fi
     fi
 
     IFS="$SEPARATOR" read -ra ERR_NOTIF <<< "$ERR_NOTIF"
@@ -405,7 +411,7 @@ validate_config_common() {
             PUSHOVER_USER_KEY
         )
 
-        if contains healthchecksio "${ERR_NOTIF[@]}"; then
+        if [[ "$init" -ne 1 ]] && contains healthchecksio "${ERR_NOTIF[@]}"; then
             #vars+=(HC_URL)
 
             local hcio_rgx='^https?://hc-ping.com/[-a-z0-9]+/?$'

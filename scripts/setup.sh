@@ -147,7 +147,7 @@ source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_com
 #chmod 600 /container.env || fail "chmod-ing /container.env failed w/ [$?]"
 
 check_dependencies
-validate_config_common
+validate_config_common -i
 setup_crontab
 install_ssh_key
 setup_msmtp
