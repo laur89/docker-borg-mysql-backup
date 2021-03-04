@@ -57,6 +57,18 @@ Every time any config is changed in `/config`, container needs to be restarted f
 the changes to get picked up.
 
 
+## Repo init examples:
+
+### For rsync.net (or other remote location):
+
+Running command from your computer: `BORG_REMOTE_PATH=borg1 borg init
+--encryption=repokey rsync:dir/repodir`
+
+### Local repo:
+
+`borg init --encryption=repokey /path/to/local/repo`
+
+
 ## Be careful
 
 **Please make sure to verify you're able to access your offsite (ie remote)
