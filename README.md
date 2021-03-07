@@ -519,14 +519,15 @@ variables are not usable with `delete`.
 
 `notif-test` script is for testing your configured notifications.
 
-    usage: notif-test.sh [-hpHsTFAmef]
+    usage: notif-test.sh [-hpIHsTFAmef]
 
     Test configured notifications. Running it will fire notification via each of
     the configured channels.
 
     arguments:
       -p ARCHIVE_PREFIX
-      -H HOST_ID
+      -I HOST_ID
+      -H HC_ID (id to replace in healthcheck url)
       -s NOTIF_SUBJECT
       -T MAIL_TO
       -F MAIL_FROM
