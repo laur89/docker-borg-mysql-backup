@@ -642,8 +642,8 @@ print_time() {
 
     sec="$1"
 
-    r="$((sec%60))s"
     tot=$((sec%60))
+    r="${tot}s"
 
     if [[ "$sec" -gt "$tot" ]]; then
         r="$((sec%3600/60))m:$r"

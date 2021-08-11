@@ -27,6 +27,8 @@ readonly usage="
       -l                      only back to local borg repo (local-only)
       -P PRUNE_OPTS           overrides container env var of same name; only required when
                               container var is not defined or needs to be overridden;
+      -1 LOCAL_PRUNE_OPTS     overrides prune opts for local repo;
+      -2 REMOTE_PRUNE_OPTS    overrides prune opts for remote repo;
       -B CREATE_OPTS          additional borg params; note it doesn't overwrite the
                               env var of same name, but extends it;
       -Z CREATE_OPTS          additional borg params; note it _overrides_ the env
@@ -137,12 +139,13 @@ _backup_common() {
 
 # TODO: should we err() or fail() from here, as they are backgrounded anyway?
 _prune_common() {
-    local l_or_r repo start_timestamp err_code err_ opts t
+    local l_or_r repo prune_opts start_timestamp err_code err_ opts t
 
     l_or_r="$1"
     repo="$2"
+    prune_opts="$3"  # local/remote specific prune opts, optional
 
-    opts="$(join -s ' ' -- "$COMMON_OPTS" "$PRUNE_OPTS")"
+    opts="$(join -s ' ' -- "$COMMON_OPTS" "${prune_opts:-$PRUNE_OPTS}")"
 
     log "=> starting $l_or_r prune from [$repo]..."
     log "=> effective $l_or_r prune opts = [$opts]"
@@ -171,12 +174,12 @@ backup_remote() {
 
 
 prune_local() {
-    _prune_common local "${LOCAL_REPO}"
+    _prune_common local "${LOCAL_REPO}" "$LOCAL_PRUNE_OPTS"
 }
 
 
 prune_remote() {
-    _prune_common remote "${REMOTE}"
+    _prune_common remote "${REMOTE}" "$REMOTE_PRUNE_OPTS"
 }
 
 
@@ -270,7 +273,6 @@ validate_config() {
     declare -a vars=(
         ARCHIVE_PREFIX
         BORG_PASSPHRASE
-        PRUNE_OPTS
         HOST_ID
     )
     [[ -n "${MYSQL_DB[*]}" ]] && vars+=(
@@ -281,6 +283,17 @@ validate_config() {
     )
     [[ "$LOCAL_ONLY" -ne 1 ]] && vars+=(REMOTE REMOTE_REPO)
     [[ "$REMOTE_ONLY" -ne 1 ]] && vars+=(LOCAL_REPO)
+
+    # validate prune options:
+    if [[ "$REMOTE_ONLY" -ne 1 && "$LOCAL_ONLY" -ne 1 ]]; then
+        if [[ -z "$REMOTE_PRUNE_OPTS" && -z "$LOCAL_PRUNE_OPTS" ]]; then
+            vars+=(PRUNE_OPTS)
+        elif [[ -z "$REMOTE_PRUNE_OPTS" || -z "$LOCAL_PRUNE_OPTS" ]] && [[ -z "$PRUNE_OPTS" ]]; then
+            fail "prune options for remote and/or local repo(s) undefined"
+        fi
+    elif [[ "$REMOTE_ONLY" -eq 1 && -z "$REMOTE_PRUNE_OPTS" ]] || [[ "$LOCAL_ONLY" -eq 1 && -z "$LOCAL_PRUNE_OPTS" ]]; then
+        vars+=(PRUNE_OPTS)
+    fi
 
     vars_defined "${vars[@]}"
 
@@ -329,7 +342,7 @@ BORG_EXCLUDE_PATHS=()
 
 unset MYSQL_DB ARCHIVE_PREFIX CONTAINERS HC_ID  # just in case
 
-while getopts "d:p:c:rlP:B:Z:E:L:e:A:D:S:R:T:hH:" opt; do
+while getopts "d:p:c:rlP:1:2:B:Z:E:L:e:A:D:S:R:T:hH:" opt; do
     case "$opt" in
         d) IFS="$SEPARATOR" read -ra MYSQL_DB <<< "$OPTARG"
             ;;
@@ -345,6 +358,10 @@ while getopts "d:p:c:rlP:B:Z:E:L:e:A:D:S:R:T:hH:" opt; do
            let REMOTE_OR_LOCAL_OPT_COUNTER+=1
             ;;
         P) PRUNE_OPTS="$OPTARG"  # overrides env var of same name
+            ;;
+        1) LOCAL_PRUNE_OPTS="$OPTARG"  # overrides env var of same name
+            ;;
+        2) REMOTE_PRUNE_OPTS="$OPTARG"  # overrides env var of same name
             ;;
         B) CREATE_OPTS+=" $OPTARG"  # _extends_ env var of same name
            let BORG_OTPS_COUNTER+=1
