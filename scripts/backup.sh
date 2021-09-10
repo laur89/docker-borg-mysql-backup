@@ -27,8 +27,8 @@ readonly usage="
       -l                      only back to local borg repo (local-only)
       -P PRUNE_OPTS           overrides container env var of same name; only required when
                               container var is not defined or needs to be overridden;
-      -1 LOCAL_PRUNE_OPTS     overrides prune opts for local repo;
-      -2 REMOTE_PRUNE_OPTS    overrides prune opts for remote repo;
+      -1 LOCAL_PRUNE_OPTS     prune options for local borg repo; overrides PRUNE_OPTS (& -P);
+      -2 REMOTE_PRUNE_OPTS    prune options for remote borg repo; overrides PRUNE_OPTS (& -P);
       -B CREATE_OPTS          additional borg params; note it doesn't overwrite the
                               env var of same name, but extends it;
       -Z CREATE_OPTS          additional borg params; note it _overrides_ the env
