@@ -417,12 +417,12 @@ variables are not usable with `restore`.
 
 ### list.sh
 
-`list` script is for listing archives in a borg repo.
+`list` script is for listing archives in a borg repo or contents of an archive.
 
     usage: list [-h] [-rl] [-p ARCHIVE_PREFIX] [-B BORG_OPTS] [-L LOCAL_REPO]
-             [-R REMOTE] [-T REMOTE_REPO]
+             [-R REMOTE] [-T REMOTE_REPO] [-a ARCHIVE_NAME]
     
-    List archives in a borg repository
+    List archives in a borg repository or contents of an archive
     
     arguments:
       -h                      show help and exit
@@ -434,6 +434,7 @@ variables are not usable with `restore`.
       -L LOCAL_REPO           overrides container env var of same name
       -R REMOTE               overrides container env var of same name
       -T REMOTE_REPO          overrides container env var of same name
+      -a ARCHIVE_NAME         full name of the borg archive whose contents to list
 
 #### Usage examples
 

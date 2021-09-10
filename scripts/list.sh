@@ -8,10 +8,10 @@ JOB_ID="list-$$"
 
 readonly usage="
     usage: $SELF [-h] [-rl] [-p ARCHIVE_PREFIX] [-B BORG_OPTS] [-L LOCAL_REPO]
-             [-R REMOTE] [-T REMOTE_REPO]
+             [-R REMOTE] [-T REMOTE_REPO] [-a ARCHIVE_NAME]
 
 
-    List archives in a borg repository
+    List archives in a borg repository or contents of an archive
 
     arguments:
       -h                      show help and exit
@@ -23,6 +23,7 @@ readonly usage="
       -L LOCAL_REPO           overrides container env var of same name
       -R REMOTE               overrides container env var of same name
       -T REMOTE_REPO          overrides container env var of same name
+      -a ARCHIVE_NAME         full name of the borg archive whose contents to list
 "
 
 
@@ -36,7 +37,7 @@ _list_common() {
     borg list --show-rc \
         $COMMON_OPTS \
         $BORG_OPTS \
-        "$repo" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || fail "listing $l_or_r repo [$repo] failed w/ [$?]"
+        "${repo}${ARCHIVE_NAME:+::$ARCHIVE_NAME}" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || fail "listing $l_or_r repo [$repo] failed w/ [$?]"
 }
 
 
@@ -64,6 +65,7 @@ validate_config() {
 
     [[ "$REMOTE_OR_LOCAL_OPT_COUNTER" -ne 1 ]] && fail "need to select whether to list local or remote repo"
     [[ "$LOC" -eq 1 ]] && [[ ! -d "$LOCAL_REPO" || ! -w "$LOCAL_REPO" ]] && fail "[$LOCAL_REPO] does not exist or is not writable; missing mount?"
+    [[ -n "$ARCHIVE_PREFIX" && -n "$ARCHIVE_NAME" ]] && fail "ARCHIVE_NAME & ARCHIVE_PREFIX options are mutually exclusive"
 }
 
 # ================
@@ -73,9 +75,9 @@ NO_NOTIF=true  # do not notify errors
 source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_common.sh" | tee -a "$LOG"; exit 1; }
 REMOTE_OR_LOCAL_OPT_COUNTER=0
 
-unset ARCHIVE_PREFIX BORG_OPTS  # just in case
+unset ARCHIVE_PREFIX BORG_OPTS ARCHIVE_NAME  # just in case
 
-while getopts "rlp:B:L:R:T:h" opt; do
+while getopts 'rlp:B:L:R:T:a:h' opt; do
     case "$opt" in
         r) REM=1
            let REMOTE_OR_LOCAL_OPT_COUNTER+=1
@@ -92,6 +94,8 @@ while getopts "rlp:B:L:R:T:h" opt; do
         R) REMOTE="$OPTARG"  # overrides env var of same name
             ;;
         T) REMOTE_REPO="$OPTARG"  # overrides env var of same name
+            ;;
+        a) ARCHIVE_NAME="$OPTARG"
             ;;
         h) echo -e "$usage"
            exit 0
