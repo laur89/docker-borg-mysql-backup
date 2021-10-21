@@ -100,7 +100,7 @@ is_dir_empty() {
     readonly dir="$1"
 
     [[ -d "$dir" ]] || fail "[$dir] is not a valid dir."
-    find "$dir" -mindepth 1 -maxdepth 1 -print -quit | grep -q .
+    find -L "$dir" -mindepth 1 -maxdepth 1 -print -quit | grep -q .
     [[ $? -eq 0 ]] && return 1 || return 0
 }
 
