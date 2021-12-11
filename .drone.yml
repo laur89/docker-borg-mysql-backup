@@ -1,0 +1,22 @@
+kind: pipeline
+type: docker
+name: default
+
+steps:
+- name: publish-image
+  image: plugins/docker
+  settings:
+    username:
+      from_secret: public_docker_username
+    password:
+      from_secret: public_docker_password
+    auto_tag: true
+    repo: layr/borg-mysql-backup
+
+trigger:
+  branch:
+  - master
+  - develop
+  - feature/*
+  event:
+  - tag
