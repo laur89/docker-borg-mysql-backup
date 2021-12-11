@@ -7,7 +7,7 @@
 # - configures msmtprc for mail notifications;
 
 readonly SELF="${0##*/}"
-readonly LOG="/var/log/${SELF}.log"
+readonly LOG="/var/log/${SELF}.log"  # note path is also tied to logrotate config
 JOB_ID="setup-$$"
 
 

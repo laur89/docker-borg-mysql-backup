@@ -100,7 +100,7 @@ is_dir_empty() {
     readonly dir="$1"
 
     [[ -d "$dir" ]] || fail "[$dir] is not a valid dir."
-    find "$dir" -mindepth 1 -maxdepth 1 -print -quit | grep -q .
+    find -L "$dir" -mindepth 1 -maxdepth 1 -print -quit | grep -q .
     [[ $? -eq 0 ]] && return 1 || return 0
 }
 
@@ -642,8 +642,8 @@ print_time() {
 
     sec="$1"
 
-    r="$((sec%60))s"
     tot=$((sec%60))
+    r="${tot}s"
 
     if [[ "$sec" -gt "$tot" ]]; then
         r="$((sec%3600/60))m:$r"

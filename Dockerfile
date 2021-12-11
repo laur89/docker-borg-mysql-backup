@@ -1,8 +1,8 @@
-FROM          alpine:3.12.0
+FROM          alpine:3
 MAINTAINER    Laur Aliste
 
 ENV LANG=C.UTF-8 \
-    BORG_VERSION=1.1.15-r1
+    BORG_VERSION=1.1.17-r1
 
 ADD scripts/* /usr/local/sbin/
 

@@ -120,6 +120,8 @@ Note all `BORG_`-prefixed env vars are [borg native ones](https://borgbackup.rea
     PRUNE_OPTS              options for borg prune (both local and remote); not 
                             required when it's defined by backup script -P param
                             (which overrides this container env var)
+    LOCAL_PRUNE_OPTS        prune options for local borg repo; overrides PRUNE_OPTS;
+    REMOTE_PRUNE_OPTS       prune options for remote borg repo; overrides PRUNE_OPTS;
     SCRIPT_FAIL_FATAL       whether failure of custom script execution should abort
                             backup, defaults to 'true';
 
@@ -187,6 +189,8 @@ as a one-off command for a single backup.
       -l                      only back to local borg repo (local-only)
       -P PRUNE_OPTS           overrides container env var of same name; only required when
                               container var is not defined or needs to be overridden;
+      -1 LOCAL_PRUNE_OPTS     prune options for local borg repo; overrides PRUNE_OPTS (& -P);
+      -2 REMOTE_PRUNE_OPTS    prune options for remote borg repo; overrides PRUNE_OPTS (& -P);
       -B CREATE_OPTS          additional borg params; note it doesn't overwrite the
                               env var of same name, but extends it;
       -Z CREATE_OPTS          additional borg params; note it _overrides_ the env
@@ -413,12 +417,12 @@ variables are not usable with `restore`.
 
 ### list.sh
 
-`list` script is for listing archives in a borg repo.
+`list` script is for listing archives in a borg repo or contents of an archive.
 
     usage: list [-h] [-rl] [-p ARCHIVE_PREFIX] [-B BORG_OPTS] [-L LOCAL_REPO]
-             [-R REMOTE] [-T REMOTE_REPO]
+             [-R REMOTE] [-T REMOTE_REPO] [-a ARCHIVE_NAME]
     
-    List archives in a borg repository
+    List archives in a borg repository or contents of an archive
     
     arguments:
       -h                      show help and exit
@@ -430,6 +434,7 @@ variables are not usable with `restore`.
       -L LOCAL_REPO           overrides container env var of same name
       -R REMOTE               overrides container env var of same name
       -T REMOTE_REPO          overrides container env var of same name
+      -a ARCHIVE_NAME         full name of the borg archive whose contents to list
 
 #### Usage examples
 
