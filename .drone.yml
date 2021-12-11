@@ -14,10 +14,8 @@ steps:
     repo: layr/borg-mysql-backup
 
 trigger:
-  branch:
-  - master
-  - develop
-  - feature/*
-  event:
-  - tag
-  - push
+  ref:
+  - refs/heads/master
+  - refs/heads/develop
+  - refs/heads/feature/*
+  - refs/tags/*
