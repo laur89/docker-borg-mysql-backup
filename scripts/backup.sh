@@ -194,6 +194,8 @@ do_backup() {
     declare -a started_pids=()
 
     log "=> Backup started"
+    log "=> ARCHIVE_NAME = [$ARCHIVE_NAME]"
+
     start_timestamp="$(date +%s)"
 
     run_scripts  before-mysql-dump
@@ -210,7 +212,7 @@ do_backup() {
     pushd -- "$TMP" &> /dev/null || fail "unable to pushd into [$TMP]"  # cd there because files in $TMP are added without full path (to avoid "$TMP_ROOT" prefix in borg repo)
 
     # note! log files/types out _after_ pushd to $TMP, otherwise some files would not resolve
-    log "following ${#NODES_TO_BACK_UP[@]} files will be backed up:"
+    log "following ${#NODES_TO_BACK_UP[@]} file(s) will be backed up:"
     for i in "${NODES_TO_BACK_UP[@]}"; do
         log "     - $i   (type: $(file_type "$i"))"
     done
@@ -424,8 +426,6 @@ validate_config
 [[ -n "$REMOTE" ]] && add_remote_to_known_hosts_if_missing "$REMOTE"
 readonly REMOTE+=":$REMOTE_REPO"  # define after validation, as we're re-defining the arg
 create_dirs
-
-log "=> ARCHIVE_NAME=[$ARCHIVE_NAME]"
 
 run_scripts  before
 
