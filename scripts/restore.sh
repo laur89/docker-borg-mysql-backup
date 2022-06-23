@@ -7,7 +7,7 @@ readonly LOG="/var/log/${SELF}.log"
 JOB_ID="restore-$$"
 
 readonly usage="
-    usage: $SELF [-h] [-d] [-c CONTAINERS] [-rl] [-B BORG_OPTS] [-L LOCAL_REPO]
+    usage: $SELF [-h] [-d] [-g] [-c CONTAINERS] [-rl] [-B BORG_OPTS] [-L LOCAL_REPO]
                    [-R REMOTE] [-T REMOTE_REPO] -O RESTORE_DIR -a ARCHIVE_NAME
 
     Restore data from borg archive
@@ -15,8 +15,11 @@ readonly usage="
     arguments:
       -h                      show help and exit
       -d                      automatically restore mysql database from dumped file; if this
-                              option is given and archive contains no sql dumps, it's an error;
-                              be careful, this is destructive operation!
+                              option is provided and archive doesn't contain exactly one dump-file,
+                              it's an error; be careful, this is a destructive operation!
+      -g                      automatically restore postgresql database from dumped file; if this
+                              option is provided and archive contains no sql dumps, it's an error;
+                              be careful, this is a destructive operation!
       -c CONTAINERS           comma-separated container names to stop before the restore begins;
                               note they won't be started afterwards, as there might be need
                               to restore other data (only sql dumps are restored automatically);
@@ -34,23 +37,55 @@ readonly usage="
 
 # TODO: currently user-included sql files would also be picked up by find!
 restore_db() {
-    local sql_files i
+    local mysql_files postgre_files i d
 
-    declare -a sql_files
-
-    [[ "$RESTORE_DB" -eq 1 ]] || return 0
+    declare -a mysql_files postgre_files
 
     while IFS= read -r -d $'\0' i; do
-        sql_files+=("$i")
+        if [[ "$i" == 'mysql:'* ]]; then
+            mysql_files+=("$i")
+        elif [[ "$i" == 'postgres:'* ]]; then
+            postgre_files+=("$i")
+        else
+            err "unrecognized SQL file [$i], ignoring it..."
+        fi
     done < <(find "$RESTORE_DIR" -mindepth 1 -maxdepth 1 -type f -name '*.sql' -print0)
-    [[ "${#sql_files[@]}" -ne 1 ]] && fail "expected to find exactly 1 .sql file in the root of [$RESTORE_DIR], but found ${#sql_files[@]}"
-    confirm "restore db from mysql dump [${sql_files[*]}]?" || { log "skip restoring db..."; return 0; }
+    unset i
 
-    mysql \
-            --host="${MYSQL_HOST}" \
-            --port="${MYSQL_PORT}" \
-            --user="${MYSQL_USER}" \
-            --password="${MYSQL_PASS}" < "${sql_files[@]}" 2> >(tee -a "$LOG" >&2) || fail "restoring db from [${sql_files[*]}] failed w/ [$?]"
+    if [[ "$RESTORE_MYSQL_DB" == 1 ]]; then
+        [[ "${#mysql_files[@]}" -ne 1 ]] && fail "expected to find exactly 1 mysql .sql file in the root of [$RESTORE_DIR], but found ${#mysql_files[@]}"
+        if confirm "restore db from mysql dump [${mysql_files[*]}]?"; then
+            mysql \
+                    --host="${MYSQL_HOST}" \
+                    --port="${MYSQL_PORT}" \
+                    --user="${MYSQL_USER}" \
+                    --password="${MYSQL_PASS}" < "${mysql_files[@]}" 2> >(tee -a "$LOG" >&2) || fail "restoring db from [${mysql_files[*]}] failed w/ [$?]"
+        else
+            log "skip restoring mysql db..."
+        fi
+    fi
+
+    # https://www.postgresql.org/docs/15/backup-dump.html#BACKUP-DUMP-RESTORE
+    if [[ "$RESTORE_POSTGRES_DB" == 1 ]]; then
+        [[ "${#postgre_files[@]}" -eq 0 ]] && fail "expected to find at least 1 postgres .sql file in the root of [$RESTORE_DIR], but found none"
+        if confirm "restore db from postgres dump(s) [${postgre_files[*]}]?"; then
+            export PGPASSWORD="$POSTGRES_PASS"
+
+            for i in "${postgre_files[@]}"; do
+                d="$(basename -- "$i")"
+                [[ "$d" == 'postgres:all-dbs.sql' ]] && d=postgres || d="$(grep -Po '^postgres:\K.*(?=\.sql$)' <<< "$d")"
+                # TODO2: restoring from all-dbs.sql, then the cluster should really be empty!
+                psql \
+                        -h "$POSTGRES_HOST" \
+                        -p "$POSTGRES_PORT" \
+                        -U "$POSTGRES_USER" \
+                        -d "$d" \
+                        -f "$i" 2> >(tee -a "$LOG" >&2) || fail "restoring [$d] postgres db from [$i] failed w/ [$?]"
+            done
+        else
+            log "skip restoring postgres db..."
+        fi
+    fi
 }
 
 
@@ -101,11 +136,17 @@ validate_config() {
         ARCHIVE_NAME
         RESTORE_DIR
     )
-    [[ "$RESTORE_DB" -eq 1 ]] && vars+=(
+    [[ "$RESTORE_MYSQL_DB" == 1 ]] && vars+=(
             MYSQL_HOST
             MYSQL_PORT
             MYSQL_USER
             MYSQL_PASS
+        )
+    [[ "$RESTORE_POSTGRES_DB" == 1 ]] && vars+=(
+            POSTGRES_HOST
+            POSTGRES_PORT
+            POSTGRES_USER
+            POSTGRES_PASS
         )
     [[ "$REM" -eq 1 ]] && vars+=(REMOTE REMOTE_REPO)
     [[ "$LOC" -eq 1 ]] && vars+=(LOCAL_REPO)
@@ -139,11 +180,13 @@ NO_NOTIF=true  # do not notify errors
 source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_common.sh" | tee -a "$LOG"; exit 1; }
 REMOTE_OR_LOCAL_OPT_COUNTER=0
 
-unset RESTORE_DB CONTAINERS REM LOC BORG_OPTS RESTORE_DIR ARCHIVE_NAME  # just in case
+unset RESTORE_MYSQL_DB RESTORE_POSTGRES_DB CONTAINERS REM LOC BORG_OPTS RESTORE_DIR ARCHIVE_NAME  # just in case
 
-while getopts "dc:rlB:L:R:T:O:a:h" opt; do
+while getopts 'dgc:rlB:L:R:T:O:a:h' opt; do
     case "$opt" in
-        d) RESTORE_DB=1
+        d) RESTORE_MYSQL_DB=1
+            ;;
+        g) RESTORE_POSTGRES_DB=1
             ;;
         c) IFS="$SEPARATOR" read -ra CONTAINERS <<< "$OPTARG"
             ;;

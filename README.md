@@ -1,6 +1,6 @@
 # borg-mysql-backup
 
-This image is for backing up mysql dumps to local and/or remote
+This image is for backing up mysql or postgres dumps to local and/or remote
 [borg](https://github.com/borgbackup/borg) repos.
 Other files&dirs may be included in the backup, and database dumps can be excluded
 altogether.
@@ -93,7 +93,15 @@ Note all `BORG_`-prefixed env vars are [borg native ones](https://borgbackup.rea
     MYSQL_FAIL_FATAL        whether unsuccessful db dump should abort backup,
                             defaults to 'true';
     MYSQL_EXTRA_OPTS        the extra options to pass to 'mysqldump' command; optional
-      mysql env variables are only required if you intend to back up databases
+
+    POSTGRES_HOST           the host/ip of your postgresql database
+    POSTGRES_PORT           the port number of your postgresql database
+    POSTGRES_USER           the username of your postgresql database
+    POSTGRES_PASS           the password of your postgresql database
+    POSTGRES_FAIL_FATAL     whether unsuccessful db dump should abort backup,
+                            defaults to 'true';
+    POSTGRES_EXTRA_OPTS     the extra options to pass to 'pg_dump' command; optional
+      mysql & postgres env variables are only required if you intend to back up databases
 
 
     HOST_ID                 host identifier to include in the borg archive name
@@ -168,17 +176,19 @@ Container incorporates `backup`, `restore`, `list`, `delete` and `notif-test` sc
 `backup` script is mostly intended to be ran by cron, but can also be executed
 as a one-off command for a single backup.
 
-    usage: backup [-h] [-d MYSQL_DBS] [-c CONTAINERS] [-rl]
+    usage: backup [-h] [-d MYSQL_DBS] [-g POSTGRES_DBS] [-c CONTAINERS] [-rl]
                   [-P PRUNE_OPTS] [-B|-Z CREATE_OPTS] [-E EXCLUDE_PATHS]
                   [-L LOCAL_REPO] [-e ERR_NOTIF] [-A SMTP_ACCOUNT] [-D MYSQL_FAIL_FATAL]
-                  [-S SCRIPT_FAIL_FATAL] [-R REMOTE] [-T REMOTE_REPO] [-H HC_ID]
-                  -p PREFIX  [NODES_TO_BACK_UP...]
+                  [-G POSTGRES_FAIL_FATAL] [-S SCRIPT_FAIL_FATAL] [-R REMOTE]
+                  [-T REMOTE_REPO] [-H HC_ID] -p PREFIX  [NODES_TO_BACK_UP...]
     
     Create new archive
     
     arguments:
       -h                      show help and exit
-      -d MYSQL_DBS            comma-separated database names to back up; use value of
+      -d MYSQL_DBS            comma-separated mysql database names to back up; use value of
+                              __all__ to back up all dbs on the server
+      -g POSTGRES_DBS         comma-separated postgresql database names to back up; use value of
                               __all__ to back up all dbs on the server
       -c CONTAINERS           comma-separated container names to stop for the backup process;
                               requires mounting the docker socket (-v /var/run/docker.sock:/var/run/docker.sock);
@@ -201,6 +211,7 @@ as a one-off command for a single backup.
       -e ERR_NOTIF            overrides container env var of same name;
       -A SMTP_ACCOUNT         overrides container env var of same name;
       -D MYSQL_FAIL_FATAL     overrides container env var of same name;
+      -G POSTGRES_FAIL_FATAL  overrides container env var of same name;
       -S SCRIPT_FAIL_FATAL    overrides container env var of same name;
       -R REMOTE               overrides container env var of same name;
       -T REMOTE_REPO          overrides container env var of same name;
@@ -340,7 +351,7 @@ Note none of the data is
 copied/moved automatically - user is expected to carry this operation out on their own.
 Only db will be restored from a dump, given the option is provided to the script.
 
-    usage: restore [-h] [-d] [-c CONTAINERS] [-rl] [-B BORG_OPTS] [-L LOCAL_REPO]
+    usage: restore [-h] [-d] [-g] [-c CONTAINERS] [-rl] [-B BORG_OPTS] [-L LOCAL_REPO]
                    [-R REMOTE] [-T REMOTE_REPO] -O RESTORE_DIR -a ARCHIVE_NAME
     
     Restore data from borg archive
@@ -348,8 +359,11 @@ Only db will be restored from a dump, given the option is provided to the script
     arguments:
       -h                      show help and exit
       -d                      automatically restore mysql database from dumped file; if this
-                              option is given and archive contains no sql dumps, it's an error;
-                              be careful, this is destructive operation!
+                              option is provided and archive doesn't contain exactly one dump-file,
+                              it's an error; be careful, this is a destructive operation!
+      -g                      automatically restore postgresql database from dumped file; if this
+                              option is provided and archive contains no sql dumps, it's an error;
+                              be careful, this is a destructive operation!
       -c CONTAINERS           comma-separated container names to stop before the restore begins;
                               note they won't be started afterwards, as there might be need
                               to restore other data (only sql dumps are restored automatically);

@@ -425,6 +425,7 @@ validate_config_common() {
 
     vars=()  # reset
     [[ -n "$MYSQL_FAIL_FATAL" ]] && vars+=(MYSQL_FAIL_FATAL)
+    [[ -n "$POSTGRES_FAIL_FATAL" ]] && vars+=(POSTGRES_FAIL_FATAL)
     [[ -n "$ADD_NOTIF_TAIL" ]] && vars+=(ADD_NOTIF_TAIL)
     [[ -n "$SCRIPT_FAIL_FATAL" ]] && vars+=(SCRIPT_FAIL_FATAL)
     validate_true_false "${vars[@]}"

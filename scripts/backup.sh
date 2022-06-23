@@ -1,22 +1,24 @@
 #!/usr/bin/env bash
 #
-# backs up mysql dump and/or other data to local and/or remote borg repository
+# backs up mysql/postgres dump and/or other data to local and/or remote borg repository
 
 readonly SELF="${0##*/}"
 readonly LOG="/var/log/${SELF}.log"
 
 readonly usage="
-    usage: $SELF [-h] [-d MYSQL_DBS] [-c CONTAINERS] [-rl]
+    usage: $SELF [-h] [-d MYSQL_DBS] [-g POSTGRES_DBS] [-c CONTAINERS] [-rl]
                   [-P PRUNE_OPTS] [-B|-Z CREATE_OPTS] [-E EXCLUDE_PATHS]
                   [-L LOCAL_REPO] [-e ERR_NOTIF] [-A SMTP_ACCOUNT] [-D MYSQL_FAIL_FATAL]
-                  [-S SCRIPT_FAIL_FATAL] [-R REMOTE] [-T REMOTE_REPO] [-H HC_ID]
-                  -p PREFIX  [NODES_TO_BACK_UP...]
+                  [-G POSTGRES_FAIL_FATAL] [-S SCRIPT_FAIL_FATAL] [-R REMOTE]
+                  [-T REMOTE_REPO] [-H HC_ID] -p PREFIX  [NODES_TO_BACK_UP...]
 
     Create new archive
 
     arguments:
       -h                      show help and exit
-      -d MYSQL_DBS            comma-separated database names to back up; use value of
+      -d MYSQL_DBS            comma-separated mysql database names to back up; use value of
+                              __all__ to back up all dbs on the server
+      -g POSTGRES_DBS         comma-separated postgresql database names to back up; use value of
                               __all__ to back up all dbs on the server
       -c CONTAINERS           comma-separated container names to stop for the backup process;
                               requires mounting the docker socket (-v /var/run/docker.sock:/var/run/docker.sock);
@@ -39,6 +41,7 @@ readonly usage="
       -e ERR_NOTIF            overrides container env var of same name;
       -A SMTP_ACCOUNT         overrides container env var of same name;
       -D MYSQL_FAIL_FATAL     overrides container env var of same name;
+      -G POSTGRES_FAIL_FATAL  overrides container env var of same name;
       -S SCRIPT_FAIL_FATAL    overrides container env var of same name;
       -R REMOTE               overrides container env var of same name;
       -T REMOTE_REPO          overrides container env var of same name;
@@ -65,8 +68,8 @@ expand_nodes_to_back_up() {
 }
 
 
-# dumps selected db(s) to $TMP
-dump_db() {
+# dumps selected mariadb/mysql db(s) to $TMP
+dump_mysql() {
     local output_filename dbs dbs_log err_code start_timestamp err_ t
 
     [[ "${#MYSQL_DB[@]}" -eq 0 ]] && return 0  # no db specified, meaning db dump not required
@@ -81,7 +84,7 @@ dump_db() {
         dbs=('--databases' "${MYSQL_DB[@]}")
     fi
 
-    log "=> starting db dump for ${dbs_log}..."
+    log "=> starting mysql db dump for ${dbs_log}..."
     start_timestamp="$(date +%s)"
 
     # TODO: add following column-stats option back once mysqldump from alpine accepts it:
@@ -96,18 +99,71 @@ dump_db() {
             --user="${MYSQL_USER}" \
             --password="${MYSQL_PASS}" \
             ${MYSQL_EXTRA_OPTS} \
-            "${dbs[@]}" > "$TMP/${output_filename}.sql" 2> >(tee -a "$LOG" >&2)
+            "${dbs[@]}" > "$TMP/mysql:${output_filename}.sql" 2> >(tee -a "$LOG" >&2)
 
     err_code="$?"
     if [[ "$err_code" -ne 0 ]]; then
         local msg
-        msg="db dump for input args [${MYSQL_DB[*]}] failed w/ [$err_code]"
+        msg="mysql db dump step for input args [${MYSQL_DB[*]}] failed w/ [$err_code]"
         [[ "${MYSQL_FAIL_FATAL:-true}" == true ]] && fail "${msg}; aborting" || err "${msg}; not aborting"
         err_=failed
     fi
 
     t="$(( $(date +%s) - start_timestamp ))"
-    log "=> db dump ${err_:-succeeded} in $(print_time "$t")"
+    log "=> mysql db dump ${err_:-succeeded} in $(print_time "$t")"
+}
+
+
+# dumps selected postgres db(s) to $TMP
+# https://www.postgresql.org/docs/15/backup-dump.html
+dump_postgres() {
+    local err_code start_timestamp err_ t d
+
+    [[ "${#POSTGRES_DB[@]}" -eq 0 ]] && return 0  # no db specified, meaning db dump not required
+
+    start_timestamp="$(date +%s)"
+    export PGPASSWORD="$POSTGRES_PASS"
+
+    if [[ "${POSTGRES_DB[*]}" == __all__ ]]; then
+        log "=> starting postgres db dump for all databases..."
+
+        pg_dumpall \
+            --clean \
+            --if-exists \
+            --quote-all-identifiers \
+            -h "$POSTGRES_HOST" \
+            -p "$POSTGRES_PORT" \
+            -U "$POSTGRES_USER" \
+            ${POSTGRES_EXTRA_OPTS} > "$TMP/postgres:all-dbs.sql" 2> >(tee -a "$LOG" >&2) # !! restore.sh references filename
+
+        err_code="$?"
+    else
+        log "=> starting postgres db dump for databases [${POSTGRES_DB[*]}]..."
+        err_code=0
+
+        for d in "${POSTGRES_DB[@]}"; do
+            pg_dump \
+                --clean \
+                --if-exists \
+                --quote-all-identifiers \
+                --create \
+                -h "$POSTGRES_HOST" \
+                -p "$POSTGRES_PORT" \
+                -U "$POSTGRES_USER" \
+                ${POSTGRES_EXTRA_OPTS} \
+                -d "$d" > "$TMP/postgres:${d}.sql" 2> >(tee -a "$LOG" >&2) || { err_code=$?; err "pg_dump for db [$d] failed w/ $err_code"; }
+        done
+    fi
+
+    if [[ "$err_code" -ne 0 ]]; then
+        local msg
+        msg="postgres db dump step for input args [${POSTGRES_DB[*]}] failed w/ [$err_code]"
+        [[ "${POSTGRES_FAIL_FATAL:-true}" == true ]] && fail "${msg}; aborting" || err "${msg}; not aborting"
+        err_=failed
+    fi
+
+    t="$(( $(date +%s) - start_timestamp ))"
+    log "=> postgres db dump ${err_:-succeeded} in $(print_time "$t")"
 }
 
 
@@ -199,8 +255,12 @@ do_backup() {
     start_timestamp="$(date +%s)"
 
     run_scripts  before-mysql-dump
-    dump_db
+    dump_mysql
     run_scripts  after-mysql-dump
+
+    run_scripts  before-postgres-dump
+    dump_postgres
+    run_scripts  after-postgres-dump
 
     expand_nodes_to_back_up  # adds dump sql (and any possible custom script additions) to NODES_TO_BACK_UP
 
@@ -283,6 +343,12 @@ validate_config() {
         MYSQL_USER
         MYSQL_PASS
     )
+    [[ -n "${POSTGRES_DB[*]}" ]] && vars+=(
+        POSTGRES_HOST
+        POSTGRES_PORT
+        POSTGRES_USER
+        POSTGRES_PASS
+    )
     [[ "$LOCAL_ONLY" -ne 1 ]] && vars+=(REMOTE REMOTE_REPO)
     [[ "$REMOTE_ONLY" -ne 1 ]] && vars+=(LOCAL_REPO)
 
@@ -303,7 +369,7 @@ validate_config() {
         for i in "${NODES_TO_BACK_UP[@]}"; do
             [[ -e "$i" ]] || err "node [$i] to back up does not exist; missing mount?"
         done
-    elif [[ "${#MYSQL_DB[@]}" -eq 0 || -z "${MYSQL_DB[*]}" ]]; then
+    elif [[ "${#MYSQL_DB[@]}" -eq 0 || -z "${MYSQL_DB[*]}" ]] && [[ "${#POSTGRES_DB[@]}" -eq 0 || -z "${POSTGRES_DB[*]}" ]]; then
         fail "no databases nor nodes selected for backup - nothing to do!"
     fi
 
@@ -342,11 +408,13 @@ REMOTE_OR_LOCAL_OPT_COUNTER=0
 BORG_OTPS_COUNTER=0
 BORG_EXCLUDE_PATHS=()
 
-unset MYSQL_DB ARCHIVE_PREFIX CONTAINERS HC_ID  # just in case
+unset MYSQL_DB POSTGRES_DB ARCHIVE_PREFIX CONTAINERS HC_ID  # just in case
 
-while getopts "d:p:c:rlP:1:2:B:Z:E:L:e:A:D:S:R:T:hH:" opt; do
+while getopts 'd:g:p:c:rlP:1:2:B:Z:E:L:e:A:D:G:S:R:T:hH:' opt; do
     case "$opt" in
         d) IFS="$SEPARATOR" read -ra MYSQL_DB <<< "$OPTARG"
+            ;;
+        g) IFS="$SEPARATOR" read -ra POSTGRES_DB <<< "$OPTARG"
             ;;
         p) readonly ARCHIVE_PREFIX="$OPTARG"  # be careful w/ var rename! eg run_scripts() depends on many var names
            readonly JOB_ID="${OPTARG}-$$"
@@ -380,6 +448,8 @@ while getopts "d:p:c:rlP:1:2:B:Z:E:L:e:A:D:S:R:T:hH:" opt; do
         A) SMTP_ACCOUNT="$OPTARG"
             ;;
         D) MYSQL_FAIL_FATAL="$OPTARG"
+            ;;
+        G) POSTGRES_FAIL_FATAL="$OPTARG"
             ;;
         S) SCRIPT_FAIL_FATAL="$OPTARG"
             ;;
