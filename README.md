@@ -100,7 +100,7 @@ Note all `BORG_`-prefixed env vars are [borg native ones](https://borgbackup.rea
     POSTGRES_PASS           the password of your postgresql database
     POSTGRES_FAIL_FATAL     whether unsuccessful db dump should abort backup,
                             defaults to 'true';
-    POSTGRES_EXTRA_OPTS     the extra options to pass to 'pg_dump' command; optional
+    POSTGRES_EXTRA_OPTS     the extra options to pass to 'pg_dump' or 'pg_dumpall' commands; optional
       mysql & postgres env variables are only required if you intend to back up databases
 
 
@@ -225,7 +225,7 @@ as a one-off command for a single backup.
 
 #### Usage examples
 
-##### Back up App1 & App2 databases and app1's data directory /app1-data daily at 05:15 to both local and remote borg repos
+##### Back up App1 & App2 mysql databases and app1's data directory /app1-data daily at 05:15 to both local and remote borg repos
 
     docker run -d \
         -e MYSQL_HOST=mysql.host \
@@ -252,13 +252,13 @@ as a one-off command for a single backup.
 
     15 05 * * *   /backup.sh -p app1-app2 -d "App1,App2" /app1-data 
 
-##### Back up all databases daily at 04:10 and 16:10 to local&remote borg repos, stopping containers myapp1 & myapp2 for the process
+##### Back up all postgres databases daily at 04:10 and 16:10 to local&remote borg repos, stopping containers myapp1 & myapp2 for the process
 
     docker run -d \
-        -e MYSQL_HOST=mysql.host \
-        -e MYSQL_PORT=27017 \
-        -e MYSQL_USER=admin \
-        -e MYSQL_PASS=password \
+        -e POSTGRES_HOST=postgre.host \
+        -e POSTGRES_PORT=5432 \
+        -e POSTGRES_USER=postgres \
+        -e POSTGRES_PASS=password \
         -e HOST_ID=hostname-to-use-in-archive-prefix \
         -e REMOTE=remoteuser@server.com \
         -e REMOTE_REPO=repo/location \
@@ -276,7 +276,7 @@ as a one-off command for a single backup.
 
 `/config/crontab` contents:
 
-    10 04,16 * * *   /backup.sh -p myapp-prefix -d __all__ -c "myapp1,myapp2"
+    10 04,16 * * *   /backup.sh -p myapp-prefix -g __all__ -c "myapp1,myapp2"
 
 ##### Back up directories /app1 & /app2 every 6 hours to local borg repo (ie remote is excluded)
 

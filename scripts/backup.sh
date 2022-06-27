@@ -74,13 +74,13 @@ dump_mysql() {
 
     [[ "${#MYSQL_DB[@]}" -eq 0 ]] && return 0  # no db specified, meaning db dump not required
 
-    if [[ "${MYSQL_DB[*]}" == __all__ ]]; then
+    if [[ "${MYSQL_DB[*]}" == "$ALL_DBS_MARKER" ]]; then
         dbs_log='all databases'
         output_filename='all-dbs'
         dbs=('--all-databases')
     else
         dbs_log="databases [${MYSQL_DB[*]}]"
-        output_filename="$(tr ' ' '+' <<< "${MYSQL_DB[*]}")"  # let the filename reflect which dbs it contains
+        output_filename="$(tr '[:blank:]' '+' <<< "${MYSQL_DB[*]}")"  # let the filename reflect which dbs it contains
         dbs=('--databases' "${MYSQL_DB[@]}")
     fi
 
@@ -124,7 +124,7 @@ dump_postgres() {
     start_timestamp="$(date +%s)"
     export PGPASSWORD="$POSTGRES_PASS"
 
-    if [[ "${POSTGRES_DB[*]}" == __all__ ]]; then
+    if [[ "${POSTGRES_DB[*]}" == "$ALL_DBS_MARKER" ]]; then
         log "=> starting postgres db dump for all databases..."
 
         pg_dumpall \

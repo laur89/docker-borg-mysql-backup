@@ -26,6 +26,7 @@ host: {h}
 archive prefix: {p}
 job id: {i}
 fatal?: {f}'
+readonly ALL_DBS_MARKER='__all__'
 
 
 DEFAULT_MAIL_FROM='{h} backup reporter'
