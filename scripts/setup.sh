@@ -41,10 +41,13 @@ setup_crontab() {
 install_ssh_key() {
     local ssh_key_target
 
-    readonly ssh_key_target=~/.ssh/id_rsa
+    readonly ssh_key_target="$HOME/.ssh/id_rsa"
 
-    [[ -d ~/.ssh ]] || fail "[~/.ssh] is not a dir; is ssh client installed?"
-    [[ -f "$SSH_KEY" && -s "$SSH_KEY" ]] && cp -- "$SSH_KEY" "$ssh_key_target"
+    [[ -d "$HOME/.ssh" ]] || fail "[~/.ssh] is not a dir; is ssh client installed?"
+    if [[ -f "$SSH_KEY" && -s "$SSH_KEY" ]]; then
+        cp -- "$SSH_KEY" "$ssh_key_target" || fail "ssh keyfile copy failed w/ $?"
+        ssh-keygen -y -P "" -f "$ssh_key_target" &>/dev/null || fail "provided ssh key is password-protected - this is not supported"
+    fi
 
     # sanitize .ssh perms:
     chmod -R u=rwX,g=,o= -- ~/.ssh
