@@ -9,7 +9,8 @@ The container features `backup`, `restore`, `list`, `delete` and `notif-test` sc
 either be ran as one-off jobs or by cron - latter being the preferred method for `backup`.
 
 For cron and/or remote borg usage, you also need to mount container configuration
-at `/config`, containing ssh key (named `id_rsa`) and/or crontab file (named `crontab`).
+at `/config`, containing crontab file (named `crontab`) and/or ssh key (named `id_rsa`).
+Note ssh key, when provided, is expected to be passwordless.
 
 Both remote & local repositories need to be
 [initialised](https://borgbackup.readthedocs.io/en/stable/usage/init.html) manually
