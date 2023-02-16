@@ -10,7 +10,7 @@ readonly usage="
                   [-P PRUNE_OPTS] [-B|-Z CREATE_OPTS] [-E EXCLUDE_PATHS]
                   [-L LOCAL_REPO] [-e ERR_NOTIF] [-A SMTP_ACCOUNT] [-D MYSQL_FAIL_FATAL]
                   [-G POSTGRES_FAIL_FATAL] [-S SCRIPT_FAIL_FATAL] [-R REMOTE]
-                  [-T REMOTE_REPO] [-H HC_ID] -p PREFIX  [NODES_TO_BACK_UP...]
+                  [-T REMOTE_REPO] [-C] [-H HC_ID] -p PREFIX  [NODES_TO_BACK_UP...]
 
     Create new archive
 
@@ -45,6 +45,7 @@ readonly usage="
       -S SCRIPT_FAIL_FATAL    overrides container env var of same name;
       -R REMOTE               overrides container env var of same name;
       -T REMOTE_REPO          overrides container env var of same name;
+      -C                      run compact command against repo after backup/prune;
       -H HC_ID                the unique/id part of healthcheck url, replacing the '{id}'
                               placeholder in HC_URL; may also provide new full url to call
                               instead, overriding the env var HC_URL
@@ -169,7 +170,7 @@ dump_postgres() {
 
 # TODO: should we err() or fail() from here, as they are backgrounded anyway?
 _backup_common() {
-    local l_or_r repo extra_opts start_timestamp err_code err_ opts t
+    local l_or_r repo extra_opts start_timestamp err_code opts t
 
     l_or_r="$1"
     repo="$2"
@@ -184,10 +185,10 @@ _backup_common() {
     borg create --stats --show-rc \
         $opts \
         "${repo}::${ARCHIVE_NAME}" \
-        "${NODES_TO_BACK_UP[@]}" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || { err "$l_or_r borg create exited w/ [$?]"; err_code=1; err_=failed; }
+        "${NODES_TO_BACK_UP[@]}" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || { err "$l_or_r borg create exited w/ [$?]"; err_code=1; }
 
     t="$(( $(date +%s) - start_timestamp ))"
-    log "=> $l_or_r backup ${err_:-succeeded} in $(print_time "$t")"
+    log "=> $l_or_r backup ${err_code:-succeeded} in $(print_time "$t")"
 
     return "${err_code:-0}"
 }
@@ -195,7 +196,7 @@ _backup_common() {
 
 # TODO: should we err() or fail() from here, as they are backgrounded anyway?
 _prune_common() {
-    local l_or_r repo prune_opts start_timestamp err_code err_ opts t
+    local l_or_r repo prune_opts start_timestamp err_code opts t
 
     l_or_r="$1"
     repo="$2"
@@ -210,10 +211,10 @@ _prune_common() {
     borg prune --show-rc \
         $opts \
         --prefix "$PREFIX_WITH_HOSTNAME" \
-        "$repo" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || { err "$l_or_r borg prune exited w/ [$?]"; err_code=1; err_=failed; }
+        "$repo" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || { err "$l_or_r borg prune exited w/ [$?]"; err_code=1; }
 
     t="$(( $(date +%s) - start_timestamp ))"
-    log "=> $l_or_r prune ${err_:-succeeded} in $(print_time "$t")"
+    log "=> $l_or_r prune ${err_code:-succeeded} in $(print_time "$t")"
 
     return "${err_code:-0}"
 }
@@ -320,8 +321,14 @@ do_backup() {
 
     run_scripts  after-prune
 
+    if [[ -n "$COMPACT" ]]; then
+        run_scripts  before-compact
+        compact_repos || err_=TRUE
+        run_scripts  after-compact
+    fi
+
     t="$(( $(date +%s) - start_timestamp ))"
-    log "=> Backup+prune finished, duration $(print_time "$t")${err_:+; at least one step failed or produced warning}"
+    log "=> Backup+prune${COMPACT:++compact} finished, duration $(print_time "$t")${err_:+; at least one step failed or produced warning}"
 
     return 0
 }
@@ -408,9 +415,9 @@ REMOTE_OR_LOCAL_OPT_COUNTER=0
 BORG_OTPS_COUNTER=0
 BORG_EXCLUDE_PATHS=()
 
-unset MYSQL_DB POSTGRES_DB ARCHIVE_PREFIX CONTAINERS HC_ID  # just in case
+unset MYSQL_DB POSTGRES_DB ARCHIVE_PREFIX CONTAINERS COMPACT HC_ID  # just in case
 
-while getopts 'd:g:p:c:rlP:1:2:B:Z:E:L:e:A:D:G:S:R:T:hH:' opt; do
+while getopts 'd:g:p:c:rlP:1:2:B:Z:E:L:e:A:D:G:S:R:T:H:Ch' opt; do
     case "$opt" in
         d) IFS="$SEPARATOR" read -ra MYSQL_DB <<< "$OPTARG"
             ;;
@@ -456,6 +463,8 @@ while getopts 'd:g:p:c:rlP:1:2:B:Z:E:L:e:A:D:G:S:R:T:hH:' opt; do
         R) REMOTE="$OPTARG"  # overrides env var of same name
             ;;
         T) REMOTE_REPO="$OPTARG"  # overrides env var of same name
+            ;;
+        C) COMPACT=TRUE
             ;;
         H) HC_ID="$OPTARG"
             ;;

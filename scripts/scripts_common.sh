@@ -92,6 +92,56 @@ start_containers() {
 }
 
 
+_compact_common() {
+    local l_or_r repo start_timestamp t err_code
+
+    l_or_r="$1"
+    repo="$2"
+
+    log "=> starting compact operation on $l_or_r repo [$repo]..."
+    start_timestamp="$(date +%s)"
+
+    borg compact --show-rc \
+        $COMMON_OPTS \
+        $BORG_OPTS \
+        "$repo" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || { err "$l_or_r borg compact exited w/ [$?]"; err_code=1; }
+
+    t="$(( $(date +%s) - start_timestamp ))"
+    log "=> $l_or_r compact ${err_code:-succeeded} in $(print_time "$t")"
+
+    return "${err_code:-0}"
+}
+
+
+# note this is called both by compact.sh & backup.sh, so be careful by changing global vars!
+compact_repos() {
+    local started_pids start_timestamp i err_code t
+
+    declare -a started_pids=()
+
+    start_timestamp="$(date +%s)"
+
+    if [[ "$REMOTE_ONLY" -ne 1 ]]; then
+        _compact_common local "$LOCAL_REPO" &
+        started_pids+=("$!")
+    fi
+
+    if [[ "$LOCAL_ONLY" -ne 1 ]]; then
+        _compact_common remote "$REMOTE" &
+        started_pids+=("$!")
+    fi
+
+    for i in "${started_pids[@]}"; do
+        wait "$i" || err_code="$?"
+    done
+
+    t="$(( $(date +%s) - start_timestamp ))"
+    log "=> Compact finished, duration $(print_time "$t")${err_code:+; at least one step failed or produced warning}"
+
+    return "${err_code:-0}"
+}
+
+
 # dir existence needs to be verified by the caller!
 #
 # note this fun is exported

@@ -181,7 +181,7 @@ as a one-off command for a single backup.
                   [-P PRUNE_OPTS] [-B|-Z CREATE_OPTS] [-E EXCLUDE_PATHS]
                   [-L LOCAL_REPO] [-e ERR_NOTIF] [-A SMTP_ACCOUNT] [-D MYSQL_FAIL_FATAL]
                   [-G POSTGRES_FAIL_FATAL] [-S SCRIPT_FAIL_FATAL] [-R REMOTE]
-                  [-T REMOTE_REPO] [-H HC_ID] -p PREFIX  [NODES_TO_BACK_UP...]
+                  [-T REMOTE_REPO] [-C] [-H HC_ID] -p PREFIX  [NODES_TO_BACK_UP...]
     
     Create new archive
     
@@ -216,6 +216,7 @@ as a one-off command for a single backup.
       -S SCRIPT_FAIL_FATAL    overrides container env var of same name;
       -R REMOTE               overrides container env var of same name;
       -T REMOTE_REPO          overrides container env var of same name;
+      -C                      run `compact` command against repo after backup/prune;
       -H HC_ID                the unique/id part of healthcheck url, replacing the '{id}'
                               placeholder in HC_URL; may also provide new full url to call
                               instead, overriding the env var HC_URL
@@ -533,6 +534,38 @@ variables are not usable with `list`.
 
 Note the `CREATE_OPTS`, `LOCAL_CREATE_OPTS`, `REMOTE_CREATE_OPTS` env
 variables are not usable with `delete`.
+
+### compact.sh
+
+`compact` script is for freeing repository space by compacting segments.
+
+    usage: compact [-h] [-rl] [-B BORG_OPTS] [-L LOCAL_REPO]
+                [-R REMOTE] [-T REMOTE_REPO]
+
+
+    Compact borg repository
+
+    arguments:
+      -h                      show help and exit
+      -r                      compact remote borg repo
+      -l                      compact local borg repo
+      -B BORG_OPTS            additional borg params to pass to borg compact command
+      -L LOCAL_REPO           overrides container env var of same name
+      -R REMOTE               overrides container env var of same name
+      -T REMOTE_REPO          overrides container env var of same name
+
+
+#### Usage examples
+
+##### Compact the local repository
+
+    docker run -it --rm \
+        -e BORG_PASSPHRASE=borgrepopassword \
+        -v /host/backup:/backup \
+        -v /host/borg-conf/.borg/cache:/root/.cache/borg \
+        -v /host/borg-conf/.borg/config:/root/.config/borg \
+        -v /host/borg-conf/logs:/var/log \
+           layr/borg-mysql-backup compact.sh -l
 
 
 ### notif-test.sh
