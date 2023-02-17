@@ -19,7 +19,7 @@ readonly usage="
       -r                      only delete from remote borg repo (remote-only)
       -l                      only delete from local borg repo (local-only)
       -p ARCHIVE_PREFIX       delete archives with given prefix; same as providing
-                              -B '--prefix ARCHIVE_PREFIX'
+                              -B '--glob-archives ARCHIVE_PREFIX*'
       -a ARCHIVE              archive name to delete; -p & -a are mutually exclusive
       -B BORG_OPTS            additional borg params to pass to borg delete command
       -L LOCAL_REPO           overrides container env var of same name
@@ -113,7 +113,7 @@ validate_config
 [[ -n "$REMOTE" ]] && add_remote_to_known_hosts_if_missing "$REMOTE"
 readonly REMOTE+=":$REMOTE_REPO"  # define after validation, as we're re-defining the arg
 
-[[ -n "$ARCHIVE_PREFIX" ]] && BORG_OPTS+=" --prefix $ARCHIVE_PREFIX"
+[[ -n "$ARCHIVE_PREFIX" ]] && BORG_OPTS+=" --glob-archives ${ARCHIVE_PREFIX}*"
 delete
 
 exit 0

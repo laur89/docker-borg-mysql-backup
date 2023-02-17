@@ -18,7 +18,7 @@ readonly usage="
       -r                      list remote borg repo
       -l                      list local borg repo
       -p ARCHIVE_PREFIX       list archives with given prefix; same as providing
-                              [-B '--prefix ARCHIVE_PREFIX']
+                              [-B '--glob-archives ARCHIVE_PREFIX*']
       -B BORG_OPTS            additional borg params to pass to borg list command
       -L LOCAL_REPO           overrides container env var of same name
       -R REMOTE               overrides container env var of same name
@@ -109,7 +109,7 @@ validate_config
 [[ -n "$REMOTE" ]] && add_remote_to_known_hosts_if_missing "$REMOTE"
 readonly REMOTE+=":$REMOTE_REPO"  # define after validation, as we're re-defining the arg
 
-[[ -n "$ARCHIVE_PREFIX" ]] && BORG_OPTS+=" --prefix $ARCHIVE_PREFIX"
+[[ -n "$ARCHIVE_PREFIX" ]] && BORG_OPTS+=" --glob-archives ${ARCHIVE_PREFIX}*"
 list_repos
 
 exit 0

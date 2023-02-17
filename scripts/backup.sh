@@ -210,7 +210,7 @@ _prune_common() {
 
     borg prune --show-rc \
         $opts \
-        --prefix "$PREFIX_WITH_HOSTNAME" \
+        --glob-archives "${PREFIX_WITH_HOSTNAME}*" \
         "$repo" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || { err "$l_or_r borg prune exited w/ [$?]"; err_code=1; }
 
     t="$(( $(date +%s) - start_timestamp ))"

@@ -445,7 +445,7 @@ variables are not usable with `restore`.
       -r                      list remote borg repo
       -l                      list local borg repo
       -p ARCHIVE_PREFIX       list archives with given prefix; same as providing
-                              [-B '--prefix ARCHIVE_PREFIX']
+                              [-B '--glob-archives ARCHIVE_PREFIX*']
       -B BORG_OPTS            additional borg params to pass to borg list command
       -L LOCAL_REPO           overrides container env var of same name
       -R REMOTE               overrides container env var of same name
@@ -473,7 +473,7 @@ variables are not usable with `restore`.
         -v /host/borg-conf/.borg/cache:/root/.cache/borg \
         -v /host/borg-conf/.borg/config:/root/.config/borg \
         -v /host/borg-conf/logs:/var/log \
-           layr/borg-mysql-backup list.sh -r -T repo/location -B '--prefix my-prefix'
+           layr/borg-mysql-backup list.sh -r -T repo/location -p my-prefix
 
 Note the `CREATE_OPTS`, `LOCAL_CREATE_OPTS`, `REMOTE_CREATE_OPTS` env
 variables are not usable with `list`.
@@ -492,7 +492,7 @@ variables are not usable with `list`.
       -r                      only delete from remote borg repo (remote-only)
       -l                      only delete from local borg repo (local-only)
       -p ARCHIVE_PREFIX       delete archives with given prefix; same as providing
-                              -B '--prefix ARCHIVE_PREFIX'
+                              -B '--glob-archives ARCHIVE_PREFIX*'
       -a ARCHIVE              archive name to delete; -p & -a are mutually exclusive
       -B BORG_OPTS            additional borg params to pass to borg delete command
       -L LOCAL_REPO           overrides container env var of same name
