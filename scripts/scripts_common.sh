@@ -6,8 +6,10 @@ set -o noglob
 set -o pipefail
 
 readonly CONF_ROOT='/config'
+readonly LOG_ROOT="$CONF_ROOT/logs"  # note path is also tied to logrotate config
 readonly ENV_ROOT="$CONF_ROOT/env"
 readonly SCRIPT_ROOT="$CONF_ROOT/scripts"
+export LOG="$LOG_ROOT/${SELF}.log"  # note SELF is defined by importing file
 
 [[ "$SEPARATOR" == space ]] && SEPARATOR=' '
 [[ "$SEPARATOR" == comma ]] && SEPARATOR=','
@@ -715,7 +717,8 @@ print_time() {
 }
 
 
-[[ -f "${ENV_ROOT}/common-env.conf" ]] && source "${ENV_ROOT}/common-env.conf"
+mkdir -p "$LOG_ROOT" || { echo -e "    ERROR: [mkdir -p $LOG_ROOT] failed w/ $?" >&2; exit 1; }
+[[ -f "$ENV_ROOT/common-env.conf" ]] && source "$ENV_ROOT/common-env.conf"
 
 if [[ "$DEBUG" == true ]]; then
     set -x

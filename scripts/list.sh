@@ -3,7 +3,6 @@
 # lists contents of local or remote archive
 
 readonly SELF="${0##*/}"
-readonly LOG="/var/log/${SELF}.log"
 JOB_ID="list-$$"
 
 readonly usage="
@@ -72,7 +71,7 @@ validate_config() {
 # Entry
 # ================
 NO_NOTIF=true  # do not notify errors
-source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_common.sh" | tee -a "$LOG"; exit 1; }
+source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_common.sh" >&2; exit 1; }
 REMOTE_OR_LOCAL_OPT_COUNTER=0
 
 unset ARCHIVE_PREFIX BORG_OPTS ARCHIVE_NAME  # just in case

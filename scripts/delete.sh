@@ -3,7 +3,6 @@
 # delete archive or whole repository
 
 readonly SELF="${0##*/}"
-readonly LOG="/var/log/${SELF}.log"
 JOB_ID="delete-$$"
 
 readonly usage="
@@ -73,13 +72,13 @@ validate_config() {
 # Entry
 # ================
 NO_NOTIF=true  # do not notify errors
-source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_common.sh" | tee -a "$LOG"; exit 1; }
+source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_common.sh" >&2; exit 1; }
 REMOTE_OR_LOCAL_OPT_COUNTER=0
 ARCHIVE_OR_PREFIX_OPT_COUNTER=0
 
 unset ARCHIVE ARCHIVE_PREFIX BORG_OPTS  # just in case
 
-while getopts "rlp:a:B:L:R:T:h" opt; do
+while getopts 'rlp:a:B:L:R:T:h' opt; do
     case "$opt" in
         r) REMOTE_ONLY=1
            let REMOTE_OR_LOCAL_OPT_COUNTER+=1

@@ -3,7 +3,6 @@
 # backs up mysql/postgres dump and/or other data to local and/or remote borg repository
 
 readonly SELF="${0##*/}"
-readonly LOG="/var/log/${SELF}.log"
 
 readonly usage="
     usage: $SELF [-h] [-d MYSQL_DBS] [-g POSTGRES_DBS] [-c CONTAINERS] [-rl]
@@ -410,7 +409,7 @@ cleanup() {
 # ================
 # Entry
 # ================
-source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_common.sh" | tee -a "$LOG"; exit 1; }
+source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_common.sh" >&2; exit 1; }
 REMOTE_OR_LOCAL_OPT_COUNTER=0
 BORG_OTPS_COUNTER=0
 BORG_EXCLUDE_PATHS=()

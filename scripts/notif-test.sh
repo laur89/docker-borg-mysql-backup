@@ -3,7 +3,6 @@
 # tests configured notification system(s)
 
 readonly SELF="${0##*/}"
-readonly LOG=/dev/null
 JOB_ID="notif-test-$$"  # just for logging; will be overwritten before notification(s) are triggered
 
 readonly usage="
@@ -29,9 +28,10 @@ readonly usage="
 # Entry
 # ================
 NO_NOTIF=true
-source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_common.sh"; exit 1; }
+source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_common.sh" >&2; exit 1; }
+export LOG=/dev/null  # override LOG
 
-while getopts "p:I:H:s:T:F:A:m:e:fh" opt; do
+while getopts 'p:I:H:s:T:F:A:m:e:fh' opt; do
     case "$opt" in
         p) ARCHIVE_PREFIX="$OPTARG"
             ;;

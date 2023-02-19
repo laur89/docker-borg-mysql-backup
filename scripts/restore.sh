@@ -3,7 +3,6 @@
 # restores selected borg archive from either local or remote repo to $RESTORE_DIR
 
 readonly SELF="${0##*/}"
-readonly LOG="/var/log/${SELF}.log"
 JOB_ID="restore-$$"
 
 readonly usage="
@@ -177,7 +176,7 @@ cleanup() {
 # ================
 trap -- 'cleanup; exit' EXIT HUP INT QUIT PIPE TERM
 NO_NOTIF=true  # do not notify errors
-source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_common.sh" | tee -a "$LOG"; exit 1; }
+source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_common.sh" >&2; exit 1; }
 REMOTE_OR_LOCAL_OPT_COUNTER=0
 
 unset RESTORE_MYSQL_DB RESTORE_POSTGRES_DB CONTAINERS REM LOC BORG_OPTS RESTORE_DIR ARCHIVE_NAME  # just in case

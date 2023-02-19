@@ -7,7 +7,6 @@
 # - configures msmtprc for mail notifications;
 
 readonly SELF="${0##*/}"
-readonly LOG="/var/log/${SELF}.log"  # note path is also tied to logrotate config
 JOB_ID="setup-$$"
 
 
@@ -94,7 +93,7 @@ EOF
 setup_logrotate() {
     local opt rotate interval size name pattern rotate_confdir target_conf OPTIND
 
-    while getopts "r:i:s:n:p:" opt; do
+    while getopts 'r:i:s:n:p:' opt; do
         case "$opt" in
             r) rotate="$OPTARG"
                 ;;
@@ -112,11 +111,11 @@ setup_logrotate() {
     done
     shift "$((OPTIND-1))"
 
-    [[ -z "$rotate" ]] && rotate=20
+    [[ -z "$rotate" ]] && rotate=5
     [[ -z "$interval" ]] && interval=weekly
-    [[ -z "$size" ]] && size=1000k
+    [[ -z "$size" ]] && size=10M
     [[ -z "$name" ]] && name=common-config
-    [[ -z "$pattern" ]] && pattern='/var/log/*.log'
+    [[ -z "$pattern" ]] && pattern="$LOG_ROOT/*.log"
 
 
     rotate_confdir='/etc/logrotate.d'
@@ -146,7 +145,8 @@ NO_SEND_MAIL=true  # stop sending mails during startup/setup; allow other notifi
 #printenv | sed 's/^\(\w\+\)=\(.*\)$/export \1="\2"/g' > /env_vars.sh || { echo -e "    ERROR: printenv failed" | tee -a "$LOG"; exit 1; }
 #env | sed -r "s/'/\\\'/gm" | sed -r "s/^([^=]+=)(.*)\$/\1'\2'/gm" \ > /etc/environment
 #declare -p | grep -Ev '\b(BASHOPTS|BASH_VERSINFO|EUID|PPID|SHELLOPTS|UID)=' > /container.env || { echo -e "    ERROR: printenv failed" | tee -a "$LOG"; exit 1; }
-source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_common.sh" | tee -a "$LOG"; exit 1; }
+source /scripts_common.sh || { echo -e "    ERROR: failed to import /scripts_common.sh" >&2; exit 1; }
+
 #chmod 600 /container.env || fail "chmod-ing /container.env failed w/ [$?]"
 
 check_dependencies
