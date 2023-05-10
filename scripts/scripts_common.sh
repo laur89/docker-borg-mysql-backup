@@ -209,7 +209,7 @@ err() {
 
     no_mail_orig="$NO_SEND_MAIL"
 
-    while getopts "FNM" opt; do
+    while getopts 'FNM' opt; do
         case "$opt" in
             F) f='-F'  # only to be provided by fail(), ie do not pass -F flag to err() yourself!
                 ;;

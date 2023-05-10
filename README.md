@@ -170,7 +170,7 @@ Note all `BORG_`-prefixed env vars are [borg native ones](https://borgbackup.rea
 
 ## Script usage
 
-Container incorporates `backup`, `restore`, `list`, `delete` and `notif-test` scripts.
+Container incorporates `backup`, `compact`, `restore`, `list`, `delete` and `notif-test` scripts.
 
 ### backup.sh
 
