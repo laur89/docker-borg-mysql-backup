@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 # alpine-linux entry
 
 /setup.sh || exit 1
