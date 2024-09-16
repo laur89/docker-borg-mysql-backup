@@ -501,8 +501,7 @@ readonly PREFIX_WITH_HOSTNAME="${ARCHIVE_PREFIX}-${HOST_ID}-"  # used for prunin
 readonly ARCHIVE_NAME="$PREFIX_WITH_HOSTNAME"'{now:%Y-%m-%d-%H%M%S}'
 
 validate_config
-[[ -n "$REMOTE" ]] && add_remote_to_known_hosts_if_missing "$REMOTE"
-readonly REMOTE+=":$REMOTE_REPO"  # define after validation, as we're re-defining the arg
+process_remote  # note this overwrites global REMOTE var
 create_dirs
 
 run_scripts  before

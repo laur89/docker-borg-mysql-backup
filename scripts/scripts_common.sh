@@ -394,18 +394,21 @@ hcio() {
 
 
 add_remote_to_known_hosts_if_missing() {
-    local input host
+    local input host_w_port host port keyscan_opts
 
     input="$1"
     [[ -z "$input" ]] && return 0
 
-    host="${input#*@}"  # everything after '@'
-    host="${host%%:*}"  # everything before ':'
+    host_w_port="${input#*@}"  # everything after '@'
+    #host="${host_w_port%%:*}"  # everything before ':'
+    IFS=':' read -r host port <<< "$host_w_port"
 
     [[ -z "$host" ]] && fail "could not extract host from remote [$input]"
 
-    if [[ -z "$(ssh-keygen -F "$host")" ]]; then
-        ssh-keyscan -H "$host" >> "$HOME/.ssh/known_hosts" || fail "adding host [$host] to ~/.ssh/known_hosts failed w/ [$?]"
+    if [[ -z "$(ssh-keygen -F "$host_w_port")" ]]; then
+        keyscan_opts=()
+        [[ -n "$port" ]] && keyscan_opts=('-p' "$port")
+        ssh-keyscan "${keyscan_opts[@]}" -H "$host" >> "$HOME/.ssh/known_hosts" || fail "adding host [$host_w_port] to ~/.ssh/known_hosts failed w/ [$?]"
     fi
 }
 
@@ -484,6 +487,33 @@ validate_config_common() {
     validate_true_false "${vars[@]}"
 
     validate_containers
+    validate_remote
+}
+
+
+validate_remote() {
+    local host port
+
+    if [[ -n "$REMOTE" ]]; then
+        IFS=':' read -r host port <<< "$REMOTE"
+        if [[ -n "$port" ]] && ! is_digit "$port"; then
+            fail "port in REMOTE:PORT, if defined, needs to be digit, but was [$port]"
+        fi
+    fi
+}
+
+
+process_remote() {
+    if [[ -n "$REMOTE" ]]; then
+        validate_remote
+
+        add_remote_to_known_hosts_if_missing "$REMOTE"
+        if [[ "$REMOTE" == *:* ]]; then
+            readonly REMOTE+="$REMOTE_REPO"  # define after validation, as we're re-defining the arg
+        else
+            readonly REMOTE+=":$REMOTE_REPO"  # define after validation, as we're re-defining the arg
+        fi
+    fi
 }
 
 
@@ -714,6 +744,11 @@ print_time() {
     fi
 
     echo -n "$r"
+}
+
+
+is_digit() {
+    [[ "$*" =~ ^[0-9]+$ ]]
 }
 
 

@@ -109,8 +109,7 @@ while getopts 'rlp:a:B:L:R:T:h' opt; do
 done
 
 validate_config
-[[ -n "$REMOTE" ]] && add_remote_to_known_hosts_if_missing "$REMOTE"
-readonly REMOTE+=":$REMOTE_REPO"  # define after validation, as we're re-defining the arg
+process_remote  # note this overwrites global REMOTE var
 
 [[ -n "$ARCHIVE_PREFIX" ]] && BORG_OPTS+=" --glob-archives ${ARCHIVE_PREFIX}*"
 delete
