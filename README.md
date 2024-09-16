@@ -106,8 +106,8 @@ Note all `BORG_`-prefixed env vars are [borg native ones](https://borgbackup.rea
 
 
     HOST_ID                 host identifier to include in the borg archive name
-    REMOTE                  remote connection - user & host; eg for rsync.net
-                            it'd be something like '12345@ch-s010.rsync.net'
+    REMOTE                  remote connection - user & host with optional port; eg for
+                            rsync.net it'd be something like '12345@ch-s010.rsync.net[:1234]'
                             optional - can be omitted when only backing up to local
                             borg repo, or if providing value via script
     REMOTE_REPO             path to repo on remote host, eg '/backup/repo'
