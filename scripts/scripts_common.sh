@@ -48,8 +48,8 @@ export BORG_RSH='ssh -oBatchMode=yes'  # https://borgbackup.readthedocs.io/en/st
 
 # No one can answer if Borg asks these questions, it is better to just fail quickly
 # instead of hanging: (from https://borgbackup.readthedocs.io/en/stable/deployment/automated-local.html#configuring-the-system)
-export BORG_RELOCATED_REPO_ACCESS_IS_OK=no
-export BORG_UNKNOWN_UNENCRYPTED_REPO_ACCESS_IS_OK=no
+export BORG_RELOCATED_REPO_ACCESS_IS_OK="${BORG_RELOCATED_REPO_ACCESS_IS_OK:-no}"
+export BORG_UNKNOWN_UNENCRYPTED_REPO_ACCESS_IS_OK="${BORG_UNKNOWN_UNENCRYPTED_REPO_ACCESS_IS_OK:-no}"
 
 
 stop_containers() {
