@@ -44,7 +44,15 @@ CURL_FLAGS=(
 declare -A CONTAINER_TO_RUNNING_STATE=()  # container_name->is_running<bool> mappings at the beginning of script
 declare -a CONTAINERS_TO_START=()  # list of containers that were stopped by this script and should be started back up upon completion
 
-export BORG_RSH='ssh -oBatchMode=yes'  # https://borgbackup.readthedocs.io/en/stable/usage/notes.html#ssh-batch-mode
+# https://borgbackup.readthedocs.io/en/stable/usage/notes.html#ssh-batch-mode
+if [[ -n "$BORG_RSH" ]]; then
+    export BORG_RSH
+elif [[ -n "$RSH_EXTRA_OPTS" ]]; then
+    export BORG_RSH="ssh -oBatchMode=yes $RSH_EXTRA_OPTS"
+else
+    export BORG_RSH='ssh -oBatchMode=yes'  # default
+fi
+
 
 # No one can answer if Borg asks these questions, it is better to just fail quickly
 # instead of hanging: (from https://borgbackup.readthedocs.io/en/stable/deployment/automated-local.html#configuring-the-system)
@@ -396,7 +404,7 @@ hcio() {
 add_remote_to_known_hosts_if_missing() {
     local input host_w_port host port keyscan_opts
 
-    input="$1"
+    input="$1"  # note :port is optional
     [[ -z "$input" ]] && return 0
 
     host_w_port="${input#*@}"  # everything after '@'
@@ -488,6 +496,7 @@ validate_config_common() {
 
     validate_containers
     validate_remote
+    [[ -n "$BORG_RSH" && -n "$RSH_EXTRA_OPTS" ]] && fail "[BORG_RSH] & [RSH_EXTRA_OPTS] are mutually exclusive"
 }
 
 
