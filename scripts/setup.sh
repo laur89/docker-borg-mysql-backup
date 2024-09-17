@@ -51,7 +51,7 @@ install_ssh_key() {
     # sanitize .ssh perms:
     chmod -R u=rwX,g=,o= -- ~/.ssh
 
-    [[ -n "$REMOTE" ]] && add_remote_to_known_hosts_if_missing "$REMOTE"
+    #[[ -n "$REMOTE" ]] && add_remote_to_known_hosts_if_missing "$REMOTE"
 }
 
 

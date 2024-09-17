@@ -48,9 +48,9 @@ declare -a CONTAINERS_TO_START=()  # list of containers that were stopped by thi
 if [[ -n "$BORG_RSH" ]]; then
     export BORG_RSH
 elif [[ -n "$RSH_EXTRA_OPTS" ]]; then
-    export BORG_RSH="ssh -oBatchMode=yes $RSH_EXTRA_OPTS"
+    export BORG_RSH="ssh -o BatchMode=yes -o StrictHostKeyChecking=no $RSH_EXTRA_OPTS"
 else
-    export BORG_RSH='ssh -oBatchMode=yes'  # default
+    export BORG_RSH='ssh -o BatchMode=yes -o StrictHostKeyChecking=no'  # default
 fi
 
 
@@ -401,11 +401,14 @@ hcio() {
 }
 
 
+# input:
+# - [user@]hostname[:port]
 add_remote_to_known_hosts_if_missing() {
-    local input host_w_port host port keyscan_opts
+    local input known_f host_w_port host port keygen_arg keyscan_opts
 
     input="$1"  # note :port is optional
     [[ -z "$input" ]] && return 0
+    known_f="$HOME/.ssh/known_hosts"
 
     host_w_port="${input#*@}"  # everything after '@'
     #host="${host_w_port%%:*}"  # everything before ':'
@@ -413,10 +416,15 @@ add_remote_to_known_hosts_if_missing() {
 
     [[ -z "$host" ]] && fail "could not extract host from remote [$input]"
 
-    if [[ -z "$(ssh-keygen -F "$host_w_port")" ]]; then
-        keyscan_opts=()
-        [[ -n "$port" ]] && keyscan_opts=('-p' "$port")
-        ssh-keyscan "${keyscan_opts[@]}" -H "$host" >> "$HOME/.ssh/known_hosts" || fail "adding host [$host_w_port] to ~/.ssh/known_hosts failed w/ [$?]"
+    keygen_arg="$host"
+    keyscan_opts=('-H')
+    if [[ -n "$port" ]]; then
+        keygen_arg="[$host]:$port"
+        keyscan_opts+=('-p' "$port")
+    fi
+
+    if [[ -z "$(ssh-keygen -F "$keygen_arg" -f "$known_f")" ]]; then
+        ssh-keyscan "${keyscan_opts[@]}" -- "$host" >> "$known_f" || fail "adding host [$host_w_port] to $known_f failed w/ [$?]"
     fi
 }
 
@@ -516,7 +524,7 @@ process_remote() {
     if [[ -n "$REMOTE" ]]; then
         validate_remote
 
-        add_remote_to_known_hosts_if_missing "$REMOTE"
+        #add_remote_to_known_hosts_if_missing "$REMOTE"
         if [[ "$REMOTE" == *:* ]]; then
             readonly REMOTE+="$REMOTE_REPO"  # define after validation, as we're re-defining the arg
         else
