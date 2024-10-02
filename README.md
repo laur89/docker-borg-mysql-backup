@@ -170,7 +170,8 @@ Note all `BORG_`-prefixed env vars are [borg native ones](https://borgbackup.rea
 
 ## Script usage
 
-Container incorporates `backup`, `compact`, `restore`, `list`, `delete` and `notif-test` scripts.
+Container incorporates `backup`, `compact`, `restore`, `list`, `delete`,
+`check` and `notif-test` scripts.
 
 ### backup.sh
 
@@ -567,6 +568,41 @@ variables are not usable with `delete`.
         -v /host/borg-conf/logs:/var/log \
            layr/borg-mysql-backup compact.sh -l
 
+### check.sh
+
+`check` script is for verifying repo/archive integrity and optionally
+attempting to fix any issues.
+
+    usage: check [-h] [-rlF] [-p ARCHIVE_PREFIX] [-a ARCHIVE] [-B BORG_OPTS]
+             [-L LOCAL_REPO] [-R REMOTE] [-T REMOTE_REPO]
+
+    Verify the consistency of a repo and its archives.
+
+    arguments:
+      -h                      show help and exit
+      -r                      only check remote borg repo (remote-only)
+      -l                      only check local borg repo (local-only)
+      -F                      attempt to repair/fix inconsistencies; dangerous, see docs!
+      -p ARCHIVE_PREFIX       check archives with given prefix; same as providing
+                              -B '--glob-archives ARCHIVE_PREFIX*'
+      -a ARCHIVE              archive name to check; -p & -a are mutually exclusive
+      -B BORG_OPTS            additional borg params to pass to borg check command
+      -L LOCAL_REPO           overrides container env var of same name
+      -R REMOTE               overrides container env var of same name
+      -T REMOTE_REPO          overrides container env var of same name
+
+
+#### Usage examples
+
+##### Check/verify the local repository
+
+    docker run -it --rm \
+        -e BORG_PASSPHRASE=borgrepopassword \
+        -v /host/backup:/backup \
+        -v /host/borg-conf/.borg/cache:/root/.cache/borg \
+        -v /host/borg-conf/.borg/config:/root/.config/borg \
+        -v /host/borg-conf/logs:/var/log \
+           layr/borg-mysql-backup check.sh -l
 
 ### notif-test.sh
 
