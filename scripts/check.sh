@@ -35,7 +35,7 @@ _check_common() {
     log "=> starting check operation on $l_or_r repo [$repo]..."
     start_timestamp="$(date +%s)"
 
-    borg check --verify-data $REPAIR --stats --show-rc \
+    borg check --verify-data $REPAIR --show-rc \
         $COMMON_OPTS \
         $BORG_OPTS \
         "${repo}${ARCHIVE:+::$ARCHIVE}" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || { err "check operation on $l_or_r repo [$repo] failed w/ [$?]"; err_code=1; }
