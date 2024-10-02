@@ -27,7 +27,7 @@ readonly usage="
 
 
 _check_common() {
-    local l_or_r repo start_timestamp err_code t
+    local l_or_r repo start_timestamp err_code t s
 
     l_or_r="$1"
     repo="$2"
@@ -41,7 +41,8 @@ _check_common() {
         "${repo}${ARCHIVE:+::$ARCHIVE}" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || { err "check operation on $l_or_r repo [$repo] failed w/ [$?]"; err_code=1; }
 
     t="$(( $(date +%s) - start_timestamp ))"
-    log "=> $l_or_r repo check ${err_code:-succeeded} in $(print_time "$t")"
+    [[ -z "$err_code" ]] && s='succeeded '
+    log "=> $l_or_r repo check ${s}in $(print_time "$t")"
 
     return "${err_code:-0}"
 }

@@ -70,7 +70,7 @@ expand_nodes_to_back_up() {
 
 # dumps selected mariadb/mysql db(s) to $TMP
 dump_mysql() {
-    local output_filename dbs dbs_log err_code start_timestamp err_ t
+    local output_filename dbs dbs_log err_code start_timestamp t s
 
     [[ "${#MYSQL_DB[@]}" -eq 0 ]] && return 0  # no db specified, meaning db dump not required
 
@@ -106,18 +106,18 @@ dump_mysql() {
         local msg
         msg="mysql db dump step for input args [${MYSQL_DB[*]}] failed w/ [$err_code]"
         [[ "${MYSQL_FAIL_FATAL:-true}" == true ]] && fail "${msg}; aborting" || err "${msg}; not aborting"
-        err_=failed
     fi
 
     t="$(( $(date +%s) - start_timestamp ))"
-    log "=> mysql db dump ${err_:-succeeded} in $(print_time "$t")"
+    [[ "$err_code" -eq 0 ]] && s='succeeded '
+    log "=> mysql db dump ${s}in $(print_time "$t")"
 }
 
 
 # dumps selected postgres db(s) to $TMP
 # https://www.postgresql.org/docs/15/backup-dump.html
 dump_postgres() {
-    local err_code start_timestamp err_ t d
+    local err_code start_timestamp t d s
 
     [[ "${#POSTGRES_DB[@]}" -eq 0 ]] && return 0  # no db specified, meaning db dump not required
 
@@ -159,17 +159,17 @@ dump_postgres() {
         local msg
         msg="postgres db dump step for input args [${POSTGRES_DB[*]}] failed w/ [$err_code]"
         [[ "${POSTGRES_FAIL_FATAL:-true}" == true ]] && fail "${msg}; aborting" || err "${msg}; not aborting"
-        err_=failed
     fi
 
     t="$(( $(date +%s) - start_timestamp ))"
-    log "=> postgres db dump ${err_:-succeeded} in $(print_time "$t")"
+    [[ "$err_code" -eq 0 ]] && s='succeeded '
+    log "=> postgres db dump ${s}in $(print_time "$t")"
 }
 
 
 # TODO: should we err() or fail() from here, as they are backgrounded anyway?
 _backup_common() {
-    local l_or_r repo extra_opts start_timestamp err_code opts t
+    local l_or_r repo extra_opts start_timestamp err_code opts t s
 
     l_or_r="$1"
     repo="$2"
@@ -187,7 +187,8 @@ _backup_common() {
         "${NODES_TO_BACK_UP[@]}" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || { err "$l_or_r borg create exited w/ [$?]"; err_code=1; }
 
     t="$(( $(date +%s) - start_timestamp ))"
-    log "=> $l_or_r backup ${err_code:-succeeded} in $(print_time "$t")"
+    [[ -z "$err_code" ]] && s='succeeded '
+    log "=> $l_or_r backup ${s}in $(print_time "$t")"
 
     return "${err_code:-0}"
 }
@@ -195,7 +196,7 @@ _backup_common() {
 
 # TODO: should we err() or fail() from here, as they are backgrounded anyway?
 _prune_common() {
-    local l_or_r repo prune_opts start_timestamp err_code opts t
+    local l_or_r repo prune_opts start_timestamp err_code opts t s
 
     l_or_r="$1"
     repo="$2"
@@ -213,7 +214,8 @@ _prune_common() {
         "$repo" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || { err "$l_or_r borg prune exited w/ [$?]"; err_code=1; }
 
     t="$(( $(date +%s) - start_timestamp ))"
-    log "=> $l_or_r prune ${err_code:-succeeded} in $(print_time "$t")"
+    [[ -z "$err_code" ]] && s='succeeded '
+    log "=> $l_or_r prune ${s}in $(print_time "$t")"
 
     return "${err_code:-0}"
 }

@@ -103,7 +103,7 @@ start_containers() {
 
 
 _compact_common() {
-    local l_or_r repo start_timestamp t err_code
+    local l_or_r repo start_timestamp t err_code s
 
     l_or_r="$1"
     repo="$2"
@@ -117,7 +117,8 @@ _compact_common() {
         "$repo" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || { err "$l_or_r borg compact exited w/ [$?]"; err_code=1; }
 
     t="$(( $(date +%s) - start_timestamp ))"
-    log "=> $l_or_r compact ${err_code:-succeeded} in $(print_time "$t")"
+    [[ -z "$err_code" ]] && s='succeeded '
+    log "=> $l_or_r compact ${s}in $(print_time "$t")"
 
     return "${err_code:-0}"
 }
