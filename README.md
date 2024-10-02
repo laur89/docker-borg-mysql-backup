@@ -547,8 +547,8 @@ variables are not usable with `delete`.
 
     arguments:
       -h                      show help and exit
-      -r                      compact remote borg repo
-      -l                      compact local borg repo
+      -r                      compact only remote borg repo (remote-only)
+      -l                      compact only local borg repo (local-only)
       -B BORG_OPTS            additional borg params to pass to borg compact command
       -L LOCAL_REPO           overrides container env var of same name
       -R REMOTE               overrides container env var of same name

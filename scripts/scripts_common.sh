@@ -712,12 +712,14 @@ contains() {
 }
 
 
+# note if SEPARATOR were guaranteed to be single char, then all this could be
+# replaced by "$(IFS=,; echo "${i[*]}")"
 join() {
     local opt OPTIND sep list i
 
     sep="$SEPARATOR"  # default
 
-    while getopts "s:" opt; do
+    while getopts 's:' opt; do
         case "$opt" in
             s) sep="$OPTARG"
                 ;;

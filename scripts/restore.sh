@@ -36,14 +36,16 @@ readonly usage="
 
 # TODO: currently user-included sql files would also be picked up by find!
 restore_db() {
-    local mysql_files postgre_files i d
+    local mysql_files postgre_files i j d
 
     declare -a mysql_files postgre_files
 
     while IFS= read -r -d $'\0' i; do
-        if [[ "$i" == 'mysql:'* ]]; then
+        j="$(basename -- "$i")"
+
+        if [[ "$j" == 'mysql:'* ]]; then
             mysql_files+=("$i")
-        elif [[ "$i" == 'postgres:'* ]]; then
+        elif [[ "$j" == 'postgres:'* ]]; then
             postgre_files+=("$i")
         else
             err "unrecognized SQL file [$i], ignoring it..."
