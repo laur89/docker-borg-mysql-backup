@@ -82,7 +82,7 @@ stop_containers() {
 }
 
 
-# caller might be backgrounding!
+# caller might be backgrounding! that's why the container names are passed explicitly.
 start_containers() {
     local containers c idx err_
 
@@ -99,6 +99,35 @@ start_containers() {
     log "=> ${err_:-all containers started}"
 
     return 0
+}
+
+
+# note this fun is exported
+# note _running_dock_by_name() is not strictly needed, as container name would suffice!
+# note commands need to block
+#
+# note with -t option stderr gets merged w/ stdout!
+dex() {
+    docker exec "$(_running_dock_by_name "$1")" "${@:2}"  2> >(tee -a "$LOG" >&2) || { err "running [${*:2}] on container [$1] failed w/ [$?]"; return 1; }
+}
+
+
+# find running container ID by container name
+# note this fun is exported
+_running_dock_by_name() {
+    local input name_to_id name line
+
+    input="$*"
+
+    declare -A name_to_id
+
+    while read -r line; do
+        name="$(cut -d' ' -f2- <<< "$line")"
+        name_to_id[$name]="$(cut -d' ' -f1 <<< "$line")"
+    done < <(docker ps --no-trunc --format '{{.ID}} {{.Names}}' | grep -i "$input")  # note we don't use docker-ps's --filter option, as using grep gives us case-insensitivity
+
+    [[ "${#name_to_id[@]}" -eq 1 ]] || return 1
+    echo -n "${name_to_id[@]}"
 }
 
 
@@ -647,7 +676,7 @@ ping_healthcheck() {
 
 
 run_scripts() {
-    local stage dir flags msg
+    local stage dir flags start_timestamp t msg
 
     stage="$1"
 
@@ -655,23 +684,23 @@ run_scripts() {
     [[ "${SCRIPT_FAIL_FATAL:-true}" == true ]] && flags+=('--exit-on-error')
     flags+=(
         -a "$stage"
-        -a "$ARCHIVE_PREFIX"
-        -a "$TMP"
-        -a "$CONF_ROOT"
-        -a "$(join -- "${NODES_TO_BACK_UP[@]}")"
         -a "$(join -- "${CONTAINERS[@]}")"
+        -a "$(join -- "${NODES_TO_BACK_UP[@]}")"
     )
 
     # export all the necessary args & functions that child processes might want/need to use:
-    export LOG LOG_TIMESTAMP_FORMAT JOB_ID ARCHIVE_PREFIX HOST_ID SEPARATOR
+    export LOG LOG_TIMESTAMP_FORMAT ARCHIVE_PREFIX HOST_ID SEPARATOR
     export NO_SEND_MAIL NO_NOTIF ADD_NOTIF_TAIL NOTIF_TAIL_MSG DEFAULT_NOTIF_TAIL_MSG
     export MAIL_TO MAIL_FROM DEFAULT_MAIL_FROM NOTIF_SUBJECT DEFAULT_NOTIF_SUBJECT SMTP_ACCOUNT
     export PUSHOVER_USER_KEY PUSHOVER_APP_TOKEN PUSHOVER_PRIORITY PUSHOVER_EXPIRE
-    export HC_URL
-    #export ERR_NOTIF CURL_FLAGS  # arrays, need to be joined and passed directly to the command below
+    export HC_URL TMP TMP_ROOT CONF_ROOT
+    #export ERR_NOTIF CURL_FLAGS CONTAINERS NODES_TO_BACK_UP  # arrays, need to be joined and passed directly to the command below
     export -f fail err log notif mail pushover hcio expand_placeholders contains is_dir_empty print_time is_valid_url
+    export -f dex  _running_dock_by_name is_digit
 
 
+    # TODO: deprecate /each? realistically there won't be a case where one would
+    # want to exec something on each and every step, right?
     for dir in \
             "$SCRIPT_ROOT/each" \
             "$SCRIPT_ROOT/$stage" \
@@ -684,13 +713,21 @@ run_scripts() {
         log "stage [$stage]: executing following scripts in [$dir]:"
         run-parts --test "${flags[@]}" "$dir" > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2) || err "run-parts dry-run for stage [$stage] in [$dir] failed w/ $?"
 
+        start_timestamp="$(date +%s)"
+
         ERR_NOTIF="$(join -- "${ERR_NOTIF[@]}")" \
+                JOB_ID="${JOB_ID}-$stage" \
                 CURL_FLAGS="$(join -- "${CURL_FLAGS[@]}")" \
-                run-parts "${flags[@]}" "$dir" 2> >(tee -a "$LOG" >&2)  # no need to log stdout right?
+                CONTAINERS="$(join -- "${CONTAINERS[@]}")" \
+                NODES_TO_BACK_UP="$(join -- "${NODES_TO_BACK_UP[@]}")" \
+                    run-parts "${flags[@]}" "$dir" 2> >(tee -a "$LOG" >&2)  # no need to log stdout right?
         if [[ "$?" -ne 0 ]]; then
             msg="custom script execution for stage [$stage] in [$dir] failed"
             [[ "${SCRIPT_FAIL_FATAL:-true}" == true ]] && fail "${msg}; aborting" || err "${msg}; not aborting"
         fi
+
+        t="$(( $(date +%s) - start_timestamp ))"
+        log "stage [$stage]: executing [$dir] done in $(print_time "$t")"
     done
 }
 
@@ -767,6 +804,7 @@ print_time() {
 }
 
 
+# note this fun is exported
 is_digit() {
     [[ "$*" =~ ^[0-9]+$ ]]
 }
