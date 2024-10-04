@@ -299,7 +299,11 @@ do_backup() {
 
     # backup is done, we can go ahead and start the containers while pruning:
     # TODO: should start_containers() be called when we errored?
-    start_containers "${CONTAINERS_TO_START[@]}" &
+    (
+        run_scripts  before-start-containers
+        start_containers "${CONTAINERS_TO_START[@]}"
+        run_scripts  after-start-containers
+    ) &
     CONTAINERS_TO_START=()  # empty so no secondary start attempts would be made after
 
     started_pids=()  # reset
@@ -400,7 +404,11 @@ cleanup() {
     [[ -d "$TMP" ]] && rm -rf -- "$TMP"
     [[ -d "$TMP_ROOT" ]] && is_dir_empty "$TMP_ROOT" && rm -rf -- "$TMP_ROOT"
 
-    start_containers "${CONTAINERS_TO_START[@]}"  # do not background here
+    if [[ "${#CONTAINERS_TO_START[@]}" -gt 0 ]]; then
+        run_scripts  before-start-containers
+        start_containers "${CONTAINERS_TO_START[@]}"  # do not background here
+        run_scripts  after-start-containers
+    fi
 
     # TODO: shouldn't we ping healthcheck the very first thing in cleanup()? ie it should fire regardles of the outcome of other calls in here
     ping_healthcheck
@@ -508,7 +516,10 @@ create_dirs
 
 run_scripts  before
 
+run_scripts  before-stop-containers
 stop_containers
+run_scripts  after-stop-containers
+
 do_backup
 
 run_scripts  after
