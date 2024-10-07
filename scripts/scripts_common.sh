@@ -720,7 +720,7 @@ run_scripts() {
                 CURL_FLAGS="$(join -- "${CURL_FLAGS[@]}")" \
                 CONTAINERS="$(join -- "${CONTAINERS[@]}")" \
                 NODES_TO_BACK_UP="$(join -- "${NODES_TO_BACK_UP[@]}")" \
-                    run-parts "${flags[@]}" "$dir" 2> >(tee -a "$LOG" >&2)  # no need to log stdout right?
+                    run-parts "${flags[@]}" "$dir"
         if [[ "$?" -ne 0 ]]; then
             msg="custom script execution for stage [$stage] in [$dir] failed"
             [[ "${SCRIPT_FAIL_FATAL:-true}" == true ]] && fail "${msg}; aborting" || err "${msg}; not aborting"

@@ -433,7 +433,7 @@ while getopts 'd:g:p:c:rlP:1:2:B:Z:E:L:e:A:D:G:S:R:T:H:Ch' opt; do
         g) IFS="$SEPARATOR" read -ra POSTGRES_DB <<< "$OPTARG"
             ;;
         p) readonly ARCHIVE_PREFIX="$OPTARG"  # be careful w/ var rename! eg run_scripts() depends on many var names
-           readonly JOB_ID="${OPTARG}-$$"
+           JOB_ID="${OPTARG}-$$"
             ;;
         c) IFS="$SEPARATOR" read -ra CONTAINERS <<< "$OPTARG"
             ;;
