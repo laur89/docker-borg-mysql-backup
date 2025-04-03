@@ -62,7 +62,7 @@ the changes to get picked up.
 
 ### For rsync.net (or other remote location):
 
-Running command from your computer: `BORG_REMOTE_PATH=borg1 borg init
+Running command from your computer: `BORG_REMOTE_PATH=borg14 borg init
 --encryption=repokey 12345@ch-s010.rsync.net:dir/path`
 
 ### Local repo:
@@ -124,7 +124,7 @@ Note all `BORG_`-prefixed env vars are [borg native ones](https://borgbackup.rea
     LOCAL_CREATE_OPTS       additional borg params for local borg backup command; optional
     REMOTE_CREATE_OPTS      additional borg params for remote borg backup command; optional
     BORG_REMOTE_PATH        remote borg executable path; eg with rsync.net
-                            you'd  want to use value 'borg1'; optional
+                            you'd  want to use value 'borg14'; optional
     BORG_PASSPHRASE         borg repo password
     PRUNE_OPTS              options for borg prune (both local and remote); not 
                             required when it's defined by backup script -P param
