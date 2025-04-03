@@ -496,9 +496,17 @@ readonly TMP="$TMP_ROOT/${ARCHIVE_PREFIX}-$RANDOM"
 
 [[ -f "$ENV_ROOT/${ARCHIVE_PREFIX}.conf" ]] && source "$ENV_ROOT/${ARCHIVE_PREFIX}.conf"  # load job-specific config if avail
 
-# process these _after_ sourcing job-specific config:
+readonly PREFIX_WITH_HOSTNAME="${ARCHIVE_PREFIX}-${HOST_ID}-"  # used for pruning
+readonly ARCHIVE_NAME="$PREFIX_WITH_HOSTNAME"'{now:%Y-%m-%d-%H%M%S}'
+
+validate_config
+
+# make sure these are processed _after_ sourcing job-specific config:
 if [[ "${#BORG_EXCLUDE_PATHS[@]}" -gt 0 ]]; then
     for i in "${BORG_EXCLUDE_PATHS[@]}"; do
+        if [[ -n "$NOTIF_MISSING_EXCL_PTH" && ! -e "$i" ]]; then
+            err "excluded path [$i] does not exist; not aborting"
+        fi
         BORG_EXCLUDE_OPTS+=" --exclude $i"
     done
     unset BORG_EXCLUDE_PATHS i
@@ -507,10 +515,7 @@ fi
 [[ -n "$BORG_EXCLUDE_OPTS" ]] && CREATE_OPTS+=" $BORG_EXCLUDE_OPTS"
 unset BORG_EXCLUDE_OPTS
 
-readonly PREFIX_WITH_HOSTNAME="${ARCHIVE_PREFIX}-${HOST_ID}-"  # used for pruning
-readonly ARCHIVE_NAME="$PREFIX_WITH_HOSTNAME"'{now:%Y-%m-%d-%H%M%S}'
 
-validate_config
 process_remote  # note this overwrites global REMOTE var
 create_dirs
 

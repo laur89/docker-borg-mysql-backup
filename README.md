@@ -133,6 +133,9 @@ Note all `BORG_`-prefixed env vars are [borg native ones](https://borgbackup.rea
     REMOTE_PRUNE_OPTS       prune options for remote borg repo; overrides PRUNE_OPTS;
     SCRIPT_FAIL_FATAL       whether failure of custom script execution should abort
                             backup, defaults to 'true';
+    NOTIF_MISSING_EXCL_PTH  set to non-empty value if any of the configured excluded
+                            file paths should raise a warning notification;
+                            this is to find potential misconfigurations
 
     HC_URL                  healthcheck url to ping upon script completion; may contain
                             {id} placeholder to define general template and provide the
