@@ -93,7 +93,7 @@ Note all `BORG_`-prefixed env vars are [borg native ones](https://borgbackup.rea
     MYSQL_PASS              the password of your mysql database
     MYSQL_FAIL_FATAL        whether unsuccessful db dump should abort backup,
                             defaults to 'true';
-    MYSQL_EXTRA_OPTS        the extra options to pass to 'mysqldump' command; optional
+    MYSQL_EXTRA_OPTS        the extra options to pass to 'mariadb-dump' command; optional
 
     POSTGRES_HOST           the host/ip of your postgresql database
     POSTGRES_PORT           the port number of your postgresql database
@@ -642,7 +642,7 @@ attempting to fix any issues.
 
 
 ## See also/recommended
-- [restic](https://github.com/restic/restic) - note: no compression
+- [restic](https://github.com/restic/restic)
 - [duplicacy](https://github.com/gilbertchen/duplicacy) - alternatives to borg. lock-free!
 - [docker-db-backup](https://github.com/tiredofit/docker-db-backup) - similar service; supports multiple dbs
 - [this blog](https://ifnull.org/articles/borgbackup_rsyncnet/) for borg setup

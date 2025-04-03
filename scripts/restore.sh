@@ -56,7 +56,7 @@ restore_db() {
     if [[ "$RESTORE_MYSQL_DB" == 1 ]]; then
         [[ "${#mysql_files[@]}" -ne 1 ]] && fail "expected to find exactly 1 mysql .sql file in the root of [$RESTORE_DIR], but found ${#mysql_files[@]}"
         if confirm "restore db from mysql dump [${mysql_files[*]}]?"; then
-            mysql \
+            mariadb \
                     --host="${MYSQL_HOST}" \
                     --port="${MYSQL_PORT}" \
                     --user="${MYSQL_USER}" \

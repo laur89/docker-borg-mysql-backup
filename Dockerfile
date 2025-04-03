@@ -7,7 +7,7 @@ ADD scripts/* /usr/local/sbin/
 
 RUN apk update && \
     apk add --no-cache \
-        grep curl bash mysql-client postgresql-client ca-certificates tzdata msmtp logrotate \
+        grep curl bash mariadb-client postgresql-client ca-certificates tzdata msmtp logrotate \
         openssh-client \
         openssh-keygen \
         borgbackup=$BORG_VERSION \

@@ -13,7 +13,10 @@ JOB_ID="setup-$$"
 check_dependencies() {
     local i
 
-    for i in curl docker mysql mysqldump borg ssh-keygen ssh-keyscan tr sed find msmtp run-parts; do
+    for i in curl docker mariadb mariadb-dump \
+             borg ssh-keygen ssh-keyscan tr \
+             sed find msmtp run-parts \
+             psql pg_dump pg_dumpall; do
         command -v "$i" >/dev/null || fail "[$i] not installed"
     done
 }

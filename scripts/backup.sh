@@ -87,11 +87,11 @@ dump_mysql() {
     log "=> starting mysql db dump for ${dbs_log}..."
     start_timestamp="$(date +%s)"
 
-    # TODO: add following column-stats option back once mysqldump from alpine accepts it:
+    # TODO: add following column-stats option back once mariadb-dump from alpine accepts it:
             #--column-statistics=0 \
     # TODO: add --routines ?
     # TODO: add --add-locks ?
-    mysqldump \
+    mariadb-dump \
             --add-drop-database \
             --max-allowed-packet=512M \
             --host="${MYSQL_HOST}" \
