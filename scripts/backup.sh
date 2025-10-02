@@ -381,7 +381,7 @@ validate_config() {
         for i in "${NODES_TO_BACK_UP[@]}"; do
             [[ -e "$i" ]] || err "node [$i] to back up does not exist; missing mount?"
         done
-    elif [[ "${#MYSQL_DB[@]}" -eq 0 || -z "${MYSQL_DB[*]}" ]] && [[ "${#POSTGRES_DB[@]}" -eq 0 || -z "${POSTGRES_DB[*]}" ]]; then
+    elif [[ -z "${MYSQL_DB[*]}" && -z "${POSTGRES_DB[*]}" ]]; then
         fail "no databases nor nodes selected for backup - nothing to do!"
     fi
 
