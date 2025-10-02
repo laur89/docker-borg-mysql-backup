@@ -737,10 +737,7 @@ run_scripts() {
 contains() {
     local src i
 
-    [[ "$#" -lt 2 ]] && { err "at least 2 args needed for $FUNCNAME"; return 2; }
-
-    src="$1"
-    shift
+    src="$1"; shift
 
     for i in "$@"; do
         [[ "$i" == "$src" ]] && return 0
