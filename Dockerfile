@@ -1,7 +1,7 @@
 FROM          alpine:3
 
 ENV LANG=C.UTF-8 \
-    BORG_VERSION=1.4.0-r0
+    BORG_VERSION=1.4.1-r0
 
 ADD scripts/* /usr/local/sbin/
 
