@@ -660,4 +660,6 @@ attempting to fix any issues.
 - [web interface for borg](https://github.com/borgbackup/borgweb/)
 - [cronshield](https://teejeetech.com/chronshield/)
   - from the creator of Timeshift
+- [databasus](https://github.com/databasus/databasus) - PostgreSQL, MySQL, MongoDB
+  backup to multiple types of storage
 
