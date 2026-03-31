@@ -379,6 +379,7 @@ validate_config() {
 
     if [[ "${#NODES_TO_BACK_UP[@]}" -gt 0 ]]; then
         for i in "${NODES_TO_BACK_UP[@]}"; do
+            # TODO: should we not pop it from NODES_TO_BACK_UP then? not exactly necessary tho
             [[ -e "$i" ]] || err "node [$i] to back up does not exist; missing mount?"
         done
     elif [[ -z "${MYSQL_DB[*]}" && -z "${POSTGRES_DB[*]}" ]]; then
