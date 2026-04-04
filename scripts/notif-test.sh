@@ -54,10 +54,8 @@ while getopts 'p:I:H:s:T:F:A:m:e:fh' opt; do
         f) FATAL=1
             ;;
         h) echo -e "$usage"
-           exit 0
-            ;;
-        *) fail "$SELF called with unsupported flag(s)"
-            ;;
+           exit 0 ;;
+        *) fail "$SELF called with unsupported flag(s)" ;;
     esac
 done
 

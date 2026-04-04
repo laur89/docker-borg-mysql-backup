@@ -572,8 +572,7 @@ validate_containers() {
     [[ "${#CONTAINERS[@]}" -eq 0 ]] && return 0
 
     for c in "${CONTAINERS[@]}"; do
-        running="$(docker container inspect -f '{{.State.Running}}' "$c")"
-        if [[ "$?" -ne 0 ]]; then
+        if ! running="$(docker container inspect -f '{{.State.Running}}' "$c")"; then
             # TODO: should we fail here instead?
             err "container [$c] inspection failed - does the container exist?"
         else

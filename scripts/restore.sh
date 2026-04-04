@@ -210,10 +210,8 @@ while getopts 'dgc:rlB:L:R:T:O:a:h' opt; do
         a) ARCHIVE_NAME="$OPTARG"
             ;;
         h) echo -e "$usage"
-           exit 0
-            ;;
-        *) fail "$SELF called with unsupported flag(s)"
-            ;;
+           exit 0 ;;
+        *) fail "$SELF called with unsupported flag(s)" ;;
     esac
 done
 

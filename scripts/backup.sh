@@ -479,10 +479,8 @@ while getopts 'd:g:p:c:rlP:1:2:B:Z:E:L:e:A:D:G:S:R:T:H:Ch' opt; do
         H) HC_ID="$OPTARG"
             ;;
         h) echo -e "$usage"
-           exit 0
-            ;;
-        *) fail "$SELF called with unsupported flag(s)"
-            ;;
+           exit 0 ;;
+        *) fail "$SELF called with unsupported flag(s)" ;;
     esac
 done
 shift "$((OPTIND-1))"
@@ -492,10 +490,10 @@ trap -- 'cleanup; exit' EXIT HUP INT QUIT PIPE TERM
 NODES_TO_BACK_UP=("$@")
 JOB_SCRIPT_ROOT="$SCRIPT_ROOT/jobs/$ARCHIVE_PREFIX"
 
-readonly TMP_ROOT="/tmp/${SELF}.tmp"
-readonly TMP="$TMP_ROOT/${ARCHIVE_PREFIX}-$RANDOM"
+TMP_ROOT="/tmp/${SELF}.tmp"
+TMP="$TMP_ROOT/${ARCHIVE_PREFIX}-$RANDOM"
 
-[[ -f "$ENV_ROOT/${ARCHIVE_PREFIX}.conf" ]] && source "$ENV_ROOT/${ARCHIVE_PREFIX}.conf"  # load job-specific config if avail
+[[ -s "$ENV_ROOT/${ARCHIVE_PREFIX}.conf" ]] && source "$ENV_ROOT/${ARCHIVE_PREFIX}.conf"  # load job-specific config if avail
 
 readonly PREFIX_WITH_HOSTNAME="${ARCHIVE_PREFIX}-${HOST_ID}-"  # used for pruning
 readonly ARCHIVE_NAME="$PREFIX_WITH_HOSTNAME"'{now:%Y-%m-%d-%H%M%S}'
@@ -503,15 +501,13 @@ readonly ARCHIVE_NAME="$PREFIX_WITH_HOSTNAME"'{now:%Y-%m-%d-%H%M%S}'
 validate_config
 
 # make sure these are processed _after_ sourcing job-specific config:
-if [[ "${#BORG_EXCLUDE_PATHS[@]}" -gt 0 ]]; then
-    for i in "${BORG_EXCLUDE_PATHS[@]}"; do
-        if [[ -n "$NOTIF_MISSING_EXCL_PTH" && ! -e "$i" ]]; then
-            err "excluded path [$i] does not exist; not aborting"
-        fi
-        BORG_EXCLUDE_OPTS+=" --exclude $i"
-    done
-    unset BORG_EXCLUDE_PATHS i
-fi
+for i in "${BORG_EXCLUDE_PATHS[@]}"; do
+    if [[ -n "$NOTIF_MISSING_EXCL_PTH" && ! -e "$i" ]]; then
+        err "excluded path [$i] does not exist; not aborting"
+    fi
+    BORG_EXCLUDE_OPTS+=" --exclude $i"
+done
+unset BORG_EXCLUDE_PATHS i
 
 [[ -n "$BORG_EXCLUDE_OPTS" ]] && CREATE_OPTS+=" $BORG_EXCLUDE_OPTS"
 unset BORG_EXCLUDE_OPTS

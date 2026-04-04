@@ -98,18 +98,12 @@ setup_logrotate() {
 
     while getopts 'r:i:s:n:p:' opt; do
         case "$opt" in
-            r) rotate="$OPTARG"
-                ;;
-            i) interval="$OPTARG"
-                ;;
-            s) size="$OPTARG"
-                ;;
-            n) name="$OPTARG"
-                ;;
-            p) pattern="$OPTARG"
-                ;;
-            *) fail "$FUNCNAME called with unsupported flag(s)"
-                ;;
+            r) rotate="$OPTARG" ;;
+            i) interval="$OPTARG" ;;
+            s) size="$OPTARG" ;;
+            n) name="$OPTARG" ;;
+            p) pattern="$OPTARG" ;;
+            *) fail "$FUNCNAME called with unsupported flag(s)" ;;
         esac
     done
     shift "$((OPTIND-1))"

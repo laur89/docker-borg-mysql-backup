@@ -109,10 +109,8 @@ while getopts 'rlFp:a:B:L:R:T:h' opt; do
         T) REMOTE_REPO="$OPTARG"  # overrides env var of same name
             ;;
         h) echo -e "$usage"
-           exit 0
-            ;;
-        *) fail "$SELF called with unsupported flag(s)"
-            ;;
+           exit 0 ;;
+        *) fail "$SELF called with unsupported flag(s)" ;;
     esac
 done
 
