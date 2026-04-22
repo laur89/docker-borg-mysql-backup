@@ -49,19 +49,13 @@ unset BORG_OPTS # just in case
 while getopts 'rlB:L:R:T:h' opt; do
     case "$opt" in
         r) REMOTE_ONLY=1
-           let REMOTE_OR_LOCAL_OPT_COUNTER+=1
-            ;;
+           let REMOTE_OR_LOCAL_OPT_COUNTER+=1 ;;
         l) LOCAL_ONLY=1
-           let REMOTE_OR_LOCAL_OPT_COUNTER+=1
-            ;;
-        B) BORG_OPTS="$OPTARG"
-            ;;
-        L) LOCAL_REPO="$OPTARG"  # overrides env var of same name
-            ;;
-        R) REMOTE="$OPTARG"  # overrides env var of same name
-            ;;
-        T) REMOTE_REPO="$OPTARG"  # overrides env var of same name
-            ;;
+           let REMOTE_OR_LOCAL_OPT_COUNTER+=1 ;;
+        B) BORG_OPTS="$OPTARG" ;;
+        L) LOCAL_REPO="$OPTARG" ;;  # overrides env var of same name
+        R) REMOTE="$OPTARG" ;;  # overrides env var of same name
+        T) REMOTE_REPO="$OPTARG" ;;  # overrides env var of same name
         h) echo -e "$usage"
            exit 0 ;;
         *) fail "$SELF called with unsupported flag(s)" ;;

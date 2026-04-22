@@ -33,26 +33,16 @@ export LOG=/dev/null  # override LOG
 
 while getopts 'p:I:H:s:T:F:A:m:e:fh' opt; do
     case "$opt" in
-        p) ARCHIVE_PREFIX="$OPTARG"
-            ;;
-        I) HOST_ID="$OPTARG"  # overrides env var of same name
-            ;;
-        H) HC_ID="$OPTARG"
-            ;;
-        s) NOTIF_SUBJECT="$OPTARG"  # overrides env var of same name
-            ;;
-        T) MAIL_TO="$OPTARG"  # overrides env var of same name
-            ;;
-        F) MAIL_FROM="$OPTARG"  # overrides env var of same name
-            ;;
-        A) SMTP_ACCOUNT="$OPTARG"  # overrides env var of same name
-            ;;
-        m) MSG="$OPTARG"
-            ;;
-        e) ERR_NOTIF="$OPTARG"  # overrides env var of same name
-            ;;
-        f) FATAL=1
-            ;;
+        p) ARCHIVE_PREFIX="$OPTARG" ;;
+        I) HOST_ID="$OPTARG" ;;  # overrides env var of same name
+        H) HC_ID="$OPTARG" ;;
+        s) NOTIF_SUBJECT="$OPTARG" ;;  # overrides env var of same name
+        T) MAIL_TO="$OPTARG" ;;  # overrides env var of same name
+        F) MAIL_FROM="$OPTARG" ;;  # overrides env var of same name
+        A) SMTP_ACCOUNT="$OPTARG" ;;  # overrides env var of same name
+        m) MSG="$OPTARG" ;;
+        e) ERR_NOTIF="$OPTARG" ;;  # overrides env var of same name
+        f) FATAL=1 ;;
         h) echo -e "$usage"
            exit 0 ;;
         *) fail "$SELF called with unsupported flag(s)" ;;

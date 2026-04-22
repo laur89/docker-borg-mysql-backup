@@ -185,30 +185,19 @@ unset RESTORE_MYSQL_DB RESTORE_POSTGRES_DB CONTAINERS REM LOC BORG_OPTS RESTORE_
 
 while getopts 'dgc:rlB:L:R:T:O:a:h' opt; do
     case "$opt" in
-        d) RESTORE_MYSQL_DB=1
-            ;;
-        g) RESTORE_POSTGRES_DB=1
-            ;;
-        c) IFS="$SEPARATOR" read -ra CONTAINERS <<< "$OPTARG"
-            ;;
+        d) RESTORE_MYSQL_DB=1 ;;
+        g) RESTORE_POSTGRES_DB=1 ;;
+        c) IFS="$SEPARATOR" read -ra CONTAINERS <<< "$OPTARG" ;;
         r) REM=1
-           let REMOTE_OR_LOCAL_OPT_COUNTER+=1
-            ;;
+           let REMOTE_OR_LOCAL_OPT_COUNTER+=1 ;;
         l) LOC=1
-           let REMOTE_OR_LOCAL_OPT_COUNTER+=1
-            ;;
-        B) BORG_OPTS="$OPTARG"
-            ;;
-        L) LOCAL_REPO="$OPTARG"  # overrides env var of same name
-            ;;
-        R) REMOTE="$OPTARG"  # overrides env var of same name
-            ;;
-        T) REMOTE_REPO="$OPTARG"  # overrides env var of same name
-            ;;
-        O) RESTORE_DIR="$OPTARG"  # dir where selected borg archive will be restored into
-            ;;
-        a) ARCHIVE_NAME="$OPTARG"
-            ;;
+           let REMOTE_OR_LOCAL_OPT_COUNTER+=1 ;;
+        B) BORG_OPTS="$OPTARG" ;;
+        L) LOCAL_REPO="$OPTARG" ;;  # overrides env var of same name
+        R) REMOTE="$OPTARG" ;;  # overrides env var of same name
+        T) REMOTE_REPO="$OPTARG" ;;  # overrides env var of same name
+        O) RESTORE_DIR="$OPTARG" ;;  # dir where selected borg archive will be restored into
+        a) ARCHIVE_NAME="$OPTARG" ;;
         h) echo -e "$usage"
            exit 0 ;;
         *) fail "$SELF called with unsupported flag(s)" ;;

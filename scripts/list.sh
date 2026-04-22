@@ -79,23 +79,15 @@ unset ARCHIVE_PREFIX BORG_OPTS ARCHIVE_NAME  # just in case
 while getopts 'rlp:B:L:R:T:a:h' opt; do
     case "$opt" in
         r) REM=1
-           let REMOTE_OR_LOCAL_OPT_COUNTER+=1
-            ;;
+           let REMOTE_OR_LOCAL_OPT_COUNTER+=1 ;;
         l) LOC=1
-           let REMOTE_OR_LOCAL_OPT_COUNTER+=1
-            ;;
-        p) ARCHIVE_PREFIX="$OPTARG"
-            ;;
-        B) BORG_OPTS="$OPTARG"
-            ;;
-        L) LOCAL_REPO="$OPTARG"  # overrides env var of same name
-            ;;
-        R) REMOTE="$OPTARG"  # overrides env var of same name
-            ;;
-        T) REMOTE_REPO="$OPTARG"  # overrides env var of same name
-            ;;
-        a) ARCHIVE_NAME="$OPTARG"
-            ;;
+           let REMOTE_OR_LOCAL_OPT_COUNTER+=1 ;;
+        p) ARCHIVE_PREFIX="$OPTARG" ;;
+        B) BORG_OPTS="$OPTARG" ;;
+        L) LOCAL_REPO="$OPTARG" ;;  # overrides env var of same name
+        R) REMOTE="$OPTARG" ;;  # overrides env var of same name
+        T) REMOTE_REPO="$OPTARG" ;;  # overrides env var of same name
+        a) ARCHIVE_NAME="$OPTARG" ;;
         h) echo -e "$usage"
            exit 0 ;;
         *) fail "$SELF called with unsupported flag(s)" ;;

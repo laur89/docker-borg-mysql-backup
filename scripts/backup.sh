@@ -429,55 +429,33 @@ unset MYSQL_DB POSTGRES_DB ARCHIVE_PREFIX CONTAINERS COMPACT HC_ID  # just in ca
 
 while getopts 'd:g:p:c:rlP:1:2:B:Z:E:L:e:A:D:G:S:R:T:H:Ch' opt; do
     case "$opt" in
-        d) IFS="$SEPARATOR" read -ra MYSQL_DB <<< "$OPTARG"
-            ;;
-        g) IFS="$SEPARATOR" read -ra POSTGRES_DB <<< "$OPTARG"
-            ;;
+        d) IFS="$SEPARATOR" read -ra MYSQL_DB <<< "$OPTARG" ;;
+        g) IFS="$SEPARATOR" read -ra POSTGRES_DB <<< "$OPTARG" ;;
         p) readonly ARCHIVE_PREFIX="$OPTARG"  # be careful w/ var rename! eg run_scripts() depends on many var names
-           JOB_ID="${OPTARG}-$$"
-            ;;
-        c) IFS="$SEPARATOR" read -ra CONTAINERS <<< "$OPTARG"
-            ;;
+           JOB_ID="${OPTARG}-$$" ;;
+        c) IFS="$SEPARATOR" read -ra CONTAINERS <<< "$OPTARG" ;;
         r) REMOTE_ONLY=1
-           let REMOTE_OR_LOCAL_OPT_COUNTER+=1
-            ;;
+           let REMOTE_OR_LOCAL_OPT_COUNTER+=1 ;;
         l) LOCAL_ONLY=1
-           let REMOTE_OR_LOCAL_OPT_COUNTER+=1
-            ;;
-        P) PRUNE_OPTS="$OPTARG"  # overrides env var of same name
-            ;;
-        1) LOCAL_PRUNE_OPTS="$OPTARG"  # overrides env var of same name
-            ;;
-        2) REMOTE_PRUNE_OPTS="$OPTARG"  # overrides env var of same name
-            ;;
+           let REMOTE_OR_LOCAL_OPT_COUNTER+=1 ;;
+        P) PRUNE_OPTS="$OPTARG" ;;  # overrides env var of same name
+        1) LOCAL_PRUNE_OPTS="$OPTARG" ;;  # overrides env var of same name
+        2) REMOTE_PRUNE_OPTS="$OPTARG" ;;  # overrides env var of same name
         B) CREATE_OPTS+=" $OPTARG"  # _extends_ env var of same name
-           let BORG_OTPS_COUNTER+=1
-            ;;
+           let BORG_OTPS_COUNTER+=1 ;;
         Z) CREATE_OPTS="$OPTARG"  # overrides env var of same name
-           let BORG_OTPS_COUNTER+=1
-            ;;
-        E) IFS="$SEPARATOR" read -ra BORG_EXCLUDE_PATHS <<< "$OPTARG"
-            ;;
-        L) LOCAL_REPO="$OPTARG"  # overrides env var of same name
-            ;;
-        e) ERR_NOTIF="$OPTARG"  # overrides env var of same name
-            ;;
-        A) SMTP_ACCOUNT="$OPTARG"
-            ;;
-        D) MYSQL_FAIL_FATAL="$OPTARG"
-            ;;
-        G) POSTGRES_FAIL_FATAL="$OPTARG"
-            ;;
-        S) SCRIPT_FAIL_FATAL="$OPTARG"
-            ;;
-        R) REMOTE="$OPTARG"  # overrides env var of same name
-            ;;
-        T) REMOTE_REPO="$OPTARG"  # overrides env var of same name
-            ;;
-        C) COMPACT=TRUE
-            ;;
-        H) HC_ID="$OPTARG"
-            ;;
+           let BORG_OTPS_COUNTER+=1 ;;
+        E) IFS="$SEPARATOR" read -ra BORG_EXCLUDE_PATHS <<< "$OPTARG" ;;
+        L) LOCAL_REPO="$OPTARG" ;;  # overrides env var of same name
+        e) ERR_NOTIF="$OPTARG" ;;  # overrides env var of same name
+        A) SMTP_ACCOUNT="$OPTARG" ;;
+        D) MYSQL_FAIL_FATAL="$OPTARG" ;;
+        G) POSTGRES_FAIL_FATAL="$OPTARG" ;;
+        S) SCRIPT_FAIL_FATAL="$OPTARG" ;;
+        R) REMOTE="$OPTARG" ;;  # overrides env var of same name
+        T) REMOTE_REPO="$OPTARG" ;;  # overrides env var of same name
+        C) COMPACT=TRUE ;;
+        H) HC_ID="$OPTARG" ;;
         h) echo -e "$usage"
            exit 0 ;;
         *) fail "$SELF called with unsupported flag(s)" ;;
