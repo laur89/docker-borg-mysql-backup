@@ -115,7 +115,7 @@ dump_mysql() {
 
 
 # dumps selected postgres db(s) to $TMP
-# https://www.postgresql.org/docs/15/backup-dump.html
+# https://www.postgresql.org/docs/18/backup-dump.html
 dump_postgres() {
     local err_code start_timestamp t d s
 

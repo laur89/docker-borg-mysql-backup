@@ -380,7 +380,9 @@ Only db will be restored from a dump, given the option is provided to the script
       -L LOCAL_REPO           overrides container env var of same name
       -R REMOTE               overrides container env var of same name
       -T REMOTE_REPO          overrides container env var of same name
-      -O RESTORE_DIR          path to directory where archive will get extracted to
+      -O RESTORE_DIR          path to directory where archive will get extracted to;
+                              note a new sub-dir will be created in there, so
+                              no danger of overwriting any existing data
       -a ARCHIVE_NAME         full name of the borg archive to extract data from
 
 #### Usage examples

@@ -29,50 +29,59 @@ readonly usage="
       -L LOCAL_REPO           overrides container env var of same name
       -R REMOTE               overrides container env var of same name
       -T REMOTE_REPO          overrides container env var of same name
-      -O RESTORE_DIR          path to directory where archive will get extracted to
+      -O RESTORE_DIR          path to directory where archive will get extracted to;
+                              note a new sub-dir will be created in there, so
+                              no danger of overwriting any existing data
       -a ARCHIVE_NAME         full name of the borg archive to extract data from
 "
 
 
-# TODO: currently user-included sql files would also be picked up by find!
+# NOTE: currently user-included sql files would also be picked up by `find`,
+#       as long as they're prefixed w/ 'mysql:' or 'postgres:'
 restore_db() {
-    local mysql_files postgre_files i j d
+    local mysql_files pg_files i j d
 
-    declare -a mysql_files postgre_files
+    declare -a mysql_files pg_files
 
+    # first resolve/collect all db dump-files:
     while IFS= read -r -d $'\0' i; do
         j="$(basename -- "$i")"
 
         if [[ "$j" == 'mysql:'* ]]; then
             mysql_files+=("$i")
         elif [[ "$j" == 'postgres:'* ]]; then
-            postgre_files+=("$i")
+            pg_files+=("$i")
         else
             err "unrecognized SQL file [$i], ignoring it..."
         fi
-    done < <(find "$RESTORE_DIR" -mindepth 1 -maxdepth 1 -type f -name '*.sql' -print0)
+    done < <(find "$RESTORE_DIR" -mindepth 1 -maxdepth 1 -type f \( -name 'mysql:*.sql' -o -name 'postgres:*.sql' \) -print0)
     unset i
 
     if [[ "$RESTORE_MYSQL_DB" == 1 ]]; then
         [[ "${#mysql_files[@]}" -ne 1 ]] && fail "expected to find exactly 1 mysql .sql file in the root of [$RESTORE_DIR], but found ${#mysql_files[@]}"
         if confirm "restore db from mysql dump [${mysql_files[*]}]?"; then
-            mariadb \
-                    --host="${MYSQL_HOST}" \
-                    --port="${MYSQL_PORT}" \
-                    --user="${MYSQL_USER}" \
-                    --password="${MYSQL_PASS}" < "${mysql_files[@]}" 2> >(tee -a "$LOG" >&2) || fail "restoring db from [${mysql_files[*]}] failed w/ [$?]"
+            for i in "${mysql_files[@]}"; do
+                # TODO: pass additional flags, e.g. --skip-ssl is likely needed;
+                #       otherwise we get error like  > TLS/SSL error: SSL is required, but the server does not support it
+                # TODO: ERROR 1193 (HY000) at line 17: Unknown system variable 'NOTE_VERBOSITY'
+                mariadb \
+                        --host="${MYSQL_HOST}" \
+                        --port="${MYSQL_PORT}" \
+                        --user="${MYSQL_USER}" \
+                        --password="${MYSQL_PASS}" < "$i" 2> >(tee -a "$LOG" >&2) || fail "restoring db from [$i] failed w/ [$?]"
+            done
         else
-            log "skip restoring mysql db..."
+            log 'skip restoring mysql db...'
         fi
     fi
 
-    # https://www.postgresql.org/docs/15/backup-dump.html#BACKUP-DUMP-RESTORE
+    # https://www.postgresql.org/docs/18/backup-dump.html#BACKUP-DUMP-RESTORE
     if [[ "$RESTORE_POSTGRES_DB" == 1 ]]; then
-        [[ "${#postgre_files[@]}" -eq 0 ]] && fail "expected to find at least 1 postgres .sql file in the root of [$RESTORE_DIR], but found none"
-        if confirm "restore db from postgres dump(s) [${postgre_files[*]}]?"; then
+        [[ "${#pg_files[@]}" -eq 0 ]] && fail "expected to find at least 1 postgres .sql file in the root of [$RESTORE_DIR], but found none"
+        if confirm "restore db from postgres dump(s) [${pg_files[*]}]?"; then
             export PGPASSWORD="$POSTGRES_PASS"
 
-            for i in "${postgre_files[@]}"; do
+            for i in "${pg_files[@]}"; do
                 d="$(basename -- "$i")"
                 [[ "$d" == 'postgres:all-dbs.sql' ]] && d=postgres || d="$(grep -Po '^postgres:\K.*(?=\.sql$)' <<< "$d")"
                 # TODO2: restoring from all-dbs.sql, then the cluster should really be empty!
@@ -84,7 +93,7 @@ restore_db() {
                         -f "$i" 2> >(tee -a "$LOG" >&2) || fail "restoring [$d] postgres db from [$i] failed w/ [$?]"
             done
         else
-            log "skip restoring postgres db..."
+            log 'skip restoring postgres db...'
         fi
     fi
 }
@@ -166,7 +175,7 @@ create_dirs() {
 
 
 cleanup() {
-    [[ "$KEEP_DIR" -ne 1 && -d "$RESTORE_DIR" ]] && rm -r -- "$RESTORE_DIR"
+    [[ "$KEEP_DIR" != 1 && -d "$RESTORE_DIR" ]] && rm -r -- "$RESTORE_DIR"
     [[ -d "$RESTORE_DIR" ]] && log "\n\n    -> restored files are in [$RESTORE_DIR]"
 
     log "==> restore script end"
@@ -208,7 +217,7 @@ done
 validate_config
 process_remote  # note this overwrites global REMOTE var
 
-readonly RESTORE_DIR="$RESTORE_DIR/restored-${ARCHIVE_NAME}"  # define & test after validation, as we're re-defining the arg
+readonly RESTORE_DIR+="/restored-${ARCHIVE_NAME}"  # define & test after validation, as we're re-defining the arg
 [[ -e "$RESTORE_DIR" ]] && fail "[$RESTORE_DIR] already exists, abort"
 create_dirs
 
