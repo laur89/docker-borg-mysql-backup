@@ -649,6 +649,7 @@ attempting to fix any issues.
 ## See also/recommended
 - [restic](https://github.com/restic/restic)
 - [duplicacy](https://github.com/gilbertchen/duplicacy) - alternatives to borg. lock-free!
+  - potentially abandonware, see [here](https://github.com/gilbertchen/duplicacy/issues/690)
 - [docker-db-backup](https://github.com/tiredofit/docker-db-backup) - similar service; supports multiple dbs
 - [this blog](https://ifnull.org/articles/borgbackup_rsyncnet/) for borg setup
 - [borgmatic](https://github.com/witten/borgmatic) - declarative borg config
